@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: pet-llama-id
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://petllamaid.netlify.app,http://localhost:3000
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /api/health
