@@ -167,17 +167,17 @@ async function openDetailModal(id) {
         <div class="tab-btn" data-dtab="m">Médico</div>
         <div class="tab-btn" data-dtab="q">QR</div>
       </div>
-      <div id="dtab-a" class="form-grid">
+      <div id="dtab-a" class="detail-view-grid">
         ${detailField('Color', p.color)}${detailField('Peso', p.weight ? p.weight + ' kg' : '—')}
         ${detailField('Categoría', p.category)}${detailField('Fecha de nacimiento', p.birth_date)}
         ${detailField('Fecha de registro', p.registration_date)}${detailField('Huella', p.fingerprint ? 'Registrada' : 'No registrada')}
       </div>
-      <div id="dtab-o" class="form-grid hidden">
+      <div id="dtab-o" class="detail-view-grid hidden">
         ${detailField('Nombre completo', p.owner_name)}${detailField('CI', p.owner_ci)}
         ${detailField('Teléfono', p.owner_phone)}${detailField('Correo', p.owner_email)}
         ${detailField('Ciudad', p.owner_city)}${detailField('Dirección', p.owner_address)}
       </div>
-      <div id="dtab-m" class="form-grid hidden">
+      <div id="dtab-m" class="detail-view-grid hidden">
         ${detailField('Vacunado', p.medical_vaccinated)}${detailField('Vacunas', p.medical_vaccines)}
         ${detailField('Veterinaria', p.medical_vet)}${detailField('Enfermedades', p.medical_diseases || 'Ninguna')}
         ${detailField('Alergias', p.medical_allergies || 'Ninguna')}${detailField('Observaciones', p.medical_observations || '—')}

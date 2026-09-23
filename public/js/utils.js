@@ -38,7 +38,7 @@ export function publicUrl(petId) {
 }
 
 export function detailField(label, val) {
-  return `<div><label style="display:block;font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">${label}</label><div style="font-size:14px;">${escapeHtml((val == null || val === '') ? '—' : val)}</div></div>`;
+  return `<div class="dv-field"><label>${label}</label><div class="dv-val">${escapeHtml((val == null || val === '') ? '—' : val)}</div></div>`;
 }
 
 export function statCard(label, val, color, icon) {
