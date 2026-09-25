@@ -185,7 +185,10 @@ async function openDetailModal(id) {
       <div id="dtab-q" class="hidden" style="text-align:center; padding:20px 0;">
         <div id="detail-qr" style="display:inline-block; padding:10px; background:#fff; border-radius:10px;"></div>
         <p class="faint" style="margin-top:10px; word-break:break-all;">${publicUrl(p.id)}</p>
-        <a href="${publicUrl(p.id)}" target="_blank" class="btn btn-outline btn-sm" style="margin-top:8px;">Abrir página pública ↗</a>
+        <div class="flex gap-2" style="justify-content:center; margin-top:12px;">
+          <button class="btn btn-primary btn-sm" id="btn-download-qr">⬇ Descargar QR</button>
+          <a href="${publicUrl(p.id)}" target="_blank" class="btn btn-outline btn-sm">Abrir página pública ↗</a>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -200,7 +203,21 @@ async function openDetailModal(id) {
     document.getElementById('dtab-' + el.dataset.dtab).classList.remove('hidden');
     if (el.dataset.dtab === 'q') {
       document.getElementById('detail-qr').innerHTML = '';
-      new QRCode(document.getElementById('detail-qr'), { text: publicUrl(p.id), width: 150, height: 150 });
+      new QRCode(document.getElementById('detail-qr'), { text: publicUrl(p.id), width: 200, height: 200 });
+      const dlBtn = document.getElementById('btn-download-qr');
+      if (dlBtn) {
+        dlBtn.addEventListener('click', () => {
+          const qrContainer = document.getElementById('detail-qr');
+          const canvas = qrContainer.querySelector('canvas');
+          const img = qrContainer.querySelector('img');
+          const src = canvas ? canvas.toDataURL('image/png') : (img ? img.src : null);
+          if (!src) return;
+          const a = document.createElement('a');
+          a.href = src;
+          a.download = `QR-${p.carnet_number}.png`;
+          a.click();
+        });
+      }
     }
   }));
   document.querySelector('[data-editfrom]').addEventListener('click', () => { closeModal(); openPetModal(p.id); });
@@ -383,17 +400,60 @@ async function savePet(id, isEdit) {
   };
 
   try {
+    let createdId = id;
     if (isEdit) {
       await api.updatePet(id, petData);
     } else {
-      await api.createPet(petData);
+      const res = await api.createPet(petData);
+      createdId = res.id;
     }
     await state.loadPets();
     api.logHistory(isEdit ? 'Edición' : 'Creación', `${petData.name} (${petData.carnet_number})`);
-    toast(isEdit ? 'Cambios guardados' : 'Mascota registrada correctamente');
-    closeModal();
-    state.cardPetId = id;
+    if (!isEdit) {
+      const newPet = state.getPets().find(x => x.id === createdId);
+      if (newPet) {
+        showPetQrModal(newPet);
+      } else {
+        toast('Mascota registrada correctamente');
+        closeModal();
+      }
+    } else {
+      toast('Cambios guardados');
+      closeModal();
+    }
+    state.cardPetId = createdId;
     state.view = isEdit ? state.view : 'mascotas';
     import('../app.js').then(m => m.renderApp());
   } catch (e) { toast(e.message, 'error'); }
+}
+
+function showPetQrModal(pet) {
+  const url = publicUrl(pet.id);
+  openModal('modal-md', `
+    <div class="modal-head"><h3>QR generado · ${escapeHtml(pet.name)}</h3><button class="btn-icon" data-close>${iconX}</button></div>
+    <div class="modal-body" style="text-align:center;">
+      <p class="muted" style="margin-bottom:16px;">Mascota registrada correctamente. Escanea este QR para ver los datos.</p>
+      <div id="created-qr" style="display:inline-block; padding:14px; background:#fff; border-radius:12px; border:1px solid var(--border);"></div>
+      <p class="faint" style="margin-top:10px; font-size:12px; word-break:break-all;">${url}</p>
+      <div class="flex gap-2" style="justify-content:center; margin-top:16px;">
+        <button class="btn btn-primary btn-sm" id="btn-dl-created-qr">⬇ Descargar QR</button>
+        <a href="${url}" target="_blank" class="btn btn-outline btn-sm">Ver página ↗</a>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close>Cerrar</button>
+    </div>
+  `);
+  new QRCode(document.getElementById('created-qr'), { text: url, width: 200, height: 200 });
+  document.getElementById('btn-dl-created-qr').addEventListener('click', () => {
+    const c = document.getElementById('created-qr');
+    const canvas = c.querySelector('canvas');
+    const img = c.querySelector('img');
+    const src = canvas ? canvas.toDataURL('image/png') : (img ? img.src : null);
+    if (!src) return;
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = `QR-${pet.carnet_number}.png`;
+    a.click();
+  });
 }
