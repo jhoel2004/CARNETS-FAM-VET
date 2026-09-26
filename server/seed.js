@@ -18,7 +18,7 @@ async function seed() {
   db.run('INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)', ['operador', hash2, 'Operador', 'Operador de Registro']);
 
   const defaults = {
-    systemName: 'Pet Llama ID',
+    systemName: 'FAM-VET',
     systemSub: 'Sistema Nacional de Identificación de Mascotas',
     defaultTemplate: 'bolivia',
     qrSize: '56',

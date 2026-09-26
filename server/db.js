@@ -101,7 +101,7 @@ async function createSqliteTables() {
   // Seed settings
   const nameExists = sqlJsDb.exec("SELECT key FROM settings WHERE key = 'system_name'");
   if (!nameExists.length || !nameExists[0].values.length) {
-    sqlJsDb.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", ['system_name', 'Pet Llama ID']);
+    sqlJsDb.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", ['system_name', 'FAM-VET']);
   }
   save();
 }

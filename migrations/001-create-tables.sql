@@ -1,5 +1,5 @@
 -- ============================================
--- Pet Llama ID - Migración a Supabase PostgreSQL
+-- FAM-VET - Migración a Supabase PostgreSQL
 -- Ejecutar en SQL Editor de Supabase
 -- ============================================
 
@@ -85,7 +85,7 @@ ON CONFLICT (username) DO NOTHING;
 
 -- Configuración por defecto
 INSERT INTO settings (key, value) VALUES
-('systemName', 'Pet Llama ID'),
+('systemName', 'FAM-VET'),
 ('systemSub', 'Sistema Nacional de Identificación de Mascotas'),
 ('defaultTemplate', 'bolivia'),
 ('qrSize', '56'),

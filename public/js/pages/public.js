@@ -30,13 +30,13 @@ export async function renderPublicPage(id) {
           </div>
           <div class="public-actions">
             <a class="btn btn-primary" href="tel:${pet.owner_phone}">📞 Llamar al propietario</a>
-            <a class="btn btn-gold" target="_blank" href="https://wa.me/${(pet.owner_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('Hola, encontré a ' + pet.name + ' (carnet ' + pet.carnet_number + '). Vi su información en Pet Llama ID.')}">💬 WhatsApp</a>
+            <a class="btn btn-gold" target="_blank" href="https://wa.me/${(pet.owner_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('Hola, encontré a ' + pet.name + ' (carnet ' + pet.carnet_number + '). Vi su información en FAM-VET.')}">💬 WhatsApp</a>
           </div>
-          <p class="faint" style="margin-top:16px; font-size:11px;">Verificado por Pet Llama ID Bolivia · Documento de identificación animal</p>
+          <p class="faint" style="margin-top:16px; font-size:11px;">Verificado por FAM-VET Bolivia · Documento de identificación animal</p>
         </div>
       </div>
     </div>`;
   } catch {
-    app.innerHTML = `<div class="public-page"><div class="public-card"><div class="public-body" style="padding-top:40px;"><h1>No encontrado</h1><p class="sub">Este código QR no corresponde a ningún registro activo en Pet Llama ID.</p><a href="#/" class="btn btn-primary" style="margin-top:18px;">Ir al sistema</a></div></div></div>`;
+    app.innerHTML = `<div class="public-page"><div class="public-card"><div class="public-body" style="padding-top:40px;"><h1>No encontrado</h1><p class="sub">Este código QR no corresponde a ningún registro activo en FAM-VET.</p><a href="#/" class="btn btn-primary" style="margin-top:18px;">Ir al sistema</a></div></div></div>`;
   }
 }

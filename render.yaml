@@ -11,7 +11,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: https://petllamaid.netlify.app,http://localhost:3000
+        value: https://famvet.netlify.app,http://localhost:3000
       - key: NODE_ENV
         value: production
     healthCheckPath: /api/health

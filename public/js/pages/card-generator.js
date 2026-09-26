@@ -125,7 +125,7 @@ function cardFrontHtml(pet, tpl) {
     </div>
     <div class="id-front-foot">
       <div class="id-carnet-no">N° ${pet.carnet_number}<small>Fecha de expiración: ${expiryDate(pet)}</small></div>
-      <div class="id-sig"><div class="sig-script">${escapeHtml(settings.signatureText || (state.user ? state.user.name.split(' ')[0] : 'Pet Llama'))}</div>Firma</div>
+      <div class="id-sig"><div class="sig-script">${escapeHtml(settings.signatureText || (state.user ? state.user.name.split(' ')[0] : 'FAM-VET'))}</div>Firma</div>
       <div class="id-flag-mini"><span></span><span></span><span></span></div>
     </div>
     ${lost ? `<div class="id-lost-stamp">PERDIDO</div>` : ''}

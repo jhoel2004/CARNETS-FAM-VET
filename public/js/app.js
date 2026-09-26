@@ -68,7 +68,7 @@ export function renderSpectador() {
     <div class="spectador-top">
       <div class="brand-mark">
         ${pawSvg(26)}
-        <div class="name">${escapeHtml(state.getSettings().systemName || 'Pet Llama ID')}<small>ID BOLIVIA</small></div>
+        <div class="name">${escapeHtml(state.getSettings().systemName || 'FAM-VET')}<small>ID BOLIVIA</small></div>
       </div>
       <button class="btn btn-outline btn-sm" id="btn-esc-logout">${iconLogout} Cerrar sesión</button>
     </div>
@@ -98,14 +98,14 @@ export function renderSpectador() {
             </div>
             <div class="public-actions">
               <a class="btn btn-primary" href="tel:${pet.owner_phone}">📞 Llamar al propietario</a>
-              <a class="btn btn-gold" target="_blank" href="https://wa.me/${(pet.owner_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('Hola, soy ' + state.user.name + ', vi la información de ' + pet.name + ' en Pet Llama ID.')}">💬 WhatsApp</a>
+              <a class="btn btn-gold" target="_blank" href="https://wa.me/${(pet.owner_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('Hola, soy ' + state.user.name + ', vi la información de ' + pet.name + ' en FAM-VET.')}">💬 WhatsApp</a>
             </div>
           </div>
         </div>
       `).join('')}
     </div>
   </div>
-  <p class="faint" style="text-align:center;margin-top:20px;font-size:11px;">Pet Llama ID Bolivia · Identificación animal</p>`;
+  <p class="faint" style="text-align:center;margin-top:20px;font-size:11px;">FAM-VET Bolivia · Identificación animal</p>`;
   const logout = document.getElementById('btn-esc-logout');
   if (logout) logout.addEventListener('click', () => { state.setUser(null); setToken(null); state.view = 'dashboard'; renderApp(); });
 }
@@ -123,7 +123,7 @@ function sidebarHtml() {
   <div class="sidebar ${state.sidebarOpen ? 'open' : ''}" id="sidebar">
     <div class="brand-mark">
       ${pawSvg()}
-      <div class="name">${escapeHtml(state.getSettings().systemName || 'Pet Llama ID')}<small>ID BOLIVIA</small></div>
+      <div class="name">${escapeHtml(state.getSettings().systemName || 'FAM-VET')}<small>ID BOLIVIA</small></div>
     </div>
     <div class="nav-section-label">Menú</div>
     ${items.filter(i => !i.adminOnly || state.user.role === 'Administrador').map(i => `
