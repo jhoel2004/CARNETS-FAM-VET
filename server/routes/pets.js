@@ -74,21 +74,44 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Nombre, propietario y teléfono son requeridos' });
 
     const id = p.id || 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-    const carnet = p.carnet_number || await nextCarnetNumber();
     const regDate = p.registration_date || new Date().toISOString().slice(0, 10);
 
-    await db.run(`INSERT INTO pets (id, carnet_number, name, species, breed, sex, birth_date, color, weight,
-      category, status, photo, fingerprint, offspring, registration_date,
-      owner_name, owner_ci, owner_address, owner_city, owner_phone, owner_email,
-      medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_diseases, medical_allergies)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)`, [
-      id, carnet, p.name, p.species || 'perro', p.breed || '', p.sex || 'Macho',
-      p.birth_date || '', p.color || '', p.weight || '', p.category || 'General',
-      p.status || 'Activo', p.photo || '', p.fingerprint || '', p.offspring || '', regDate,
-      p.owner_name, p.owner_ci || '', p.owner_address || '', p.owner_city || '', p.owner_phone, p.owner_email || '',
-      p.medical_vaccinated || 'No', p.medical_vaccines || '', p.medical_vet || '',
-      p.medical_observations || '', p.medical_diseases || '', p.medical_allergies || ''
-    ]);
+    let carnet = p.carnet_number;
+    let inserted = false;
+    let attempts = 0;
+    let lastErr = null;
+
+    while (!inserted && attempts < 4) {
+      attempts++;
+      if (!carnet || attempts > 1) carnet = await nextCarnetNumber();
+      try {
+        await db.run(`INSERT INTO pets (id, carnet_number, name, species, breed, sex, birth_date, color, weight,
+          category, status, photo, fingerprint, offspring, registration_date,
+          owner_name, owner_ci, owner_address, owner_city, owner_phone, owner_email,
+          medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_diseases, medical_allergies)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)`, [
+          id, carnet, p.name, p.species || 'perro', p.breed || '', p.sex || 'Macho',
+          p.birth_date || '', p.color || '', p.weight || '', p.category || 'General',
+          p.status || 'Activo', p.photo || '', p.fingerprint || '', p.offspring || '', regDate,
+          p.owner_name, p.owner_ci || '', p.owner_address || '', p.owner_city || '', p.owner_phone, p.owner_email || '',
+          p.medical_vaccinated || 'No', p.medical_vaccines || '', p.medical_vet || '',
+          p.medical_observations || '', p.medical_diseases || '', p.medical_allergies || ''
+        ]);
+        inserted = true;
+      } catch (e) {
+        const isDup = e.code === '23505' || (e.message && (e.message.includes('duplicate key') || e.message.includes('UNIQUE constraint')));
+        if (isDup && attempts < 4) {
+          lastErr = e;
+          continue;
+        }
+        throw e;
+      }
+    }
+
+    if (!inserted) {
+      console.error('POST /api/pets: no se pudo asignar número de carnet tras 4 intentos', lastErr);
+      return res.status(500).json({ error: 'No se pudo generar el número de carnet, intente de nuevo' });
+    }
 
     // Auto-crear espectador con password = CI
     if (p.owner_ci) {
@@ -148,8 +171,13 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
 
 async function nextCarnetNumber() {
   const year = new Date().getFullYear();
-  const row = await db.get("SELECT COUNT(*) as c FROM pets WHERE carnet_number LIKE $1", [`%${year}%`]);
-  return `PLI-BO-${year}-${String((row ? parseInt(row.c) : 0) + 1).padStart(5, '0')}`;
+  const rows = await db.query("SELECT carnet_number FROM pets WHERE carnet_number LIKE $1", [`PLI-BO-${year}-%`]);
+  let max = 0;
+  for (const r of rows) {
+    const num = parseInt(String(r.carnet_number).split('-').pop(), 10);
+    if (!isNaN(num) && num > max) max = num;
+  }
+  return `PLI-BO-${year}-${String(max + 1).padStart(5, '0')}`;
 }
 
 module.exports = router;
