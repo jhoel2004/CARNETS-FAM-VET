@@ -73,45 +73,31 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
     if (!p.name || !p.owner_name || !p.owner_phone)
       return res.status(400).json({ error: 'Nombre, propietario y teléfono son requeridos' });
 
+    if (!p.carnet_number || !String(p.carnet_number).trim())
+      return res.status(400).json({ error: 'El número de carnet/CI es requerido' });
+
+    const dupCheck = await db.get('SELECT id FROM pets WHERE carnet_number = $1', [String(p.carnet_number).trim()]);
+    if (dupCheck && dupCheck.id !== p.id)
+      return res.status(409).json({ error: 'El número de carnet/CI ya existe' });
+
     const id = p.id || 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     const regDate = p.registration_date || new Date().toISOString().slice(0, 10);
+    const carnet = String(p.carnet_number).trim();
 
-    let carnet = p.carnet_number;
-    let inserted = false;
-    let attempts = 0;
-    let lastErr = null;
-
-    while (!inserted && attempts < 4) {
-      attempts++;
-      if (!carnet || attempts > 1) carnet = await nextCarnetNumber();
-      try {
-        await db.run(`INSERT INTO pets (id, carnet_number, name, species, breed, sex, birth_date, color, weight,
-          category, status, photo, fingerprint, offspring, registration_date,
-          owner_name, owner_ci, owner_address, owner_city, owner_phone, owner_email,
-          medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_diseases, medical_allergies)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)`, [
-          id, carnet, p.name, p.species || 'perro', p.breed || '', p.sex || 'Macho',
-          p.birth_date || '', p.color || '', p.weight || '', p.category || 'General',
-          p.status || 'Activo', p.photo || '', p.fingerprint || '', p.offspring || '', regDate,
-          p.owner_name, p.owner_ci || '', p.owner_address || '', p.owner_city || '', p.owner_phone, p.owner_email || '',
-          p.medical_vaccinated || 'No', p.medical_vaccines || '', p.medical_vet || '',
-          p.medical_observations || '', p.medical_diseases || '', p.medical_allergies || ''
-        ]);
-        inserted = true;
-      } catch (e) {
-        const isDup = e.code === '23505' || (e.message && (e.message.includes('duplicate key') || e.message.includes('UNIQUE constraint')));
-        if (isDup && attempts < 4) {
-          lastErr = e;
-          continue;
-        }
-        throw e;
-      }
-    }
-
-    if (!inserted) {
-      console.error('POST /api/pets: no se pudo asignar número de carnet tras 4 intentos', lastErr);
-      return res.status(500).json({ error: 'No se pudo generar el número de carnet, intente de nuevo' });
-    }
+    await db.run(`INSERT INTO pets (id, carnet_number, name, species, breed, sex, birth_date, color, weight,
+      category, status, photo, fingerprint, offspring, registration_date,
+      owner_name, owner_ci, owner_address, owner_city, owner_phone, owner_email,
+      medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_diseases, medical_allergies,
+      signature, age_years, age_months)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)`, [
+      id, carnet, p.name, p.species || 'perro', p.breed || '', p.sex || 'Macho',
+      p.birth_date || '', p.color || '', p.weight || '', p.category || 'General',
+      p.status || 'Activo', p.photo || '', p.fingerprint || '', p.offspring || '', regDate,
+      p.owner_name, p.owner_ci || '', p.owner_address || '', p.owner_city || '', p.owner_phone, p.owner_email || '',
+      p.medical_vaccinated || 'No', p.medical_vaccines || '', p.medical_vet || '',
+      p.medical_observations || '', p.medical_diseases || '', p.medical_allergies || '',
+      p.signature || '', p.age_years || '', p.age_months || ''
+    ]);
 
     // Auto-crear espectador con password = CI
     if (p.owner_ci) {
@@ -136,17 +122,25 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Mascota no encontrada' });
 
     const p = req.body;
+
+    if (p.carnet_number && String(p.carnet_number).trim() !== existing.carnet_number) {
+      const dupCheck = await db.get('SELECT id FROM pets WHERE carnet_number = $1 AND id != $2', [String(p.carnet_number).trim(), req.params.id]);
+      if (dupCheck) return res.status(409).json({ error: 'El número de carnet/CI ya existe' });
+    }
+
     await db.run(`UPDATE pets SET
-      name=$1, species=$2, breed=$3, sex=$4, birth_date=$5, color=$6, weight=$7, category=$8, status=$9,
-      photo=$10, fingerprint=$11, offspring=$12, registration_date=$13,
-      owner_name=$14, owner_ci=$15, owner_address=$16, owner_city=$17, owner_phone=$18, owner_email=$19,
-      medical_vaccinated=$20, medical_vaccines=$21, medical_vet=$22, medical_observations=$23, medical_diseases=$24, medical_allergies=$25,
-      updated_at=$26
-      WHERE id=$27`, [
-      p.name, p.species, p.breed, p.sex, p.birth_date, p.color, p.weight, p.category, p.status,
+      carnet_number=$1, name=$2, species=$3, breed=$4, sex=$5, birth_date=$6, color=$7, weight=$8, category=$9, status=$10,
+      photo=$11, fingerprint=$12, offspring=$13, registration_date=$14,
+      owner_name=$15, owner_ci=$16, owner_address=$17, owner_city=$18, owner_phone=$19, owner_email=$20,
+      medical_vaccinated=$21, medical_vaccines=$22, medical_vet=$23, medical_observations=$24, medical_diseases=$25, medical_allergies=$26,
+      signature=$27, age_years=$28, age_months=$29,
+      updated_at=$30
+      WHERE id=$31`, [
+      p.carnet_number || existing.carnet_number, p.name, p.species, p.breed, p.sex, p.birth_date, p.color, p.weight, p.category, p.status,
       p.photo, p.fingerprint, p.offspring || '', p.registration_date,
       p.owner_name, p.owner_ci, p.owner_address, p.owner_city, p.owner_phone, p.owner_email,
       p.medical_vaccinated, p.medical_vaccines, p.medical_vet, p.medical_observations, p.medical_diseases, p.medical_allergies,
+      p.signature || '', p.age_years || '', p.age_months || '',
       new Date().toISOString(), req.params.id
     ]);
 

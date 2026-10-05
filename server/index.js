@@ -87,7 +87,7 @@ app.use((err, req, res, _next) => {
 async function start() {
   await db.init();
   app.listen(PORT, () => {
-    console.log(`FAM-VET corriendo en http://localhost:${PORT}`);
+    console.log(`FAM J VET corriendo en http://localhost:${PORT}`);
   });
 }
 

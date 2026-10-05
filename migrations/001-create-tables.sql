@@ -1,5 +1,5 @@
 -- ============================================
--- FAM-VET - Migración a Supabase PostgreSQL
+-- FAM J VET - Migración a Supabase PostgreSQL
 -- Ejecutar en SQL Editor de Supabase
 -- ============================================
 
@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS pets (
   medical_observations TEXT DEFAULT '',
   medical_diseases TEXT DEFAULT '',
   medical_allergies TEXT DEFAULT '',
+  signature TEXT DEFAULT '',
+  age_years TEXT DEFAULT '',
+  age_months TEXT DEFAULT '',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -85,7 +88,7 @@ ON CONFLICT (username) DO NOTHING;
 
 -- Configuración por defecto
 INSERT INTO settings (key, value) VALUES
-('systemName', 'FAM-VET'),
+('systemName', 'FAM J VET'),
 ('systemSub', 'Sistema Nacional de Identificación de Mascotas'),
 ('defaultTemplate', 'bolivia'),
 ('qrSize', '56'),

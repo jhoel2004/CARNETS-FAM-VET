@@ -169,8 +169,9 @@ async function openDetailModal(id) {
       </div>
       <div id="dtab-a" class="detail-view-grid">
         ${detailField('Color', p.color)}${detailField('Peso', p.weight ? p.weight + ' kg' : '—')}
-        ${detailField('Categoría', p.category)}${detailField('Fecha de nacimiento', p.birth_date)}
-        ${detailField('Fecha de registro', p.registration_date)}${detailField('Huella', p.fingerprint ? 'Registrada' : 'No registrada')}
+        ${detailField('Categoría', p.category)}${detailField('Edad', formatAge(p))}
+        ${detailField('Fecha de nacimiento', p.birth_date)}${detailField('Fecha de registro', p.registration_date)}
+        ${detailField('Huella', p.fingerprint ? 'Registrada' : 'No registrada')}${detailField('Firma', p.signature || '—')}
       </div>
       <div id="dtab-o" class="detail-view-grid hidden">
         ${detailField('Nombre completo', p.owner_name)}${detailField('CI', p.owner_ci)}
@@ -234,6 +235,15 @@ async function openDetailModal(id) {
   });
 }
 
+function formatAge(p) {
+  const parts = [];
+  if (p.age_years) parts.push(`${p.age_years} año${p.age_years !== '1' ? 's' : ''}`);
+  if (p.age_months) parts.push(`${p.age_months} mes${p.age_months !== '1' ? 'es' : ''}`);
+  if (parts.length) return parts.join(' ');
+  if (p.birth_date) return calcAgeF(p.birth_date);
+  return '—';
+}
+
 function calcAgeF(dob) {
   if (!dob) return '—';
   const b = new Date(dob), n = new Date();
@@ -248,10 +258,11 @@ function calcAgeF(dob) {
 
 function blankPet() {
   return {
-    id: uid(), name: '', species: 'perro', breed: '', sex: 'Macho', birth_date: '', color: '', weight: '',
+    id: uid(), name: '', carnet_number: '', species: 'perro', breed: '', sex: 'Macho', birth_date: '', color: '', weight: '',
     category: 'General', status: 'Activo', photo: '', fingerprint: '', offspring: '', registration_date: new Date().toISOString().slice(0, 10),
     owner_name: '', owner_ci: '', owner_address: '', owner_city: '', owner_phone: '', owner_email: '',
-    medical_vaccinated: 'No', medical_vaccines: '', medical_vet: '', medical_observations: '', medical_diseases: '', medical_allergies: ''
+    medical_vaccinated: 'No', medical_vaccines: '', medical_vet: '', medical_observations: '', medical_diseases: '', medical_allergies: '',
+    signature: '', age_years: '', age_months: ''
   };
 }
 
@@ -274,15 +285,18 @@ export async function openPetModal(id) {
       <form id="pet-form">
         <div id="ftab-animal" class="form-grid">
           <div class="field full"><label>Nombre de la mascota *</label><input required name="name" value="${escapeHtml(pet.name)}"></div>
-          <div class="field"><label>N° de carnet</label><input name="carnet_number" value="${pet.carnet_number || ''}" readonly style="opacity:.7;"></div>
+          <div class="field"><label>N° de carnet / CI *</label><input required name="carnet_number" value="${escapeHtml(pet.carnet_number || '')}" placeholder="Ej: PLI-BO-2026-00001"></div>
           <div class="field"><label>Especie</label><select name="species"><option value="perro" ${pet.species === 'perro' ? 'selected' : ''}>Perro</option><option value="gato" ${pet.species === 'gato' ? 'selected' : ''}>Gato</option><option value="otro" ${pet.species === 'otro' ? 'selected' : ''}>Otro</option></select></div>
           <div class="field"><label>Raza</label><input name="breed" value="${escapeHtml(pet.breed || '')}"></div>
           <div class="field"><label>Sexo</label><select name="sex"><option ${pet.sex === 'Macho' ? 'selected' : ''}>Macho</option><option ${pet.sex === 'Hembra' ? 'selected' : ''}>Hembra</option></select></div>
-          <div class="field"><label>Fecha de nacimiento</label><input type="date" name="birth_date" value="${pet.birth_date || ''}"></div>
+          <div class="field"><label>Edad - Años</label><input type="number" min="0" max="30" name="age_years" value="${escapeHtml(pet.age_years || '')}" placeholder="Ej: 3"></div>
+          <div class="field"><label>Edad - Meses</label><input type="number" min="0" max="11" name="age_months" value="${escapeHtml(pet.age_months || '')}" placeholder="Ej: 6"></div>
+          <div class="field"><label>Fecha de nacimiento (opcional)</label><input type="date" name="birth_date" value="${pet.birth_date || ''}"></div>
           <div class="field"><label>Color</label><input name="color" value="${escapeHtml(pet.color || '')}"></div>
           <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" name="weight" value="${pet.weight || ''}"></div>
           <div class="field"><label>Categoría</label><input name="category" value="${escapeHtml(pet.category || '')}"></div>
           <div class="field"><label>Estado</label><select name="status"><option ${pet.status === 'Activo' ? 'selected' : ''}>Activo</option><option ${pet.status === 'Inactivo' ? 'selected' : ''}>Inactivo</option><option ${pet.status === 'Perdido' ? 'selected' : ''}>Perdido</option></select></div>
+          <div class="field"><label>Firma del propietario</label><input name="signature" value="${escapeHtml(pet.signature || '')}" placeholder="Nombre o firma del titular"></div>
           <div class="field"><label>Huella (opcional, texto/código)</label><input name="fingerprint" value="${escapeHtml(pet.fingerprint || '')}"></div>
           <div class="field"><label>Hijos (camada)</label><input name="offspring" value="${escapeHtml(pet.offspring || '')}" placeholder="Ej: 3 cachorros"></div>
           <div class="field"><label>Fecha de registro</label><input type="date" name="registration_date" value="${pet.registration_date || ''}"></div>
@@ -379,8 +393,8 @@ async function savePet(id, isEdit) {
   const fd = new FormData(form);
   const get = k => fd.get(k) || '';
 
-  if (!get('name').trim() || !get('owner_name').trim() || !get('owner_phone').trim()) {
-    toast('Completa los campos obligatorios (*)', 'error');
+  if (!get('name').trim() || !get('owner_name').trim() || !get('owner_phone').trim() || !get('carnet_number').trim()) {
+    toast('Completa los campos obligatorios (*), incluyendo el número de carnet', 'error');
     return;
   }
 
@@ -396,7 +410,8 @@ async function savePet(id, isEdit) {
     owner_city: get('owner_city'), owner_phone: get('owner_phone'), owner_email: get('owner_email'),
     medical_vaccinated: get('medical_vaccinated'), medical_vaccines: get('medical_vaccines'),
     medical_vet: get('medical_vet'), medical_observations: get('medical_observations'),
-    medical_diseases: get('medical_diseases'), medical_allergies: get('medical_allergies')
+    medical_diseases: get('medical_diseases'), medical_allergies: get('medical_allergies'),
+    signature: get('signature'), age_years: get('age_years'), age_months: get('age_months')
   };
 
   try {

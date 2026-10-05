@@ -75,6 +75,9 @@ async function createSqliteTables() {
     medical_observations TEXT DEFAULT '',
     medical_diseases TEXT DEFAULT '',
     medical_allergies TEXT DEFAULT '',
+    signature TEXT DEFAULT '',
+    age_years TEXT DEFAULT '',
+    age_months TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
@@ -92,6 +95,14 @@ async function createSqliteTables() {
     created_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
 
+  // Add new columns to existing tables if missing
+  const addCol = (table, col) => {
+    try { sqlJsDb.run(`ALTER TABLE ${table} ADD COLUMN ${col}`); } catch (_) {}
+  };
+  addCol('pets', "signature TEXT DEFAULT ''");
+  addCol('pets', "age_years TEXT DEFAULT ''");
+  addCol('pets', "age_months TEXT DEFAULT ''");
+
   // Seed admin user if not exists
   const adminExists = sqlJsDb.exec("SELECT id FROM users WHERE username = 'admin'");
   if (!adminExists.length || !adminExists[0].values.length) {
@@ -101,7 +112,7 @@ async function createSqliteTables() {
   // Seed settings
   const nameExists = sqlJsDb.exec("SELECT key FROM settings WHERE key = 'system_name'");
   if (!nameExists.length || !nameExists[0].values.length) {
-    sqlJsDb.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", ['system_name', 'FAM-VET']);
+    sqlJsDb.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", ['system_name', 'FAM J VET']);
   }
   save();
 }
