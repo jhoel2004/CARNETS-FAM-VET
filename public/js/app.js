@@ -194,4 +194,6 @@ function bindViewEvents() {
   bindPetsEvents();
   bindConfigEvents();
   bindCarnetEvents();
+  document.querySelectorAll('#page-body [data-nav]').forEach(el => el.addEventListener('click', () => { state.view = el.dataset.nav; renderApp(); }));
+  document.querySelectorAll('#page-body [data-pet]').forEach(el => el.addEventListener('click', () => { state.view = 'mascotas'; state.search = ''; renderApp(); }));
 }
