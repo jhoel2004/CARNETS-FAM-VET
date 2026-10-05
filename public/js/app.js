@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { setToken } from './api.js';
 import { api } from './api.js';
-import { pawSvg, iconGrid, iconPaw, iconCard, iconSearch, iconClock, iconGear, iconLogout, iconMenu, iconPlus } from './icons.js';
+import { pawSvg, iconGrid, iconPaw, iconCard, iconSearch, iconClock, iconGear, iconLogout, iconMenu, iconPlus, iconX } from './icons.js';
 import { escapeHtml, toast, statusBadge, speciesLabel, placeholderPhoto } from './utils.js';
 import { initLogin, renderLogin } from './pages/login.js';
 import { initDashboard, viewDashboard, drawCharts } from './pages/dashboard.js';
@@ -50,6 +50,7 @@ export function renderApp() {
   const app = document.getElementById('app');
   app.innerHTML = `
   <div class="shell">
+    <div class="drawer-veil ${state.sidebarOpen ? 'show' : ''}" id="drawer-veil"></div>
     ${sidebarHtml()}
     <div class="main">
       ${topbarHtml()}
@@ -145,7 +146,7 @@ function sidebarHtml() {
 function topbarHtml() {
   return `
   <div class="topbar">
-    <button class="btn-icon" id="btn-burger" style="display:none;">${iconMenu}</button>
+    <button class="btn-icon" id="btn-burger" title="Abrir panel de opciones">${iconMenu}</button>
     <div class="search-global">
       ${iconSearch}
       <input id="global-search" placeholder="Buscar mascota, propietario, CI, teléfono o carnet..." value="${escapeHtml(state.search)}" autocomplete="off">
@@ -168,11 +169,30 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+let escBound = false;
+
+function setDrawer(open) {
+  state.sidebarOpen = open;
+  document.getElementById('sidebar')?.classList.toggle('open', open);
+  document.getElementById('drawer-veil')?.classList.toggle('show', open);
+  const burger = document.getElementById('btn-burger');
+  if (burger) {
+    burger.classList.toggle('open', open);
+    burger.innerHTML = open ? iconX : iconMenu;
+    burger.title = open ? 'Cerrar panel de opciones' : 'Abrir panel de opciones';
+  }
+}
+
 function bindShellEvents() {
   const burger = document.getElementById('btn-burger');
   if (burger) {
-    burger.style.display = '';
-    burger.addEventListener('click', () => { state.sidebarOpen = !state.sidebarOpen; document.getElementById('sidebar')?.classList.toggle('open', state.sidebarOpen); });
+    if (state.sidebarOpen) { burger.classList.add('open'); burger.innerHTML = iconX; }
+    burger.addEventListener('click', () => setDrawer(!state.sidebarOpen));
+  }
+  document.getElementById('drawer-veil')?.addEventListener('click', () => setDrawer(false));
+  if (!escBound) {
+    escBound = true;
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.sidebarOpen) setDrawer(false); });
   }
   document.querySelectorAll('[data-nav]').forEach(el => el.addEventListener('click', () => { state.view = el.dataset.nav; state.sidebarOpen = false; renderApp(); }));
   const logout = document.querySelector('[data-action="logout"]');
