@@ -45,6 +45,59 @@ export function statCard(label, val, color, icon) {
   return `<div class="stat-card"><div class="top"><div class="icon" style="background:${color}22; color:${color};">${icon}</div></div><div class="val">${val}</div><div class="lbl">${label}</div></div>`;
 }
 
+export function dayLabel(dateStr) {
+  if (!dateStr) return 'Actividad';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d)) return dateStr;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((today - day) / 86400000);
+  if (diff === 0) return 'Hoy';
+  if (diff === 1) return 'Ayer';
+  if (diff > 1 && diff < 7) return `Hace ${diff} días`;
+  return dateStr;
+}
+
+export function describeHistory(h) {
+  const action = (h.action || '').toLowerCase();
+  const entity = h.entity || '';
+  if (/imprim|impresi|pdf|carnet.*(impr|gener)/i.test(h.action || '') || /imprim/i.test(action)) {
+    return `Se imprimió el carnet de ${entity}`;
+  }
+  if (/export/i.test(action)) {
+    const m = entity.match(/(\d+)/);
+    return m ? `Se exportaron ${m[1]} registros` : `Se exportó la base de datos`;
+  }
+  if (/descarg/i.test(action)) {
+    return `Se descargó el carnet de ${entity}`;
+  }
+  if (/nuev|registr|cre/i.test(action)) {
+    return entity ? `Se registró una nueva mascota: ${entity}` : 'Se registró una nueva mascota';
+  }
+  if (/actualiz|edit|modific/i.test(action)) {
+    return `Se actualizó la ficha de ${entity}`;
+  }
+  if (/elimin|borr/i.test(action)) {
+    return `Se eliminó el registro de ${entity}`;
+  }
+  if (/perd/i.test(action)) {
+    return `Se reportó perdida: ${entity}`;
+  }
+  return `${h.action || 'Movimiento'} — ${entity}`;
+}
+
+export function groupHistoryByDay(list) {
+  const groups = [];
+  const map = new Map();
+  (list || []).forEach(h => {
+    const label = dayLabel(h.date);
+    if (!map.has(label)) { map.set(label, []); groups.push({ label, items: map.get(label) }); }
+    map.get(label).push(h);
+  });
+  return groups;
+}
+
 export function toast(msg, type) {
   const el = document.createElement('div');
   el.className = 'toast' + (type === 'error' ? ' error' : '');

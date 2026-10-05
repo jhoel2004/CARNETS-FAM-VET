@@ -1,4 +1,4 @@
-import { escapeHtml, statusBadge, speciesLabel, placeholderPhoto } from '../utils.js';
+import { escapeHtml, statusBadge, placeholderPhoto, groupHistoryByDay, describeHistory } from '../utils.js';
 
 let state = null;
 
@@ -13,19 +13,8 @@ function greeting() {
   return 'Buenas noches';
 }
 
-function humanWhen(dateStr, timeStr) {
-  if (!dateStr) return timeStr || '';
-  const d = new Date(dateStr + 'T00:00:00');
-  if (isNaN(d)) return `${dateStr} ${timeStr || ''}`.trim();
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diff = Math.round((today - day) / 86400000);
-  const hora = timeStr ? ` · ${timeStr}` : '';
-  if (diff === 0) return `Hoy${hora}`;
-  if (diff === 1) return `Ayer${hora}`;
-  if (diff > 1 && diff < 7) return `Hace ${diff} días${hora}`;
-  return `${dateStr}${hora}`;
+function speciesShort(s) {
+  return { perro: 'Perro', gato: 'Gato', otro: 'Otro' }[s] || s || '—';
 }
 
 export function viewDashboard() {
@@ -36,34 +25,41 @@ export function viewDashboard() {
   const userName = escapeHtml((state.user && state.user.name ? state.user.name.split(' ')[0] : 'Administrador'));
 
   const sorted = [...pets].sort((a, b) => new Date(b.registration_date) - new Date(a.registration_date));
-  const latest = sorted.slice(0, 8);
-  const recent = state.getHistory().slice(0, 8);
+  const latest = sorted.slice(0, 6);
+  const groups = groupHistoryByDay(state.getHistory().slice(0, 12));
 
   const summary = total === 0
-    ? 'Aún no hay mascotas registradas. Empieza creando la primera ficha.'
-    : `Tienes <b>${total}</b> ${total === 1 ? 'mascota registrada' : 'mascotas registradas'} · ${active} activas${lost ? ` · <span style="color:var(--status-lost);font-weight:700;">${lost} perdida${lost === 1 ? '' : 's'}</span>` : ''}.`;
+    ? 'Aún no hay mascotas registradas. Crea la primera ficha para empezar.'
+    : `<b>${total}</b> ${total === 1 ? 'mascota registrada' : 'mascotas registradas'} <span class="sep">·</span> <b>${total}</b> ${total === 1 ? 'carnet emitido' : 'carnets emitidos'} <span class="sep">·</span> <b>${active}</b> ${active === 1 ? 'activa' : 'activas'}${lost ? ` <span class="sep">·</span> <span class="lost-n">${lost} ${lost === 1 ? 'perdida' : 'perdidas'}</span>` : ' <span class="sep">·</span> 0 perdidas'}`;
 
   return `
-  <div class="page-head"><div><h1>${greeting()}, ${userName} 🐾</h1><p>${summary}</p></div></div>
+  <div class="page-head"><div><h1>${greeting()}, ${userName}</h1><p>Resumen de registros y carnets</p><div class="dash-summary">${summary}</div></div></div>
   <div class="grid-2 dash-grid">
     <div class="panel">
-      <h3>Últimas mascotas <button class="btn btn-ghost btn-sm" data-nav="mascotas">Ver todas →</button></h3>
+      <div class="dash-sec-title"><span><span class="sec-ico">🐾</span>Mascotas recientes</span><button class="btn btn-ghost btn-sm" data-nav="mascotas">Ver todas</button></div>
       ${latest.length ? `<div class="mini-table">
         ${latest.map(p => `
           <div class="mini-row" data-pet="${p.id}">
             <img class="pet-thumb" src="${p.photo || placeholderPhoto()}" alt="">
-            <div class="mini-main"><b>${escapeHtml(p.name)}</b><span class="faint">${speciesLabel(p.species)} · N° ${escapeHtml(p.carnet_number || '—')}</span></div>
+            <div class="mini-main"><b>${escapeHtml(p.name)}</b><span class="faint">${speciesShort(p.species)} · N° ${escapeHtml(p.carnet_number || '—')}</span></div>
             <div class="mini-side">${statusBadge(p.status)}<span class="faint mini-date">${escapeHtml(p.registration_date || '')}</span></div>
           </div>`).join('')}
-      </div>` : `<div class="empty-state"><div style="font-size:40px;">🐾</div><div><b>Todavía no hay fichas</b><p>Registra tu primera mascota para verla aquí.</p></div></div>`}
+      </div>` : `<div class="empty-state" style="padding:28px 16px;"><div style="font-size:32px;">🐾</div><div><b>Todavía no hay fichas</b><p>Registra la primera mascota para verla aquí.</p></div></div>`}
     </div>
     <div class="panel">
-      <h3>Movimientos en la veterinaria</h3>
-      ${recent.length ? recent.map(h => `<div class="activity-row"><span class="dot" style="background:${/perd/i.test(h.action || '') ? 'var(--status-lost)' : /nuev|registr|cre/i.test(h.action || '') ? 'var(--status-active)' : 'var(--text-faint)'}"></span><div><b>${escapeHtml(h.action)}</b> — ${escapeHtml(h.entity)}<div class="faint">${escapeHtml(h.user || '')} · ${humanWhen(h.date, h.time)}</div></div></div>`).join('') : `<p class="faint">Sin movimientos todavía. Cada registro o carnet aparecerá aquí.</p>`}
+      <div class="dash-sec-title"><span><span class="sec-ico">📋</span>Actividad reciente</span></div>
+      ${groups.length ? groups.map(g => `
+        <div class="act-day">${escapeHtml(g.label)}</div>
+        ${g.items.map(h => `
+          <div class="act-item">
+            <span class="act-time">${escapeHtml((h.time || '').slice(0, 5))}</span>
+            <div class="act-body"><b>${escapeHtml(describeHistory(h))}</b><div class="act-user">${escapeHtml(h.user || '')}</div></div>
+          </div>`).join('')}
+      `).join('') : `<p class="faint">Sin actividad registrada.</p>`}
     </div>
   </div>`;
 }
 
 export function drawCharts() {
-  // Gráficos eliminados por decisión de diseño — sin operación.
+  // Sin gráficos por decisión de diseño.
 }
