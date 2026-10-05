@@ -25,7 +25,6 @@ export function viewConfig() {
         <div class="field"><label>Formato de carnet</label><input id="cfg-format" value="${escapeHtml(s.cardFormat || '')}"></div>
         <div class="field"><label>Tamaño de QR (px)</label><input id="cfg-qr" type="number" value="${s.qrSize || 56}"></div>
         <div class="field full"><label>Texto de pie de carnet</label><input id="cfg-footer" value="${escapeHtml(s.footerText || '')}"></div>
-        <div class="field full"><label>Texto de firma del carnet</label><input id="cfg-signature" value="${escapeHtml(s.signatureText || '')}" placeholder="Ej: Jhoel" style="font-family:'Brush Script MT',cursive;font-size:18px;font-style:italic;"></div>
         <div class="field full"><label>Plantilla predeterminada</label>
           <select id="cfg-tpl">${TEMPLATES.map(t => `<option value="${t.id}" ${s.defaultTemplate === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}</select>
         </div>
@@ -59,8 +58,7 @@ export function bindConfigEvents() {
         cardFormat: document.getElementById('cfg-format').value,
         qrSize: Number(document.getElementById('cfg-qr').value) || 56,
         footerText: document.getElementById('cfg-footer').value,
-        defaultTemplate: document.getElementById('cfg-tpl').value,
-        signatureText: document.getElementById('cfg-signature').value
+        defaultTemplate: document.getElementById('cfg-tpl').value
       });
       await state.loadSettings();
       api.logHistory('Actualización de configuración', state.getSettings().systemName);

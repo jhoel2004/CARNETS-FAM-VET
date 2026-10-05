@@ -24,6 +24,10 @@ export const iconFileDown = w(`<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2
 export const iconUser = w(`<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.2 3.9-5 7-5s5.8 1.8 7 5"/>`);
 export const iconPhone = w(`<path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.13.96.36 1.9.7 2.8a2 2 0 01-.45 2.1L8.1 9.9a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0122 16.9z"/>`);
 export const iconPin = w(`<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1116 0z"/><circle cx="12" cy="10" r="3"/>`);
+export const iconDog = w(`<circle cx="9" cy="9" r="1.4"/><circle cx="15" cy="9" r="1.4"/><path d="M7 4C5.5 4 4.5 5.5 5 7l1 3.5c.3 1 1.2 1.5 2 1M17 4c1.5 0 2.5 1.5 2 3l-1 3.5c-.3 1-1.2 1.5-2 1"/><path d="M12 11.5c-2.6 0-4.5 1.9-4.5 4 0 1.5 1.1 2.5 2.5 2.5.7 0 1.3-.3 2-.3s1.3.3 2 .3c1.4 0 2.5-1 2.5-2.5 0-2.1-1.9-4-4.5-4z"/>`);
+export const iconCat = w(`<path d="M5 4l2.5 2.5M19 4l-2.5 2.5"/><circle cx="9.5" cy="10" r="1.3"/><circle cx="14.5" cy="10" r="1.3"/><path d="M12 6.5c-3 0-5 2.2-5 5 0 1.4.6 2.4 1.8 3.2.5 1.7 1.7 3.3 3.2 3.3s2.7-1.6 3.2-3.3c1.2-.8 1.8-1.8 1.8-3.2 0-2.8-2-5-5-5z"/><path d="M10 14.5c.6.5 1.3.7 2 .7s1.4-.2 2-.7"/>`);
+export const iconCalendar = w(`<rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M8 3v4M16 3v4M3.5 10h17"/>`);
+export const iconChart = w(`<path d="M3 3v16a2 2 0 002 2h16"/><path d="M7 14l4-4 3 3 5-6"/>`);
 
 export function pawSvg(size = 34) {
   return `<svg class="paw" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="9.5" r="2" fill="#C59A38"/><circle cx="12" cy="6.2" r="2" fill="#C59A38"/><circle cx="17" cy="9.5" r="2" fill="#C59A38"/><path d="M7 15.4c0-2.5 2.1-4.4 5-4.4s5 1.9 5 4.4-2.2 3.9-5 3.9-5-1.4-5-3.9z" fill="#C59A38"/></svg>`;

@@ -98,6 +98,127 @@ export function groupHistoryByDay(list) {
   return groups;
 }
 
+export function pctOf(v, total) {
+  return total ? Math.round((v / total) * 100) : 0;
+}
+
+// Edad en años (decimal) a partir de age_years/age_months, con fallback a birth_date.
+export function petAgeYears(p) {
+  const y = parseFloat(p.age_years);
+  const m = parseFloat(p.age_months);
+  if (!isNaN(y) || !isNaN(m)) return (isNaN(y) ? 0 : y) + (isNaN(m) ? 0 : m) / 12;
+  if (p.birth_date) {
+    const b = new Date(p.birth_date);
+    if (!isNaN(b)) return Math.max(0, (Date.now() - b.getTime()) / 31557600000);
+  }
+  return null;
+}
+
+export function ageGroupLabel(y) {
+  if (y == null) return 'Sin información';
+  if (y < 1) return '0–1 años';
+  if (y < 4) return '1–3 años';
+  if (y < 8) return '4–7 años';
+  if (y < 12) return '8–12 años';
+  return '12+ años';
+}
+
+export function monthKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function monthShort(key) {
+  const [y, m] = key.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('es-BO', { month: 'short' });
+}
+
+// Últimos N meses (incluye actual) como ['2025-11', ...]
+export function lastMonths(n) {
+  const out = [];
+  const d = new Date();
+  d.setDate(1);
+  for (let i = n - 1; i >= 0; i--) {
+    const t = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    out.push(monthKey(t));
+  }
+  return out;
+}
+
+// Estadísticas del dashboard calculadas solo con datos reales.
+export function calcDashboardStats(pets, history) {
+  const total = pets.length;
+  const now = new Date();
+  const byStatus = { Activo: 0, Inactivo: 0, Perdido: 0 };
+  const bySpecies = { perro: 0, gato: 0, otro: 0 };
+  const bySex = { Macho: 0, Hembra: 0, ND: 0 };
+  const byAge = { '0–1 años': 0, '1–3 años': 0, '4–7 años': 0, '8–12 años': 0, '12+ años': 0, 'Sin información': 0 };
+  const breeds = new Map();
+  const owners = new Map();
+  let thisMonth = 0;
+  let incomplete = 0;
+  let sterilized = 0;
+
+  pets.forEach(p => {
+    if (byStatus[p.status] !== undefined) byStatus[p.status]++;
+    else byStatus.Inactivo++;
+    if (bySpecies[p.species] !== undefined) bySpecies[p.species]++;
+    else bySpecies.otro++;
+    if (p.sex === 'Macho' || p.sex === 'Hembra') bySex[p.sex]++;
+    else bySex.ND++;
+
+    byAge[ageGroupLabel(petAgeYears(p))]++;
+
+    const b = (p.breed || '').trim();
+    if (b) {
+      const k = b.toLowerCase();
+      if (!breeds.has(k)) breeds.set(k, { name: b, count: 0 });
+      breeds.get(k).count++;
+    }
+
+    const ok = (p.owner_ci || '').trim() || (p.owner_name || '').trim();
+    if (ok) {
+      if (!owners.has(ok)) owners.set(ok, { name: p.owner_name || ok, count: 0, thisMonth: false });
+      const o = owners.get(ok);
+      o.count++;
+    }
+
+    const rd = p.registration_date ? new Date(p.registration_date) : null;
+    if (rd && !isNaN(rd) && rd.getMonth() === now.getMonth() && rd.getFullYear() === now.getFullYear()) {
+      thisMonth++;
+      if (ok && owners.has(ok)) owners.get(ok).thisMonth = true;
+    }
+
+    if (!b || !p.photo || !p.weight) incomplete++;
+
+    const med = [p.medical_observations, p.medical_vaccines, p.medical_diseases].join(' ').toLowerCase();
+    if (/esteriliz|castrad/.test(med)) sterilized++;
+  });
+
+  const months = lastMonths(12);
+  const perMonth = months.map(k => pets.filter(p => (p.registration_date || '').slice(0, 7) === k).length);
+
+  const topBreeds = [...breeds.values()].sort((a, b) => b.count - a.count).slice(0, 5);
+  const topOwners = [...owners.values()].sort((a, b) => b.count - a.count).slice(0, 5);
+  const newOwnersMonth = [...owners.values()].filter(o => o.thisMonth).length;
+
+  const hist = history || [];
+  const printed = hist.filter(h => /impresi/.test((h.action || '').toLowerCase())).length;
+  const downloaded = hist.filter(h => /descarg/.test((h.action || '').toLowerCase())).length;
+
+  return {
+    total, thisMonth, incomplete,
+    active: byStatus.Activo, inactive: byStatus.Inactivo, lost: byStatus.Perdido,
+    dogs: bySpecies.perro, cats: bySpecies.gato, others: bySpecies.otro,
+    males: bySex.Macho, females: bySex.Hembra, sexND: bySex.ND,
+    byAge, topBreeds, topOwners,
+    ownersCount: owners.size, newOwnersMonth,
+    avgPerOwner: owners.size ? (total / owners.size) : 0,
+    months, perMonth,
+    printed, downloaded,
+    pendingCards: Math.max(0, total - printed),
+  };
+}
+
 export function toast(msg, type) {
   const el = document.createElement('div');
   el.className = 'toast' + (type === 'error' ? ' error' : '');

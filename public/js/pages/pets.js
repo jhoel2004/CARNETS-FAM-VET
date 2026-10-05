@@ -154,11 +154,11 @@ async function openDetailModal(id) {
     <div class="modal-head"><h3>Ficha completa · ${escapeHtml(p.name)}</h3><button class="btn-icon" data-close>${iconX}</button></div>
     <div class="modal-body">
       <div class="flex gap-3" style="align-items:flex-start; flex-wrap:wrap;">
-        <img src="${p.photo || placeholderPhoto()}" style="width:150px;height:150px;border-radius:14px;object-fit:cover;border:1px solid var(--border);">
+        <img src="${p.photo || placeholderPhoto()}" style="width:150px;height:150px;border-radius:12px;object-fit:cover;border:1px solid var(--border);">
         <div style="flex:1; min-width:240px;">
           <div class="flex items-center gap-2">${statusBadge(p.status)} <span class="faint" style="font-family:var(--font-mono);">${p.carnet_number}</span></div>
-          <h2 style="font-family:var(--font-serif); margin-top:8px;">${escapeHtml(p.name)}</h2>
-          <p class="muted">${speciesLabel(p.species)} · ${escapeHtml(p.breed || '—')} · ${p.sex} · ${calcAgeF(p.birth_date)}</p>
+          <h2 style="margin-top:8px;">${escapeHtml(p.name)}</h2>
+          <p class="muted">${speciesLabel(p.species)} · ${escapeHtml(p.breed || '—')} · ${p.sex} · ${formatAge(p)}</p>
         </div>
       </div>
       <div class="tabs" style="margin-top:20px;">
@@ -170,7 +170,7 @@ async function openDetailModal(id) {
       <div id="dtab-a" class="detail-view-grid">
         ${detailField('Color', p.color)}${detailField('Peso', p.weight ? p.weight + ' kg' : '—')}
         ${detailField('Categoría', p.category)}${detailField('Edad', formatAge(p))}
-        ${detailField('Fecha de nacimiento', p.birth_date)}${detailField('Fecha de registro', p.registration_date)}
+        ${detailField('Fecha de registro', p.registration_date)}${detailField('Firma del propietario', p.signature || '—')}
         ${detailField('Huella', p.fingerprint ? 'Registrada' : 'No registrada')}${detailField('Firma', p.signature || '—')}
       </div>
       <div id="dtab-o" class="detail-view-grid hidden">
@@ -291,12 +291,11 @@ export async function openPetModal(id) {
           <div class="field"><label>Sexo</label><select name="sex"><option ${pet.sex === 'Macho' ? 'selected' : ''}>Macho</option><option ${pet.sex === 'Hembra' ? 'selected' : ''}>Hembra</option></select></div>
           <div class="field"><label>Edad - Años</label><input type="number" min="0" max="30" name="age_years" value="${escapeHtml(pet.age_years || '')}" placeholder="Ej: 3"></div>
           <div class="field"><label>Edad - Meses</label><input type="number" min="0" max="11" name="age_months" value="${escapeHtml(pet.age_months || '')}" placeholder="Ej: 6"></div>
-          <div class="field"><label>Fecha de nacimiento (opcional)</label><input type="date" name="birth_date" value="${pet.birth_date || ''}"></div>
           <div class="field"><label>Color</label><input name="color" value="${escapeHtml(pet.color || '')}"></div>
           <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" name="weight" value="${pet.weight || ''}"></div>
           <div class="field"><label>Categoría</label><input name="category" value="${escapeHtml(pet.category || '')}"></div>
           <div class="field"><label>Estado</label><select name="status"><option ${pet.status === 'Activo' ? 'selected' : ''}>Activo</option><option ${pet.status === 'Inactivo' ? 'selected' : ''}>Inactivo</option><option ${pet.status === 'Perdido' ? 'selected' : ''}>Perdido</option></select></div>
-          <div class="field"><label>Firma del propietario</label><input name="signature" value="${escapeHtml(pet.signature || '')}" placeholder="Nombre o firma del titular"></div>
+          <div class="field"><label>Firma del propietario (aparece en el carnet)</label><input name="signature" value="${escapeHtml(pet.signature || '')}" placeholder="Ej: Juan Pérez"></div>
           <div class="field"><label>Huella (opcional, texto/código)</label><input name="fingerprint" value="${escapeHtml(pet.fingerprint || '')}"></div>
           <div class="field"><label>Hijos (camada)</label><input name="offspring" value="${escapeHtml(pet.offspring || '')}" placeholder="Ej: 3 cachorros"></div>
           <div class="field"><label>Fecha de registro</label><input type="date" name="registration_date" value="${pet.registration_date || ''}"></div>
@@ -402,7 +401,7 @@ async function savePet(id, isEdit) {
     id,
     carnet_number: get('carnet_number'),
     name: get('name'), species: get('species'), breed: get('breed'), sex: get('sex'),
-    birth_date: get('birth_date'), color: get('color'), weight: get('weight'),
+    birth_date: '', color: get('color'), weight: get('weight'),
     category: get('category') || 'General', status: get('status'),
     fingerprint: get('fingerprint'), offspring: get('offspring'), registration_date: get('registration_date'),
     photo: photoTemp,
