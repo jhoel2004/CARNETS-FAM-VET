@@ -1,6 +1,6 @@
 /**
  * Configuración del frontend.
- * - En desarrollo local (mismo servidor): window.__API_URL = '' (vacío, usa /api relativo)
- * - En producción (Netlify → Render): window.__API_URL = 'https://pet-llama-id.onrender.com'
+ * URL relativa (mismo origen): el backend Express sirve API + interfaz
+ * desde https://carnets-fam-vet.onrender.com — sin Netlify, sin CORS.
  */
-window.__API_URL = 'https://carnets-fam-vet.onrender.com';
+window.__API_URL = '';
