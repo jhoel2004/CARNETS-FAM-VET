@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { setToken } from './api.js';
 import { api } from './api.js';
-import { pawSvg, iconGrid, iconPaw, iconCard, iconSearch, iconClock, iconGear, iconLogout, iconMenu } from './icons.js';
+import { pawSvg, iconGrid, iconPaw, iconCard, iconSearch, iconClock, iconGear, iconLogout, iconMenu, iconPlus } from './icons.js';
 import { escapeHtml, toast, statusBadge, speciesLabel, placeholderPhoto } from './utils.js';
 import { initLogin, renderLogin } from './pages/login.js';
 import { initDashboard, viewDashboard, drawCharts } from './pages/dashboard.js';
@@ -76,7 +76,7 @@ export function renderSpectador() {
       ${!pets.length ? `<div class="empty-state">${iconPaw}<div><b>No hay mascotas asociadas a este CI</b><p>Verifica que tu CI esté registrado correctamente.</p></div></div>`
       : pets.map(pet => `
         <div class="spectador-card">
-          ${pet.status === 'Perdido' ? '<div class="public-alert">🚨 ¡ESTA MASCOTA ESTÁ PERDIDA! — POR FAVOR CONTACTAR AL PROPIETARIO</div>' : ''}
+          ${pet.status === 'Perdido' ? '<div class="public-alert">ESTA MASCOTA ESTÁ PERDIDA — POR FAVOR CONTACTAR AL PROPIETARIO</div>' : ''}
           <div class="spec-photo-wrap">
             <img class="public-photo" src="${pet.photo || placeholderPhoto()}" alt="${escapeHtml(pet.name)}">
           </div>
@@ -88,7 +88,7 @@ export function renderSpectador() {
               <div><b>Sexo</b><span>${pet.sex || '—'}</span></div>
               <div><b>Color</b><span>${escapeHtml(pet.color || '—')}</span></div>
               <div><b>Peso</b><span>${pet.weight ? pet.weight + ' kg' : '—'}</span></div>
-              <div><b>Vacunado</b><span>${pet.medical_vaccinated === 'Sí' ? '✅ Sí' : '❌ No'}</span></div>
+              <div><b>Vacunado</b><span>${pet.medical_vaccinated === 'Sí' ? 'Sí' : 'No'}</span></div>
               <div><b>Fecha nac.</b><span>${pet.birth_date || '—'}</span></div>
               <div><b>Hijos</b><span>${escapeHtml(pet.offspring || 'Ninguno')}</span></div>
               <div class="full"><b>Propietario</b><span>${escapeHtml(pet.owner_name)}</span></div>
@@ -97,8 +97,8 @@ export function renderSpectador() {
               ${pet.medical_allergies ? `<div class="full"><b>Alergias</b><span>${escapeHtml(pet.medical_allergies)}</span></div>` : ''}
             </div>
             <div class="public-actions">
-              <a class="btn btn-primary" href="tel:${pet.owner_phone}">📞 Llamar al propietario</a>
-              <a class="btn btn-gold" target="_blank" href="https://wa.me/${(pet.owner_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('Hola, soy ' + state.user.name + ', vi la información de ' + pet.name + ' en FAM J VET.')}">💬 WhatsApp</a>
+              <a class="btn btn-primary" href="tel:${pet.owner_phone}">Llamar al propietario</a>
+              <a class="btn btn-gold" target="_blank" href="https://wa.me/${(pet.owner_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('Hola, soy ' + state.user.name + ', vi la información de ' + pet.name + ' en FAM J VET.')}">WhatsApp</a>
             </div>
           </div>
         </div>
@@ -148,10 +148,11 @@ function topbarHtml() {
     <button class="btn-icon" id="btn-burger" style="display:none;">${iconMenu}</button>
     <div class="search-global">
       ${iconSearch}
-      <input id="global-search" placeholder="Buscar por nombre, carnet, propietario, CI, teléfono..." value="${escapeHtml(state.search)}">
+      <input id="global-search" placeholder="Buscar mascota, propietario, CI, teléfono o carnet..." value="${escapeHtml(state.search)}" autocomplete="off">
+      <kbd>Ctrl K</kbd>
     </div>
     <div class="topbar-right">
-      <button class="btn btn-primary btn-sm" data-action="new-pet">＋ Nueva mascota</button>
+      <button class="btn btn-primary btn-sm" data-action="new-pet">${iconPlus} Nueva mascota</button>
       <label class="switch" title="Modo oscuro">
         <input type="checkbox" id="theme-toggle" ${state.theme === 'dark' ? 'checked' : ''}>
         <span class="slider"></span>
@@ -160,7 +161,19 @@ function topbarHtml() {
   </div>`;
 }
 
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    const i = document.getElementById('global-search');
+    if (i) { e.preventDefault(); i.focus(); i.select(); }
+  }
+});
+
 function bindShellEvents() {
+  const burger = document.getElementById('btn-burger');
+  if (burger) {
+    burger.style.display = '';
+    burger.addEventListener('click', () => { state.sidebarOpen = !state.sidebarOpen; document.getElementById('sidebar')?.classList.toggle('open', state.sidebarOpen); });
+  }
   document.querySelectorAll('[data-nav]').forEach(el => el.addEventListener('click', () => { state.view = el.dataset.nav; state.sidebarOpen = false; renderApp(); }));
   const logout = document.querySelector('[data-action="logout"]');
   if (logout) logout.addEventListener('click', () => { state.setUser(null); setToken(null); state.view = 'dashboard'; renderApp(); });

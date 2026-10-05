@@ -10,7 +10,7 @@ export async function renderPublicPage(id) {
     <div class="public-page">
       <a href="#/" style="position:absolute; top:14px; left:14px; color:#fff; opacity:.7; text-decoration:none; font-size:13px; z-index:10;">← Volver</a>
       <div class="public-card">
-        ${lost ? `<div class="public-alert">🚨 ¡ESTA MASCOTA ESTÁ PERDIDA! — POR FAVOR CONTACTAR AL PROPIETARIO</div>` : ''}
+        ${lost ? `<div class="public-alert">ESTA MASCOTA ESTÁ PERDIDA — POR FAVOR CONTACTAR AL PROPIETARIO</div>` : ''}
         <div class="public-photo-wrap">
           <img class="public-photo" src="${pet.photo || placeholderPhoto()}" alt="${escapeHtml(pet.name)}">
         </div>
@@ -22,15 +22,15 @@ export async function renderPublicPage(id) {
             <div><b>Sexo</b><span>${pet.sex || '—'}</span></div>
             <div><b>Color</b><span>${escapeHtml(pet.color || '—')}</span></div>
             <div><b>Peso</b><span>${pet.weight ? pet.weight + ' kg' : '—'}</span></div>
-            <div><b>Vacunado</b><span>${pet.medical_vaccinated === 'Sí' ? '✅ Sí' : '❌ No'}</span></div>
+            <div><b>Vacunado</b><span>${pet.medical_vaccinated === 'Sí' ? 'Sí' : 'No'}</span></div>
             <div class="full" style="grid-column:1/-1;"><b>Propietario</b><span>${escapeHtml(pet.owner_name)}</span></div>
             <div class="full" style="grid-column:1/-1;"><b>Dirección</b><span>${escapeHtml(pet.owner_address || '—')}, ${escapeHtml(pet.owner_city || '')}</span></div>
             ${pet.medical_observations ? `<div class="full" style="grid-column:1/-1;"><b>Observaciones médicas</b><span>${escapeHtml(pet.medical_observations)}</span></div>` : ''}
             ${pet.medical_allergies ? `<div class="full" style="grid-column:1/-1;"><b>Alergias</b><span>${escapeHtml(pet.medical_allergies)}</span></div>` : ''}
           </div>
           <div class="public-actions">
-            <a class="btn btn-primary" href="tel:${pet.owner_phone}">📞 Llamar al propietario</a>
-            <a class="btn btn-gold" target="_blank" href="https://wa.me/${(pet.owner_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('Hola, encontré a ' + pet.name + ' (carnet ' + pet.carnet_number + '). Vi su información en FAM J VET.')}">💬 WhatsApp</a>
+            <a class="btn btn-primary" href="tel:${pet.owner_phone}">Llamar al propietario</a>
+            <a class="btn btn-gold" target="_blank" href="https://wa.me/${(pet.owner_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('Hola, encontré a ' + pet.name + ' (carnet ' + pet.carnet_number + '). Vi su información en FAM J VET.')}">WhatsApp</a>
           </div>
           <p class="faint" style="margin-top:16px; font-size:11px;">Verificado por FAM J VET Bolivia · Documento de identificación animal</p>
         </div>

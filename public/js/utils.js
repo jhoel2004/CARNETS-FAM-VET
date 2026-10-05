@@ -19,12 +19,12 @@ export function escapeHtml(s) {
 }
 
 export function speciesLabel(s) {
-  return { perro: '🐕 Perro', gato: '🐈 Gato', otro: '🐾 Otro' }[s] || s;
+  return { perro: 'Perro', gato: 'Gato', otro: 'Otro' }[s] || s || '—';
 }
 
 export function statusBadge(s) {
-  const map = { Activo: 'active', Inactivo: 'inactive', Perdido: 'lost' };
-  return `<span class="badge ${map[s] || 'inactive'}">${s}</span>`;
+  const map = { Activo: 'active', Inactivo: 'inactive', Perdido: 'lost', Pendiente: 'pending' };
+  return `<span class="badge ${map[s] || 'inactive'}">${escapeHtml(s)}</span>`;
 }
 
 export function placeholderPhoto() {

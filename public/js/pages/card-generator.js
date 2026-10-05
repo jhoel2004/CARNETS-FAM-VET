@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { iconCard } from '../icons.js';
+import { iconDownload, iconPrinter } from '../icons.js';
 import { escapeHtml, speciesLabel, placeholderPhoto, publicUrl, toast } from '../utils.js';
 
 let state = null;
@@ -20,7 +20,7 @@ export function viewCarnet() {
   state.cardTemplate = state.cardTemplate || state.getSettings().defaultTemplate || 'bolivia';
 
   return `
-  <div class="page-head"><div><h1>Generador de carnets</h1><p>Diseño tipo cédula de identidad oficial — anverso y reverso.</p></div></div>
+  <div class="page-head"><div><h1>Generador de carnets</h1><p>Anverso y reverso del carnet de identificación.</p></div></div>
   <div class="carnet-stage">
     <div class="carnet-preview-col">
       <div class="card-faces">
@@ -47,9 +47,9 @@ export function viewCarnet() {
             </div>`).join('')}
         </div>
         <div class="flex gap-2" style="margin-top:6px; flex-direction:column;">
-          <button class="btn btn-primary" id="btn-download-png">⬇ Descargar PNG (ambos lados)</button>
-          <button class="btn btn-outline" id="btn-download-pdf">⬇ Descargar PDF (ambos lados)</button>
-          <button class="btn btn-outline" id="btn-print-card">🖨 Imprimir</button>
+          <button class="btn btn-primary" id="btn-download-png">${iconDownload} Descargar PNG</button>
+          <button class="btn btn-outline" id="btn-download-pdf">${iconDownload} Descargar PDF</button>
+          <button class="btn btn-outline" id="btn-print-card">${iconPrinter} Imprimir</button>
         </div>
       </div>
     </div>
@@ -92,7 +92,7 @@ function pawStampSvg() {
 }
 
 function cardFrontHtml(pet, tpl) {
-  if (!pet) return `<div class="id-card tpl-${tpl}"><div class="empty-state" style="padding:20px;">${iconCard}<div><b>Sin mascota</b><p style="font-size:12px;">Registra una mascota primero.</p></div></div></div>`;
+  if (!pet) return `<div class="id-card tpl-${tpl}"><div class="empty-state" style="padding:20px;"><div><b>Sin mascota</b><p style="font-size:12px;">Registra una mascota primero.</p></div></div></div>`;
   const lost = pet.status === 'Perdido';
   const settings = state.getSettings();
   return `

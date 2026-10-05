@@ -16,7 +16,7 @@ class AppState {
     this.cardPetId = null;
     this.cardTemplate = null;
     this.sidebarOpen = false;
-    this.theme = localStorage.getItem('pli-theme') || 'light';
+    this.theme = localStorage.getItem('pli-theme') || 'dark';
   }
 
   get user() { return this._user; }

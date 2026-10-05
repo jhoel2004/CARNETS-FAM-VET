@@ -15,7 +15,7 @@ export function initConfig(s) {
 export function viewConfig() {
   const s = state.getSettings();
   return `
-  <div class="page-head"><div><h1>Configuración del sistema</h1><p>Personaliza la identidad, plantillas y usuarios de FAM J VET.</p></div></div>
+  <div class="page-head"><div><h1>Configuración</h1><p>Identidad, plantillas y usuarios de FAM J VET.</p></div></div>
   <div class="grid-2">
     <div class="panel">
       <h3>Identidad del sistema</h3>
@@ -44,7 +44,7 @@ export function viewConfig() {
         <div class="field"><label>Nombre completo</label><input id="new-user-fullname" placeholder="Nombre Apellido"></div>
         <div class="field"><label>Rol</label><select id="new-user-role"><option>Operador</option><option>Administrador</option></select></div>
       </div>
-      <button class="btn btn-outline" id="btn-add-user">＋ Agregar usuario</button>
+      <button class="btn btn-outline" id="btn-add-user">Agregar usuario</button>
     </div>
   </div>`;
 }

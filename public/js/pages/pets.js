@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { iconPaw, iconEye, iconEdit, iconCard, iconTrash, iconX, iconUpload } from '../icons.js';
+import { iconEye, iconEdit, iconCard, iconTrash, iconX, iconUpload, iconDownload, iconFileDown } from '../icons.js';
 import { escapeHtml, speciesLabel, statusBadge, placeholderPhoto, detailField, publicUrl, uid, toast } from '../utils.js';
 import { openModal, closeModal } from '../components/modal.js';
 
@@ -13,22 +13,22 @@ export function viewMascotas(advanced) {
   const list = filteredPets();
   return `
   <div class="page-head">
-    <div><h1>${advanced ? 'Búsqueda avanzada' : 'Gestión de mascotas'}</h1><p>${list.length} registro(s) encontrado(s)</p></div>
+    <div><h1>${advanced ? 'Búsqueda avanzada' : 'Mascotas'}</h1><p>${list.length} ${list.length === 1 ? 'registro encontrado' : 'registros encontrados'}</p></div>
     <div class="flex gap-2">
-      <button class="btn btn-outline btn-sm" data-action="export-json">⬇ Exportar base de datos</button>
-      <button class="btn btn-outline btn-sm" data-action="import-json">⬆ Importar</button>
+      <button class="btn btn-outline btn-sm" data-action="export-json">${iconFileDown} Exportar</button>
+      <button class="btn btn-outline btn-sm" data-action="import-json">${iconUpload} Importar</button>
       <input type="file" id="import-file" accept="application/json" class="hidden">
     </div>
   </div>
   <div class="toolbar">
     <div class="chip-filter">
-      <span class="chip ${state.filterSpecies === '' ? 'active' : ''}" data-species="">Todas las especies</span>
-      <span class="chip ${state.filterSpecies === 'perro' ? 'active' : ''}" data-species="perro">🐕 Perros</span>
-      <span class="chip ${state.filterSpecies === 'gato' ? 'active' : ''}" data-species="gato">🐈 Gatos</span>
-      <span class="chip ${state.filterSpecies === 'otro' ? 'active' : ''}" data-species="otro">🐾 Otros</span>
+      <span class="chip ${state.filterSpecies === '' ? 'active' : ''}" data-species="">Todas</span>
+      <span class="chip ${state.filterSpecies === 'perro' ? 'active' : ''}" data-species="perro">Perros</span>
+      <span class="chip ${state.filterSpecies === 'gato' ? 'active' : ''}" data-species="gato">Gatos</span>
+      <span class="chip ${state.filterSpecies === 'otro' ? 'active' : ''}" data-species="otro">Otros</span>
     </div>
     <div class="chip-filter">
-      <span class="chip ${state.filterStatus === '' ? 'active' : ''}" data-status="">Todos los estados</span>
+      <span class="chip ${state.filterStatus === '' ? 'active' : ''}" data-status="">Todos</span>
       <span class="chip ${state.filterStatus === 'Activo' ? 'active' : ''}" data-status="Activo">Activo</span>
       <span class="chip ${state.filterStatus === 'Inactivo' ? 'active' : ''}" data-status="Inactivo">Inactivo</span>
       <span class="chip ${state.filterStatus === 'Perdido' ? 'active' : ''}" data-status="Perdido">Perdido</span>
@@ -61,7 +61,7 @@ export function viewMascotas(advanced) {
             </td>
           </tr>`).join('')}
       </tbody>
-    </table>` : `<div class="empty-state">${iconPaw}<div><b>No hay mascotas registradas</b><p>Crea el primer registro con el botón "Nueva mascota".</p></div></div>`}
+    </table>` : `<div class="empty-state"><div><b>No hay mascotas registradas</b><p>Crea el primer registro con el botón "Nueva mascota".</p></div></div>`}
   </div>`;
 }
 
@@ -187,13 +187,13 @@ async function openDetailModal(id) {
         <div id="detail-qr" style="display:inline-block; padding:10px; background:#fff; border-radius:10px;"></div>
         <p class="faint" style="margin-top:10px; word-break:break-all;">${publicUrl(p.id)}</p>
         <div class="flex gap-2" style="justify-content:center; margin-top:12px;">
-          <button class="btn btn-primary btn-sm" id="btn-download-qr">⬇ Descargar QR</button>
-          <a href="${publicUrl(p.id)}" target="_blank" class="btn btn-outline btn-sm">Abrir página pública ↗</a>
+          <button class="btn btn-primary btn-sm" id="btn-download-qr">${iconDownload} Descargar QR</button>
+          <a href="${publicUrl(p.id)}" target="_blank" class="btn btn-outline btn-sm">Abrir página pública</a>
         </div>
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-outline" data-toggle-lost="${p.id}">${p.status === 'Perdido' ? 'Marcar como encontrada' : '🚨 Reportar como perdida'}</button>
+      <button class="btn ${p.status === 'Perdido' ? 'btn-outline' : 'btn-danger'}" data-toggle-lost="${p.id}">${p.status === 'Perdido' ? 'Marcar como encontrada' : 'Reportar como perdida'}</button>
       <button class="btn btn-primary" data-editfrom="${p.id}">Editar</button>
     </div>
   `);
@@ -307,7 +307,7 @@ export async function openPetModal(id) {
             <input type="file" id="photo-input" accept="image/*" class="hidden">
           </div>
           <div class="flex gap-2" style="margin-top:12px;">
-            <button type="button" class="btn btn-outline btn-sm" id="btn-rotate">↻ Girar 90°</button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-rotate">Girar 90°</button>
             <button type="button" class="btn btn-outline btn-sm" id="btn-remove-photo">Quitar foto</button>
           </div>
         </div>
@@ -451,8 +451,8 @@ function showPetQrModal(pet) {
       <div id="created-qr" style="display:inline-block; padding:14px; background:#fff; border-radius:12px; border:1px solid var(--border);"></div>
       <p class="faint" style="margin-top:10px; font-size:12px; word-break:break-all;">${url}</p>
       <div class="flex gap-2" style="justify-content:center; margin-top:16px;">
-        <button class="btn btn-primary btn-sm" id="btn-dl-created-qr">⬇ Descargar QR</button>
-        <a href="${url}" target="_blank" class="btn btn-outline btn-sm">Ver página ↗</a>
+        <button class="btn btn-primary btn-sm" id="btn-dl-created-qr">${iconDownload} Descargar QR</button>
+        <a href="${url}" target="_blank" class="btn btn-outline btn-sm">Ver página</a>
       </div>
     </div>
     <div class="modal-foot">
