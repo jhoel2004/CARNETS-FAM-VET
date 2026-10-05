@@ -1,7 +1,6 @@
 require('dotenv').config();
 
 const express = require('express');
-const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
@@ -13,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 app.disable('x-powered-by');
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
   : ['http://localhost:3000'];
 
 app.use(helmet({
@@ -31,16 +30,31 @@ app.use(helmet({
     }
   }
 }));
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('No permitido por CORS'));
+// CORS: acepta la lista configurada Y siempre el mismo origen del servicio.
+// Así el login nunca se rompe aunque ALLOWED_ORIGINS quede desactualizado en el host.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const sameHost = (() => {
+    if (!origin) return false;
+    try { return new URL(origin).host === (req.headers.host || '').split(',')[0]; }
+    catch { return false; }
+  })();
+  const allowed = !origin || allowedOrigins.includes(origin) || sameHost;
+  if (allowed) {
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
-  },
-  credentials: true
-}));
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+      return res.sendStatus(204);
+    }
+    return next();
+  }
+  return res.status(403).json({ error: 'Origen no permitido por CORS' });
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
