@@ -3,6 +3,7 @@ services:
     name: pet-llama-id
     runtime: node
     plan: free
+    autoDeployTrigger: commit
     buildCommand: npm install
     startCommand: npm start
     envVars:

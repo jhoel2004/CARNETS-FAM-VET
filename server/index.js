@@ -75,15 +75,30 @@ const settingsRoutes = require('./routes/settings');
 const historyRoutes = require('./routes/history');
 const userRoutes = require('./routes/users');
 
+// Health check primero: responde siempre, esté lista la DB o no (así Render no devuelve 503).
+app.get('/api/health', (req, res) => {
+  const st = db.state;
+  res.json({
+    status: 'ok',
+    db: st.ready ? 'ok' : 'error',
+    dbError: st.ready ? null : st.error,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Si la base de datos no está lista, las rutas API responden 503 con mensaje claro en vez de 500 genérico.
+app.use('/api', (req, res, next) => {
+  if (!db.state.ready) {
+    return res.status(503).json({ error: 'Base de datos no disponible', dbError: db.state.error });
+  }
+  next();
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/users', userRoutes);
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Endpoint no encontrado' });
@@ -98,11 +113,28 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
+function delay(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+// El servidor escucha primero y la base de datos se conecta en segundo plano:
+// la app queda disponible aunque la DB tarde o falle (con reintentos con backoff).
 async function start() {
-  await db.init();
   app.listen(PORT, () => {
     console.log(`FAM J VET corriendo en http://localhost:${PORT}`);
   });
+  let intento = 0;
+  for (;;) {
+    intento++;
+    try {
+      await db.init();
+      return;
+    } catch (e) {
+      console.error(`[DB] No se pudo conectar (intento ${intento}):`, (e && e.message) || e);
+      await db.close();
+      await delay(Math.min(30000, 5000 * intento));
+    }
+  }
 }
 
 start().catch(e => { console.error('Error al iniciar:', e); process.exit(1); });

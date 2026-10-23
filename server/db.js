@@ -7,19 +7,45 @@ let usePg = false;
 let pool = null;
 let sqlJsDb = null;
 
+// Estado de la conexión, expuesto para /api/health y el diagnóstico en producción.
+const state = { ready: false, error: null, host: null };
+
+function setError(e) {
+  state.ready = false;
+  state.error = (e && e.code ? `${e.code}: ` : '') + (e && e.message ? e.message : String(e));
+}
+
+function hostOf(connectionString) {
+  try { return new URL(connectionString).host; } catch { return 'host desconocido'; }
+}
+
 async function init() {
   if (process.env.DATABASE_URL) {
     const { Pool } = require('pg');
+    state.host = hostOf(process.env.DATABASE_URL);
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      max: 5,
+      connectionTimeoutMillis: 8000,
+      idleTimeoutMillis: 30000
     });
-    const client = await pool.connect();
+    pool.on('error', (e) => {
+      console.error('[DB] Error del pool:', (e && e.code ? `${e.code}: ` : '') + (e && e.message ? e.message : e));
+    });
     try {
-      await client.query('SELECT 1');
-      console.log('✅ Conectado a PostgreSQL');
-    } finally {
-      client.release();
+      const client = await pool.connect();
+      try {
+        await client.query('SELECT 1');
+      } finally {
+        client.release();
+      }
+      state.ready = true;
+      state.error = null;
+      console.log(`[DB] Conectado a PostgreSQL (${state.host})`);
+    } catch (e) {
+      setError(e);
+      throw e;
     }
     usePg = true;
   } else {
@@ -33,8 +59,18 @@ async function init() {
     }
     sqlJsDb.run('PRAGMA journal_mode = WAL');
     await createSqliteTables();
-    console.log('✅ Conectado a SQLite local:', DB_PATH);
+    console.log('[DB] Conectado a SQLite local:', DB_PATH);
+    state.ready = true;
+    state.error = null;
     usePg = false;
+  }
+}
+
+async function close() {
+  if (pool) {
+    const p = pool;
+    pool = null;
+    try { await p.end(); } catch (_) {}
   }
 }
 
@@ -174,4 +210,4 @@ function save() {
   }
 }
 
-module.exports = { init, query, get, run };
+module.exports = { init, close, query, get, run, state };
