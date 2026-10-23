@@ -1,6 +1,11 @@
 /**
- * Migra datos desde SQLite local a Supabase PostgreSQL
- * Uso: npm run migrate
+ * Crea el esquema en PostgreSQL (Supabase) si falta y migra los datos
+ * de la base SQLite local (data/db.sqlite) a Supabase.
+ *
+ * Uso (desde la carpeta del proyecto):
+ *   DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-1-us-west-2.pooler.supabase.com:5432/postgres" npm run migrate
+ *
+ * Es idempotente: puede ejecutarse varias veces sin duplicar datos.
  */
 require('dotenv').config();
 
@@ -9,116 +14,168 @@ const fs = require('fs');
 
 const DB_PATH = path.join(__dirname, '..', 'data', 'db.sqlite');
 
+const DDL = `
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  role TEXT DEFAULT 'Operador',
+  name TEXT,
+  created_at TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+);
+CREATE TABLE IF NOT EXISTS pets (
+  id TEXT PRIMARY KEY,
+  carnet_number TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  species TEXT DEFAULT 'perro',
+  breed TEXT DEFAULT '',
+  sex TEXT DEFAULT 'Macho',
+  birth_date TEXT DEFAULT '',
+  color TEXT DEFAULT '',
+  weight TEXT DEFAULT '',
+  category TEXT DEFAULT 'General',
+  status TEXT DEFAULT 'Activo',
+  photo TEXT DEFAULT '',
+  fingerprint TEXT DEFAULT '',
+  offspring TEXT DEFAULT '',
+  registration_date TEXT DEFAULT to_char(current_date, 'YYYY-MM-DD'),
+  owner_name TEXT NOT NULL,
+  owner_ci TEXT DEFAULT '',
+  owner_address TEXT DEFAULT '',
+  owner_city TEXT DEFAULT '',
+  owner_phone TEXT DEFAULT '',
+  owner_email TEXT DEFAULT '',
+  medical_vaccinated TEXT DEFAULT 'No',
+  medical_vaccines TEXT DEFAULT '',
+  medical_vet TEXT DEFAULT '',
+  medical_observations TEXT DEFAULT '',
+  medical_diseases TEXT DEFAULT '',
+  medical_allergies TEXT DEFAULT '',
+  signature TEXT DEFAULT '',
+  age_years TEXT DEFAULT '',
+  age_months TEXT DEFAULT '',
+  created_at TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
+  updated_at TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+);
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+CREATE TABLE IF NOT EXISTS history (
+  id SERIAL PRIMARY KEY,
+  action TEXT NOT NULL,
+  entity TEXT DEFAULT '',
+  "user" TEXT DEFAULT '',
+  date TEXT DEFAULT '',
+  time TEXT DEFAULT '',
+  created_at TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+);
+`;
+
+// Por si la tabla pets ya existía en una versión antigua sin las columnas nuevas.
+const DDL_PATCH = `
+ALTER TABLE pets ADD COLUMN IF NOT EXISTS signature TEXT DEFAULT '';
+ALTER TABLE pets ADD COLUMN IF NOT EXISTS age_years TEXT DEFAULT '';
+ALTER TABLE pets ADD COLUMN IF NOT EXISTS age_months TEXT DEFAULT '';
+`;
+
+const CONFLICT = {
+  users: { key: 'id', mode: 'update' },
+  pets: { key: 'id', mode: 'update' },
+  settings: { key: 'key', mode: 'update' },
+  history: { key: 'id', mode: 'nothing' }
+};
+
+function quote(col) {
+  return `"${col}"`;
+}
+
+async function migrateTable(client, sqlite, table) {
+  const res = sqlite.exec(`SELECT * FROM ${table}`);
+  if (!res.length || !res[0].values.length) {
+    console.log(`   (sin filas en ${table})`);
+    return 0;
+  }
+  const { columns, values } = res[0];
+  const names = columns.map(quote);
+  const ph = columns.map((c, i) => `$${i + 1}`);
+  let sql = `INSERT INTO ${table} (${names.join(', ')}) VALUES (${ph.join(', ')})`;
+  const cf = CONFLICT[table];
+  if (cf) {
+    if (cf.mode === 'update') {
+      const sets = columns.map((c, i) => (c === cf.key ? null : `${quote(c)}=$${i + 1}`))
+        .filter(Boolean).join(', ');
+      sql += ` ON CONFLICT (${quote(cf.key)}) DO UPDATE SET ${sets}`;
+    } else {
+      sql += ` ON CONFLICT (${quote(cf.key)}) DO NOTHING`;
+    }
+  }
+  for (const row of values) {
+    await client.query(sql, row);
+  }
+  console.log(`   ${table}: ${values.length} filas migradas`);
+  return values.length;
+}
+
 async function main() {
   if (!process.env.DATABASE_URL) {
-    console.error('❌ DATABASE_URL no está definida. Agrega la variable de entorno con la URL de conexión de Supabase.');
-    console.error('   Ejemplo: DATABASE_URL="postgresql://postgres:xxx@db.xxx.supabase.co:5432/postgres" npm run migrate');
+    console.error('[ERROR] DATABASE_URL no está definida.');
+    console.error('  Ejemplo (copiado tal cual de Render > Environment, o de Supabase > Connection string):');
+    console.error('  DATABASE_URL="postgresql://...@aws-1-us-west-2.pooler.supabase.com:5432/postgres" npm run migrate');
     process.exit(1);
   }
 
   if (!fs.existsSync(DB_PATH)) {
-    console.error('❌ No se encontró la base de datos SQLite:', DB_PATH);
+    console.error(`[ERROR] No se encontró la base SQLite local: ${DB_PATH}`);
     process.exit(1);
   }
 
   const initSqlJs = require('sql.js');
   const SQL = await initSqlJs();
-  const buf = fs.readFileSync(DB_PATH);
-  const sqlite = new SQL.Database(buf);
+  const sqlite = new SQL.Database(fs.readFileSync(DB_PATH));
 
   const { Pool } = require('pg');
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 10000,
+    max: 3
   });
 
   const client = await pool.connect();
   try {
     await client.query('SELECT 1');
-    console.log('✅ Conectado a SQLite y PostgreSQL');
+    console.log('[OK] Conectado a SQLite local y a PostgreSQL (Supabase)');
+    console.log('');
+
+    console.log('Creando/verificando esquema...');
+    await client.query(DDL);
+    await client.query(DDL_PATCH);
+    console.log('[OK] Esquema listo (users, pets, settings, history)');
     console.log('');
 
     await client.query('BEGIN');
-
-    // Migrar users
-    const users = sqlite.exec('SELECT * FROM users');
-    if (users.length) {
-      console.log(`📦 Migrando ${users[0].values.length} usuarios...`);
-      for (const row of users[0].values) {
-      const [id, username, password, role, name, created_at] = row;
-        await client.query(
-        `INSERT INTO users (id, username, password, role, name, created_at) VALUES ($1,$2,$3,$4,$5,$6)
-         ON CONFLICT (id) DO UPDATE SET username=$2, password=$3, role=$4, name=$5, created_at=$6`,
-        [id, username, password, role, name, created_at]
-      );
-    }
-      console.log('   ✅ Usuarios migrados');
+    const total = {};
+    try {
+      for (const table of ['users', 'pets', 'settings', 'history']) {
+        total[table] = await migrateTable(client, sqlite, table);
+      }
+      await client.query("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1))");
+      await client.query("SELECT setval(pg_get_serial_sequence('history', 'id'), COALESCE((SELECT MAX(id) FROM history), 1))");
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw e;
     }
 
-    // Migrar pets
-    const pets = sqlite.exec('SELECT * FROM pets');
-    if (pets.length) {
-      console.log(`📦 Migrando ${pets[0].values.length} mascotas...`);
-      for (const row of pets[0].values) {
-        await client.query(
-        `INSERT INTO pets (id, carnet_number, name, species, breed, sex, birth_date, color, weight,
-          category, status, photo, fingerprint, offspring, registration_date,
-          owner_name, owner_ci, owner_address, owner_city, owner_phone, owner_email,
-          medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_diseases, medical_allergies,
-          created_at, updated_at)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29)
-          ON CONFLICT (id) DO UPDATE SET carnet_number=$2, name=$3, species=$4, breed=$5, sex=$6, birth_date=$7, color=$8, weight=$9,
-          category=$10, status=$11, photo=$12, fingerprint=$13, offspring=$14, registration_date=$15,
-          owner_name=$16, owner_ci=$17, owner_address=$18, owner_city=$19, owner_phone=$20, owner_email=$21,
-          medical_vaccinated=$22, medical_vaccines=$23, medical_vet=$24, medical_observations=$25, medical_diseases=$26, medical_allergies=$27,
-          created_at=$28, updated_at=$29`,
-        row
-      );
-    }
-      console.log('   ✅ Mascotas migradas');
-    }
-
-    // Migrar settings
-    const settings = sqlite.exec('SELECT * FROM settings');
-    if (settings.length) {
-      console.log(`📦 Migrando ${settings[0].values.length} configuraciones...`);
-      for (const row of settings[0].values) {
-      const [key, value] = row;
-        await client.query(
-        'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
-        [key, value]
-      );
-    }
-      console.log('   ✅ Configuraciones migradas');
-    }
-
-    // Migrar history
-    const history = sqlite.exec('SELECT * FROM history');
-    if (history.length) {
-      console.log(`📦 Migrando ${history[0].values.length} registros de historial...`);
-      for (const row of history[0].values) {
-      const [id, action, entity, user, date, time, created_at] = row;
-        await client.query(
-        `INSERT INTO history (id, action, entity, "user", date, time, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)
-         ON CONFLICT (id) DO NOTHING`,
-        [id, action, entity, user, date, time, created_at]
-      );
-    }
-      console.log('   ✅ Historial migrado');
-    }
-
-    // Actualizar secuencia de IDs
-    console.log('🔄 Actualizando secuencias...');
-    await client.query("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1))");
-    await client.query("SELECT setval(pg_get_serial_sequence('history', 'id'), COALESCE((SELECT MAX(id) FROM history), 1))");
-    console.log('   ✅ Secuencias actualizadas');
-
-    await client.query('COMMIT');
     console.log('');
-    console.log('🎉 ¡Migración completada exitosamente!');
-  } catch (e) {
-    await client.query('ROLLBACK').catch(() => {});
-    throw e;
+    console.log('Conteo final en PostgreSQL:');
+    for (const table of ['users', 'pets', 'settings', 'history']) {
+      const r = await client.query(`SELECT COUNT(*)::int AS n FROM ${table}`);
+      console.log(`   ${table}: ${r.rows[0].n}`);
+    }
+    console.log('');
+    console.log('[OK] Migración completada. Redeploy de Render no es necesario: la app lee la DB en vivo.');
   } finally {
     client.release();
     await pool.end();
@@ -126,6 +183,7 @@ async function main() {
 }
 
 main().catch(e => {
-  console.error('❌ Error durante la migración:', e.message);
+  const msg = e && e.code ? `${e.code}: ${e.message}` : (e && e.message ? e.message : String(e));
+  console.error('[ERROR] Migración falló:', msg);
   process.exit(1);
 });
