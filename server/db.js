@@ -15,14 +15,17 @@ function setError(e) {
   state.error = (e && e.code ? `${e.code}: ` : '') + (e && e.message ? e.message : String(e));
 }
 
-function hostOf(connectionString) {
-  try { return new URL(connectionString).host; } catch { return 'host desconocido'; }
-}
-
 async function init() {
   if (process.env.DATABASE_URL) {
+    const raw = process.env.DATABASE_URL;
     const { Pool } = require('pg');
-    state.host = hostOf(process.env.DATABASE_URL);
+    try {
+      state.host = new URL(raw).host || 'host desconocido';
+    } catch {
+      state.error = 'DATABASE_URL inválida: debe ser postgresql://usuario:contraseña@host:5432/postgres — sin comillas ni espacios, con el placeholder [YOUR-PASSWORD] reemplazado y los símbolos de la contraseña URL-encoded (@=%40 #=%23 $=%24)';
+      console.error('[DB]', state.error);
+      throw new Error('Invalid DATABASE_URL format');
+    }
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
