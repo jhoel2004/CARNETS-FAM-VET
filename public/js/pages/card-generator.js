@@ -24,7 +24,7 @@ export function viewCarnet() {
   const pets = state.getPets();
   const sel = state.cardPetId || (pets[0] && pets[0].id) || '';
   state.cardPetId = sel;
-  state.cardDocType = state.cardDocType || 'health';
+  state.cardDocType = state.cardDocType || 'credential';
   state.cardTemplate = state.cardTemplate || state.getSettings().defaultTemplate || 'bolivia';
 
   const pet = pets.find(p => p.id === sel) || null;
