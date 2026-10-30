@@ -154,6 +154,11 @@ async function createSqliteTables() {
     sterilized INTEGER DEFAULT 0,
     microchip TEXT DEFAULT '',
     blood_type TEXT DEFAULT '',
+    vaccines_detail TEXT DEFAULT '[]',
+    deworming_detail TEXT DEFAULT '[]',
+    conditions_detail TEXT DEFAULT '[]',
+    surgeries_detail TEXT DEFAULT '[]',
+    medications_detail TEXT DEFAULT '[]',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
@@ -181,6 +186,11 @@ async function createSqliteTables() {
   addCol('pets', "age_mode TEXT DEFAULT 'birth_date'");
   addCol('pets', "vaccines_list TEXT DEFAULT ''");
   addCol('pets', "distinctive_marks TEXT DEFAULT ''");
+  addCol('pet_medical_details', "vaccines_detail TEXT DEFAULT '[]'");
+  addCol('pet_medical_details', "deworming_detail TEXT DEFAULT '[]'");
+  addCol('pet_medical_details', "conditions_detail TEXT DEFAULT '[]'");
+  addCol('pet_medical_details', "surgeries_detail TEXT DEFAULT '[]'");
+  addCol('pet_medical_details', "medications_detail TEXT DEFAULT '[]'");
   addCol('pet_health_records', "batch TEXT DEFAULT ''");
   addCol('pet_health_records', "scheduled_date TEXT DEFAULT ''");
 
@@ -197,6 +207,11 @@ async function createSqliteTables() {
     sterilized INTEGER DEFAULT 0,
     microchip TEXT DEFAULT '',
     blood_type TEXT DEFAULT '',
+    vaccines_detail TEXT DEFAULT '[]',
+    deworming_detail TEXT DEFAULT '[]',
+    conditions_detail TEXT DEFAULT '[]',
+    surgeries_detail TEXT DEFAULT '[]',
+    medications_detail TEXT DEFAULT '[]',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
@@ -278,6 +293,11 @@ async function ensurePgSchema(client) {
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS distinctive_marks TEXT DEFAULT '';
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS age_mode TEXT DEFAULT 'birth_date';
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS vaccines_list TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS vaccines_detail TEXT DEFAULT '[]';
+    ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS deworming_detail TEXT DEFAULT '[]';
+    ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS conditions_detail TEXT DEFAULT '[]';
+    ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS surgeries_detail TEXT DEFAULT '[]';
+    ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS medications_detail TEXT DEFAULT '[]';
     ALTER TABLE IF EXISTS pet_health_records ADD COLUMN IF NOT EXISTS batch TEXT DEFAULT '';
     ALTER TABLE IF EXISTS pet_health_records ADD COLUMN IF NOT EXISTS scheduled_date TEXT DEFAULT '';
     CREATE TABLE IF NOT EXISTS pet_health_records (
@@ -310,6 +330,11 @@ async function ensurePgSchema(client) {
       sterilized INTEGER DEFAULT 0,
       microchip TEXT DEFAULT '',
       blood_type TEXT DEFAULT '',
+      vaccines_detail TEXT DEFAULT '[]',
+      deworming_detail TEXT DEFAULT '[]',
+      conditions_detail TEXT DEFAULT '[]',
+      surgeries_detail TEXT DEFAULT '[]',
+      medications_detail TEXT DEFAULT '[]',
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );

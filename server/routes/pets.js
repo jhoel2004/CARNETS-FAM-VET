@@ -371,21 +371,36 @@ router.put('/:id/medical-details', authenticateToken, requireAdminOrOperator, as
     if (existing) {
       await db.run(`UPDATE pet_medical_details SET
         vaccines_list=$1, deworming_history=$2, medical_conditions=$3, allergies=$4, surgeries=$5,
-        medications=$6, sterilized=$7, microchip=$8, blood_type=$9, updated_at=$10
-        WHERE pet_id=$11`, [
+        medications=$6, sterilized=$7, microchip=$8, blood_type=$9,
+        vaccines_detail=$10, deworming_detail=$11, conditions_detail=$12, surgeries_detail=$13, medications_detail=$14, updated_at=$15
+        WHERE pet_id=$16`, [
         d.vaccines_list || '', d.deworming_history || '', d.medical_conditions || '',
         d.allergies || '', d.surgeries || '', d.medications || '',
-        d.sterilized ? 1 : 0, d.microchip || '', d.blood_type || '', now, req.params.id
+        d.sterilized ? 1 : 0, d.microchip || '', d.blood_type || '',
+        d.vaccines_detail ? JSON.stringify(d.vaccines_detail) : '[]',
+        d.deworming_detail ? JSON.stringify(d.deworming_detail) : '[]',
+        d.conditions_detail ? JSON.stringify(d.conditions_detail) : '[]',
+        d.surgeries_detail ? JSON.stringify(d.surgeries_detail) : '[]',
+        d.medications_detail ? JSON.stringify(d.medications_detail) : '[]',
+        now, req.params.id
       ]);
     } else {
       const id = 'md' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
       await db.run(`INSERT INTO pet_medical_details (
         id, pet_id, vaccines_list, deworming_history, medical_conditions, allergies, surgeries,
-        medications, sterilized, microchip, blood_type, created_at, updated_at
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [
+        medications, sterilized, microchip, blood_type,
+        vaccines_detail, deworming_detail, conditions_detail, surgeries_detail, medications_detail,
+        created_at, updated_at
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`, [
         id, req.params.id, d.vaccines_list || '', d.deworming_history || '',
         d.medical_conditions || '', d.allergies || '', d.surgeries || '',
-        d.medications || '', d.sterilized ? 1 : 0, d.microchip || '', d.blood_type || '', now, now
+        d.medications || '', d.sterilized ? 1 : 0, d.microchip || '', d.blood_type || '',
+        d.vaccines_detail ? JSON.stringify(d.vaccines_detail) : '[]',
+        d.deworming_detail ? JSON.stringify(d.deworming_detail) : '[]',
+        d.conditions_detail ? JSON.stringify(d.conditions_detail) : '[]',
+        d.surgeries_detail ? JSON.stringify(d.surgeries_detail) : '[]',
+        d.medications_detail ? JSON.stringify(d.medications_detail) : '[]',
+        now, now
       ]);
     }
 

@@ -269,6 +269,107 @@ function blankPet() {
   };
 }
 
+/* ============================================================
+   FUNCIONES HELPER PARA LISTAS DINÁMICAS DE DATOS MÉDICOS
+   ============================================================ */
+
+function parseJsonArray(str) {
+  try { return JSON.parse(str || '[]'); } catch { return []; }
+}
+
+function renderVaccineItems(jsonStr) {
+  const items = parseJsonArray(jsonStr);
+  return items.map(item => renderVaccineItem(item)).join('');
+}
+
+function renderVaccineItem(item = {}) {
+  return `
+  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
+    <input type="text" name="vaccine_name" placeholder="Nombre de la vacuna" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="date" name="vaccine_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="text" name="vaccine_lot" placeholder="Lote" value="${escapeHtml(item.lot || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="text" name="vaccine_vet" placeholder="Veterinaria" value="${escapeHtml(item.vet || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <select name="vaccine_applied" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+      <option value="1" ${item.applied !== '0' ? 'selected' : ''}>Aplicada</option>
+      <option value="0" ${item.applied === '0' ? 'selected' : ''}>Pendiente</option>
+    </select>
+    <input type="date" name="vaccine_next_due" placeholder="Próxima dosis" value="${escapeHtml(item.next_due || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
+  </div>`;
+}
+
+function renderDewormingItems(jsonStr) {
+  const items = parseJsonArray(jsonStr);
+  return items.map(item => renderDewormingItem(item)).join('');
+}
+
+function renderDewormingItem(item = {}) {
+  return `
+  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
+    <input type="text" name="deworming_product" placeholder="Producto" value="${escapeHtml(item.product || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="text" name="deworming_weight" placeholder="Peso (kg)" value="${escapeHtml(item.weight || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="date" name="deworming_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="text" name="deworming_vet" placeholder="Veterinaria" value="${escapeHtml(item.vet || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="text" name="deworming_next_due" placeholder="Próxima dosis" value="${escapeHtml(item.next_due || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
+  </div>`;
+}
+
+function renderConditionItems(jsonStr) {
+  const items = parseJsonArray(jsonStr);
+  return items.map(item => renderConditionItem(item)).join('');
+}
+
+function renderConditionItem(item = {}) {
+  return `
+  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
+    <input type="text" name="condition_name" placeholder="Enfermedad" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="date" name="condition_date" placeholder="Fecha diagnóstico" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="text" name="condition_notes" placeholder="Notas" value="${escapeHtml(item.notes || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
+  </div>`;
+}
+
+function renderSurgeryItems(jsonStr) {
+  const items = parseJsonArray(jsonStr);
+  return items.map(item => renderSurgeryItem(item)).join('');
+}
+
+function renderSurgeryItem(item = {}) {
+  return `
+  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
+    <input type="text" name="surgery_name" placeholder="Cirugía" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="date" name="surgery_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="text" name="surgery_vet" placeholder="Veterinaria" value="${escapeHtml(item.vet || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="text" name="surgery_notes" placeholder="Notas" value="${escapeHtml(item.notes || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
+  </div>`;
+}
+
+function renderMedicationItems(jsonStr) {
+  const items = parseJsonArray(jsonStr);
+  return items.map(item => renderMedicationItem(item)).join('');
+}
+
+function renderMedicationItem(item = {}) {
+  return `
+  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
+    <input type="text" name="medication_name" placeholder="Medicamento" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="text" name="medication_dose" placeholder="Dosis" value="${escapeHtml(item.dose || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="text" name="medication_freq" placeholder="Frecuencia" value="${escapeHtml(item.frequency || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="date" name="medication_start" placeholder="Fecha inicio" value="${escapeHtml(item.start_date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
+  </div>`;
+}
+
+function addDynamicItem(listId, html) {
+  const container = document.getElementById(listId);
+  if (container) {
+    container.insertAdjacentHTML('beforeend', html);
+  }
+}
+
+
 let photoTemp = '';
 
 export async function openPetModal(id) {
@@ -337,44 +438,54 @@ export async function openPetModal(id) {
         </div>
         <div id="ftab-med" class="form-grid hidden">
           <div class="field"><label>Vacunado</label><select name="medical_vaccinated" id="vaccinated-select"><option ${pet.medical_vaccinated === 'Sí' ? 'selected' : ''}>Sí</option><option ${pet.medical_vaccinated === 'No' ? 'selected' : ''}>No</option></select></div>
-          <div class="field full" id="vaccines-checkboxes-group" style="${pet.medical_vaccinated === 'Sí' ? '' : 'display:none;'}">
-            <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Vacunas que tiene la mascota</label>
-            <div class="vacuna-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px;">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
-                <input type="checkbox" name="vacuna_Quíntuple" value="Quíntuple" ${pet.vaccines_list && pet.vaccines_list.includes('Quíntuple') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
-                <span>Quíntuple</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
-                <input type="checkbox" name="vacuna_Séxtuple" value="Séxtuple" ${pet.vaccines_list && pet.vaccines_list.includes('Séxtuple') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
-                <span>Séxtuple</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
-                <input type="checkbox" name="vacuna_Antirrábica" value="Antirrábica" ${pet.vaccines_list && pet.vaccines_list.includes('Antirrábica') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
-                <span>Antirrábica</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
-                <input type="checkbox" name="vacuna_Tos de las perreras" value="Tos de las perreras" ${pet.vaccines_list && pet.vaccines_list.includes('Tos de las perreras') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
-                <span>Tos de las perreras</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
-                <input type="checkbox" name="vacuna_Leptospirosis" value="Leptospirosis" ${pet.vaccines_list && pet.vaccines_list.includes('Leptospirosis') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
-                <span>Leptospirosis</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
-                <input type="checkbox" name="vacuna_Otra" value="" ${pet.vaccines_list && pet.vaccines_list.includes('__OTRA__') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
-                <input type="text" name="vacuna_personalizada" placeholder="Nombre de la vacuna" value="${pet.vaccines_list && pet.vaccines_list.includes('__OTRA__') ? '' : ''}" style="flex:1; border:none; background:transparent; font-size:13px; padding-left:5px;" ${!pet.vaccines_list || !pet.vaccines_list.includes('__OTRA__') ? 'disabled' : ''}>
-              </label>
+
+          <!-- Vacunas dinámicas -->
+          <div class="field full" id="vaccines-section" style="${pet.medical_vaccinated === 'Sí' ? '' : 'display:none;'}">
+            <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Vacunas</label>
+            <div id="vaccines-list" class="dynamic-list">
+              ${renderVaccineItems(pet.vaccines_detail || '[]')}
             </div>
-            <div style="margin-top:8px;">
-              <small style="color:var(--text-2);">Selecciona las vacunas que tiene. Si no aparece, marca "Otra" y escribe el nombre.</small>
-            </div>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-vaccine" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar vacuna</button>
           </div>
+
+          <!-- Desparasitaciones dinámicas -->
+          <div class="field full">
+            <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Desparasitaciones</label>
+            <div id="deworming-list" class="dynamic-list">
+              ${renderDewormingItems(pet.deworming_detail || '[]')}
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-deworming" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar desparasitación</button>
+          </div>
+
+          <!-- Enfermedades crónicas dinámicas -->
+          <div class="field full">
+            <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Enfermedades crónicas</label>
+            <div id="conditions-list" class="dynamic-list">
+              ${renderConditionItems(pet.conditions_detail || '[]')}
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-condition" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar enfermedad</button>
+          </div>
+
+          <!-- Cirugías dinámicas -->
+          <div class="field full">
+            <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Cirugías previas</label>
+            <div id="surgeries-list" class="dynamic-list">
+              ${renderSurgeryItems(pet.surgeries_detail || '[]')}
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-surgery" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar cirugía</button>
+          </div>
+
+          <!-- Medicamentos dinámicos -->
+          <div class="field full">
+            <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Medicamentos actuales</label>
+            <div id="medications-list" class="dynamic-list">
+              ${renderMedicationItems(pet.medications_detail || '[]')}
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-medication" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar medicamento</button>
+          </div>
+
           <div class="field"><label>Veterinaria</label><input name="medical_vet" value="${escapeHtml(pet.medical_vet || '')}"></div>
-          <div class="field full"><label>Desparasitaciones (historial)</label><textarea name="deworming_history" rows="2" placeholder="Ej: Pyrantel (3 meses), Albendazol (6 meses)">${escapeHtml(pet.deworming_history || '')}</textarea></div>
-          <div class="field"><label>Enfermedades crónicas</label><input name="medical_conditions" value="${escapeHtml(pet.medical_conditions || '')}"></div>
           <div class="field"><label>Alergias</label><input name="allergies" value="${escapeHtml(pet.allergies || '')}"></div>
-          <div class="field"><label>Cirugías previas</label><input name="surgeries" value="${escapeHtml(pet.surgeries || '')}"></div>
-          <div class="field"><label>Medicamentos actuales</label><input name="medications" value="${escapeHtml(pet.medications || '')}"></div>
           <div class="field"><label>Esterilizado</label><select name="sterilized"><option ${pet.sterilized ? 'selected' : ''}>No</option><option ${!pet.sterilized ? 'selected' : ''}>Sí</option></select></div>
           <div class="field"><label>Microchip</label><input name="microchip" value="${escapeHtml(pet.microchip || '')}"></div>
           <div class="field"><label>Tipo de sangre</label><input name="blood_type" value="${escapeHtml(pet.blood_type || '')}"></div>
@@ -415,17 +526,48 @@ export async function openPetModal(id) {
   const vaccinatedSelect = document.getElementById('vaccinated-select');
   if (vaccinatedSelect) {
     vaccinatedSelect.addEventListener('change', (e) => {
-      const group = document.getElementById('vaccines-checkboxes-group');
+      const group = document.getElementById('vaccines-section');
       if (group) group.style.display = e.target.value === 'Sí' ? '' : 'none';
     });
   }
 
-  // Habilitar/deshabilitar input de vacuna personalizada
-  document.querySelectorAll('input[name="vacuna_Otra"]').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      const input = e.target.closest('label').querySelector('input[name="vacuna_personalizada"]');
-      if (input) input.disabled = !e.target.checked;
-    });
+  // Event listeners para agregar items dinámicos
+  const btnAddVaccine = document.getElementById('btn-add-vaccine');
+  if (btnAddVaccine) {
+    btnAddVaccine.addEventListener('click', () => addDynamicItem('vaccines-list', renderVaccineItem()));
+  }
+  const btnAddDeworming = document.getElementById('btn-add-deworming');
+  if (btnAddDeworming) {
+    btnAddDeworming.addEventListener('click', () => addDynamicItem('deworming-list', renderDewormingItem()));
+  }
+  const btnAddCondition = document.getElementById('btn-add-condition');
+  if (btnAddCondition) {
+    btnAddCondition.addEventListener('click', () => addDynamicItem('conditions-list', renderConditionItem()));
+  }
+  const btnAddSurgery = document.getElementById('btn-add-surgery');
+  if (btnAddSurgery) {
+    btnAddSurgery.addEventListener('click', () => addDynamicItem('surgeries-list', renderSurgeryItem()));
+  }
+  const btnAddMedication = document.getElementById('btn-add-medication');
+  if (btnAddMedication) {
+    btnAddMedication.addEventListener('click', () => addDynamicItem('medications-list', renderMedicationItem()));
+  }
+
+  // Delegación para eliminar items dinámicos
+  document.getElementById('vaccines-list')?.addEventListener('click', (e) => {
+    if (e.target && e.target.classList.contains('btn-remove-item')) e.target.closest('.dynamic-item').remove();
+  });
+  document.getElementById('deworming-list')?.addEventListener('click', (e) => {
+    if (e.target && e.target.classList.contains('btn-remove-item')) e.target.closest('.dynamic-item').remove();
+  });
+  document.getElementById('conditions-list')?.addEventListener('click', (e) => {
+    if (e.target && e.target.classList.contains('btn-remove-item')) e.target.closest('.dynamic-item').remove();
+  });
+  document.getElementById('surgeries-list')?.addEventListener('click', (e) => {
+    if (e.target && e.target.classList.contains('btn-remove-item')) e.target.closest('.dynamic-item').remove();
+  });
+  document.getElementById('medications-list')?.addEventListener('click', (e) => {
+    if (e.target && e.target.classList.contains('btn-remove-item')) e.target.closest('.dynamic-item').remove();
   });
 
   bindPhotoEditor();
@@ -484,19 +626,27 @@ async function savePet(id, isEdit) {
     return;
   }
 
-  // Recolectar vacunas seleccionadas de los checkboxes
-  const vacunasSeleccionadas = [];
-  document.querySelectorAll('input[name^="vacuna_"]').forEach(cb => {
-    if (cb.checked) {
-      if (cb.name === 'vacuna_Otra' && cb.value === '') {
-        const inputPersonalizada = cb.closest('label')?.querySelector('input[name="vacuna_personalizada"]');
-        const nombrePersonalizada = inputPersonalizada ? inputPersonalizada.value.trim() : '';
-        if (nombrePersonalizada) vacunasSeleccionadas.push(nombrePersonalizada);
-      } else {
-        vacunasSeleccionadas.push(cb.value);
-      }
-    }
-  });
+  // Recolectar items dinámicos de cada sección médica
+  const collectDynamicList = (containerId, fieldNames) => {
+    const container = document.getElementById(containerId);
+    if (!container) return [];
+    const items = [];
+    container.querySelectorAll('.dynamic-item').forEach(el => {
+      const item = {};
+      fieldNames.forEach(fn => {
+        const input = el.querySelector(`input[name="${fn}"], select[name="${fn}"]`);
+        if (input) item[fn] = input.value;
+      });
+      items.push(item);
+    });
+    return items;
+  };
+
+  const vaccines = collectDynamicList('vaccines-list', ['vaccine_name', 'vaccine_date', 'vaccine_lot', 'vaccine_vet', 'vaccine_applied', 'vaccine_next_due']);
+  const dewormings = collectDynamicList('deworming-list', ['deworming_product', 'deworming_weight', 'deworming_date', 'deworming_vet', 'deworming_next_due']);
+  const conditions = collectDynamicList('conditions-list', ['condition_name', 'condition_date', 'condition_notes']);
+  const surgeries = collectDynamicList('surgeries-list', ['surgery_name', 'surgery_date', 'surgery_vet', 'surgery_notes']);
+  const medications = collectDynamicList('medications-list', ['medication_name', 'medication_dose', 'medication_freq', 'medication_start']);
 
   const petData = {
     id,
@@ -510,17 +660,18 @@ async function savePet(id, isEdit) {
     photo: photoTemp,
     owner_name: get('owner_name'), owner_ci: get('owner_ci'), owner_address: get('owner_address'),
     owner_city: get('owner_city'), owner_phone: get('owner_phone'), owner_email: get('owner_email'),
-    medical_vaccinated: get('medical_vaccinated'), medical_vaccines: get('medical_vaccines'),
-    medical_vet: get('medical_vet'), medical_observations: get('medical_observations'),
-    medical_diseases: get('medical_diseases'), medical_allergies: get('medical_allergies'),
+    medical_vaccinated: get('medical_vaccinated'), medical_vet: get('medical_vet'),
+    medical_observations: get('medical_observations'),
+    medical_diseases: get('medical_conditions'), medical_allergies: get('allergies'),
     signature: get('signature'),
     age_years: get('age_mode') === 'years_months' ? get('age_years') : '',
     age_months: get('age_mode') === 'years_months' ? get('age_months') : '',
     age_mode: get('age_mode'),
-    vaccines_list: vacunasSeleccionadas.join(', '),
-    deworming_history: get('deworming_history'),
-    medical_conditions: get('medical_conditions'), allergies_ext: get('allergies'),
-    surgeries: get('surgeries'), medications: get('medications'),
+    vaccines_list: vaccines.map(v => v.vaccine_name).filter(Boolean).join(', '),
+    deworming_history: dewormings.map(d => d.deworming_product).filter(Boolean).join(', '),
+    medical_conditions: conditions.map(c => c.condition_name).filter(Boolean).join(', '),
+    surgeries: surgeries.map(s => s.surgery_name).filter(Boolean).join(', '),
+    medications: medications.map(m => m.medication_name).filter(Boolean).join(', '),
     sterilized: get('sterilized') === '1' ? 1 : 0, microchip: get('microchip'), blood_type: get('blood_type')
   };
 
@@ -535,7 +686,7 @@ async function savePet(id, isEdit) {
     await state.loadPets();
     api.logHistory(isEdit ? 'Edición' : 'Creación', `${petData.name} (${petData.carnet_number})`);
 
-    // Guardar detalles médicos extendidos
+    // Guardar detalles médicos extendidos con listas dinámicas como JSON
     const medicalDetails = {
       vaccines_list: petData.vaccines_list,
       deworming_history: petData.deworming_history,
@@ -545,7 +696,12 @@ async function savePet(id, isEdit) {
       medications: petData.medications,
       sterilized: petData.sterilized,
       microchip: petData.microchip,
-      blood_type: petData.blood_type
+      blood_type: petData.blood_type,
+      vaccines_detail: vaccines,
+      deworming_detail: dewormings,
+      conditions_detail: conditions,
+      surgeries_detail: surgeries,
+      medications_detail: medications
     };
     try {
       await api.updateMedicalDetails(createdId, medicalDetails);
