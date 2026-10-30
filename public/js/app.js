@@ -210,7 +210,7 @@ function bindShellEvents() {
   });
 }
 
-export function renderView() {
+export async function renderView() {
   const body = document.getElementById('page-body');
   if (state.view === 'dashboard') body.innerHTML = viewDashboard();
   else if (state.view === 'mascotas') body.innerHTML = viewMascotas();
@@ -220,7 +220,7 @@ export function renderView() {
   else if (state.view === 'config') body.innerHTML = state.user.role === 'Administrador' ? viewConfig() : `<p>No autorizado.</p>`;
   bindViewEvents();
   if (state.view === 'dashboard') drawCharts();
-  if (state.view === 'carnet') renderCardPreview();
+  if (state.view === 'carnet') await renderCardPreview();
 }
 
 function bindViewEvents() {

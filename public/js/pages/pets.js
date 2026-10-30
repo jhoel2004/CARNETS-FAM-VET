@@ -261,6 +261,7 @@ function blankPet() {
     id: uid(), name: '', carnet_number: '', species: 'perro', breed: '', sex: 'Macho', birth_date: '', color: '', weight: '',
     category: 'General', status: 'Activo', photo: '', fingerprint: '', offspring: '', registration_date: new Date().toISOString().slice(0, 10),
     owner_name: '', owner_ci: '', owner_address: '', owner_city: '', owner_phone: '', owner_email: '',
+    distinctive_marks: '',
     medical_vaccinated: 'No', medical_vaccines: '', medical_vet: '', medical_observations: '', medical_diseases: '', medical_allergies: '',
     signature: '', age_years: '', age_months: ''
   };
@@ -288,10 +289,11 @@ export async function openPetModal(id) {
           <div class="field"><label>N° de carnet / CI *</label><input required name="carnet_number" value="${escapeHtml(pet.carnet_number || '')}" placeholder="Ej: PLI-BO-2026-00001"></div>
           <div class="field"><label>Especie</label><select name="species"><option value="perro" ${pet.species === 'perro' ? 'selected' : ''}>Perro</option><option value="gato" ${pet.species === 'gato' ? 'selected' : ''}>Gato</option><option value="otro" ${pet.species === 'otro' ? 'selected' : ''}>Otro</option></select></div>
           <div class="field"><label>Raza</label><input name="breed" value="${escapeHtml(pet.breed || '')}"></div>
+          <div class="field"><label>Fecha de nacimiento</label><input type="date" name="birth_date" value="${pet.birth_date || ''}"></div>
           <div class="field"><label>Sexo</label><select name="sex"><option ${pet.sex === 'Macho' ? 'selected' : ''}>Macho</option><option ${pet.sex === 'Hembra' ? 'selected' : ''}>Hembra</option></select></div>
           <div class="field"><label>Edad - Años</label><input type="number" min="0" max="30" name="age_years" value="${escapeHtml(pet.age_years || '')}" placeholder="Ej: 3"></div>
           <div class="field"><label>Edad - Meses</label><input type="number" min="0" max="11" name="age_months" value="${escapeHtml(pet.age_months || '')}" placeholder="Ej: 6"></div>
-          <div class="field"><label>Color</label><input name="color" value="${escapeHtml(pet.color || '')}"></div>
+          <div class="field"><label>Color / señas distintivas</label><input name="distinctive_marks" value="${escapeHtml(pet.distinctive_marks || pet.color || '')}"></div>
           <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" name="weight" value="${pet.weight || ''}"></div>
           <div class="field"><label>Categoría</label><input name="category" value="${escapeHtml(pet.category || '')}"></div>
           <div class="field"><label>Estado</label><select name="status"><option ${pet.status === 'Activo' ? 'selected' : ''}>Activo</option><option ${pet.status === 'Inactivo' ? 'selected' : ''}>Inactivo</option><option ${pet.status === 'Perdido' ? 'selected' : ''}>Perdido</option></select></div>
@@ -401,8 +403,9 @@ async function savePet(id, isEdit) {
     id,
     carnet_number: get('carnet_number'),
     name: get('name'), species: get('species'), breed: get('breed'), sex: get('sex'),
-    birth_date: '', color: get('color'), weight: get('weight'),
+    birth_date: get('birth_date'), color: get('color') || get('distinctive_marks'), weight: get('weight'),
     category: get('category') || 'General', status: get('status'),
+    distinctive_marks: get('distinctive_marks'),
     fingerprint: get('fingerprint'), offspring: get('offspring'), registration_date: get('registration_date'),
     photo: photoTemp,
     owner_name: get('owner_name'), owner_ci: get('owner_ci'), owner_address: get('owner_address'),

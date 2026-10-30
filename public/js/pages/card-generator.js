@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { iconDownload, iconPrinter } from '../icons.js';
 import { escapeHtml, speciesLabel, placeholderPhoto, publicUrl, toast } from '../utils.js';
+import { initHealthCard, viewHealthCard, bindHealthCardEvents } from './health-card.js';
 
 let state = null;
 
@@ -9,25 +10,35 @@ const TEMPLATES = [
   { id: 'minimal', name: 'Minimalista' }, { id: 'moderna', name: 'Moderna' }, { id: 'vet', name: 'Veterinaria' }
 ];
 
+const DOC_TYPES = [
+  { id: 'credential', name: 'Credencial de identificación' },
+  { id: 'health', name: 'Carnet sanitario' },
+];
+
 export function initCard(s) {
   state = s;
+  initHealthCard();
 }
 
 export function viewCarnet() {
   const pets = state.getPets();
   const sel = state.cardPetId || (pets[0] && pets[0].id) || '';
   state.cardPetId = sel;
+  state.cardDocType = state.cardDocType || 'health';
   state.cardTemplate = state.cardTemplate || state.getSettings().defaultTemplate || 'bolivia';
 
+  const pet = pets.find(p => p.id === sel) || null;
+
   return `
-  <div class="page-head"><div><h1>Generador de carnets</h1><p>Anverso y reverso del carnet de identificación.</p></div></div>
+  <div class="page-head"><div><h1>Generador de documentos</h1><p>Credencial de identificación y carnet sanitario.</p></div></div>
   <div class="carnet-stage">
     <div class="carnet-preview-col">
       <div class="card-faces">
-        <div class="face-label">Anverso</div>
+        <div class="face-label">${state.cardDocType === 'health' ? 'Portada — Carnet sanitario' : 'Anverso — Credencial'}</div>
         <div id="card-render-front"></div>
-        <div class="face-label">Reverso</div>
-        <div id="card-render-back"></div>
+        ${state.cardDocType === 'health' ? `
+          <div class="face-label">Reverso — Registros de salud</div>
+          <div id="card-render-back"></div>` : ''}
       </div>
     </div>
     <div class="carnet-options-col">
@@ -37,24 +48,42 @@ export function viewCarnet() {
           ${pets.length ? pets.map(p => `<option value="${p.id}" ${p.id === sel ? 'selected' : ''}>${escapeHtml(p.name)} — ${p.carnet_number}</option>`).join('') : '<option>No hay mascotas registradas</option>'}
         </select>
       </div>
-      <div class="panel">
-        <h3>Plantilla</h3>
-        <div class="tpl-grid">
-          ${TEMPLATES.map(t => `
+      <div class="panel" style="margin-bottom:16px;">
+        <h3>Tipo de documento</h3>
+        <div class="tpl-grid" style="grid-template-columns:1fr;">
+          ${DOC_TYPES.map(t => `
             <div>
-              <div class="tpl-swatch tpl-${t.id} ${state.cardTemplate === t.id ? 'selected' : ''}" data-tpl="${t.id}"><div class="tri-top"><span></span><span></span><span></span></div></div>
-              <div class="tpl-name">${t.name}</div>
+              <div class="tpl-swatch tpl-${t.id} ${state.cardDocType === t.id ? 'selected' : ''}" data-doctype="${t.id}">
+                <div style="padding:14px 10px; font-size:13px; font-weight:600; color:var(--text);">${t.name}</div>
+              </div>
+              <div class="tpl-name">${t.id === 'health' ? 'Diseño libro · estilo carnet de Max' : '6 plantillas · QR · MRZ'}</div>
             </div>`).join('')}
         </div>
-        <div class="flex gap-2" style="margin-top:6px; flex-direction:column;">
-          <button class="btn btn-primary" id="btn-download-png">${iconDownload} Descargar PNG</button>
-          <button class="btn btn-outline" id="btn-download-pdf">${iconDownload} Descargar PDF</button>
-          <button class="btn btn-outline" id="btn-print-card">${iconPrinter} Imprimir</button>
-        </div>
       </div>
+      ${state.cardDocType === 'health' ? `<div id="hc-card-container"></div>` : viewCredential(pet)}
     </div>
   </div>
   <div id="print-area" class="hidden"></div>`;
+}
+
+function viewCredential(pet) {
+  if (!pet) return `<div class="panel"><h3>Plantilla</h3><p>Selecciona una mascota primero.</p></div>`;
+  return `
+  <div class="panel">
+    <h3>Plantilla</h3>
+    <div class="tpl-grid">
+      ${TEMPLATES.map(t => `
+        <div>
+          <div class="tpl-swatch tpl-${t.id} ${state.cardTemplate === t.id ? 'selected' : ''}" data-tpl="${t.id}"><div class="tri-top"><span></span><span></span><span></span></div></div>
+          <div class="tpl-name">${t.name}</div>
+        </div>`).join('')}
+    </div>
+    <div class="flex gap-2" style="margin-top:6px; flex-direction:column;">
+      <button class="btn btn-primary" id="btn-download-png">${iconDownload} Descargar PNG</button>
+      <button class="btn btn-outline" id="btn-download-pdf">${iconDownload} Descargar PDF</button>
+      <button class="btn btn-outline" id="btn-print-card">${iconPrinter} Imprimir</button>
+    </div>
+  </div>`;
 }
 
 function currentPet() {
@@ -170,11 +199,32 @@ function cardBackHtml(pet, tpl) {
   </div>`;
 }
 
-export function renderCardPreview() {
+export async function renderCardPreview() {
   const pet = currentPet();
+  if (state.cardDocType === 'health' && pet) {
+    await state.loadHealthRecords(pet.id);
+  }
+
   const front = document.getElementById('card-render-front');
   const back = document.getElementById('card-render-back');
+
+  if (state.cardDocType === 'health') {
+    if (front) front.innerHTML = '';
+    if (back) back.innerHTML = '';
+    const container = document.getElementById('hc-card-container');
+    if (container && pet) {
+      container.innerHTML = viewHealthCard(pet);
+      import('./health-card.js').then((m) => m.bindHealthCardEvents());
+    }
+    return;
+  }
+
   if (!front || !back) return;
+  if (!pet) {
+    front.innerHTML = cardFrontHtml(null, state.cardTemplate);
+    back.innerHTML = cardBackHtml(null, state.cardTemplate);
+    return;
+  }
   front.innerHTML = cardFrontHtml(pet, state.cardTemplate);
   back.innerHTML = cardBackHtml(pet, state.cardTemplate);
   const qrHolder = document.getElementById('card-qr');
@@ -184,7 +234,17 @@ export function renderCardPreview() {
 export function bindCarnetEvents() {
   const sel = document.getElementById('carnet-pet-select');
   if (sel) sel.addEventListener('change', () => { state.cardPetId = sel.value; renderCardPreview(); });
-  document.querySelectorAll('[data-tpl]').forEach(el => el.addEventListener('click', () => { state.cardTemplate = el.dataset.tpl; import('../app.js').then(m => { m.renderView(); renderCardPreview(); }); }));
+
+  document.querySelectorAll('[data-doctype]').forEach(el => el.addEventListener('click', () => {
+    state.cardDocType = el.dataset.doctype;
+    import('../app.js').then(m => { m.renderView(); renderCardPreview(); });
+  }));
+
+  document.querySelectorAll('[data-tpl]').forEach(el => el.addEventListener('click', () => {
+    state.cardTemplate = el.dataset.tpl;
+    import('../app.js').then(m => { m.renderView(); renderCardPreview(); });
+  }));
+
   const dlPng = document.getElementById('btn-download-png');
   if (dlPng) dlPng.addEventListener('click', () => downloadCard('png'));
   const dlPdf = document.getElementById('btn-download-pdf');
@@ -194,6 +254,10 @@ export function bindCarnetEvents() {
 }
 
 async function downloadCard(type) {
+  if (state.cardDocType === 'health') {
+    import('./health-card.js').then((m) => m.downloadCard(type));
+    return;
+  }
   const front = document.getElementById('the-id-card-front');
   const back = document.getElementById('the-id-card-back');
   if (!front || !back) { toast('Selecciona una mascota primero', 'error'); return; }
@@ -229,6 +293,10 @@ async function downloadCard(type) {
 }
 
 function printCard() {
+  if (state.cardDocType === 'health') {
+    import('./health-card.js').then((m) => m.printCard());
+    return;
+  }
   const pet = currentPet();
   if (!pet) { toast('Selecciona una mascota', 'error'); return; }
   const front = document.getElementById('card-render-front').innerHTML;

@@ -7,6 +7,7 @@ class AppState {
     this._users = [];
     this._settings = {};
     this._history = [];
+    this._healthRecords = {};
     this._user = null;
     this.view = 'dashboard';
     this.search = '';
@@ -26,6 +27,7 @@ class AppState {
   getUsers() { return this._users; }
   getSettings() { return this._settings; }
   getHistory() { return this._history; }
+  getHealthRecords(petId) { return this._healthRecords[petId] || []; }
 
   setView(v) { this.view = v; }
 
@@ -52,6 +54,10 @@ class AppState {
 
   async loadPets() {
     try { this._pets = await api.getPets(); } catch { this._pets = []; }
+  }
+
+  async loadHealthRecords(petId) {
+    try { this._healthRecords[petId] = await api.getHealthRecords(petId); } catch { this._healthRecords[petId] = []; }
   }
 
   async loadUsers() {

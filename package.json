@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "migrate": "node migrations/migrate-to-supabase.js"
+    "migrate": "node migrations/migrate-to-supabase.js",
+    "migrate:health": "node migrations/apply-health-records.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -1,10 +1,10 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const db = require('../db');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { authenticateToken, requireAdmin, requireAdminOrOperator } = require('../middleware/auth');
 
 const router = express.Router();
-const publicPetColumns = 'id, carnet_number, name, species, breed, sex, birth_date, color, weight, category, status, photo, fingerprint, offspring, registration_date, owner_name, owner_phone, medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_allergies';
+const publicPetColumns = 'id, carnet_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight, category, status, photo, fingerprint, offspring, registration_date, owner_name, owner_phone, medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_allergies';
 
 // ============================================
 // RUTAS PÚBLICAS PRIMERO (antes de /:id)
@@ -84,14 +84,14 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
     const regDate = p.registration_date || new Date().toISOString().slice(0, 10);
     const carnet = String(p.carnet_number).trim();
 
-    await db.run(`INSERT INTO pets (id, carnet_number, name, species, breed, sex, birth_date, color, weight,
+    await db.run(`INSERT INTO pets (id, carnet_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight,
       category, status, photo, fingerprint, offspring, registration_date,
       owner_name, owner_ci, owner_address, owner_city, owner_phone, owner_email,
       medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_diseases, medical_allergies,
       signature, age_years, age_months)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)`, [
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31)`, [
       id, carnet, p.name, p.species || 'perro', p.breed || '', p.sex || 'Macho',
-      p.birth_date || '', p.color || '', p.weight || '', p.category || 'General',
+      p.birth_date || '', p.color || '', p.distinctive_marks || '', p.weight || '', p.category || 'General',
       p.status || 'Activo', p.photo || '', p.fingerprint || '', p.offspring || '', regDate,
       p.owner_name, p.owner_ci || '', p.owner_address || '', p.owner_city || '', p.owner_phone, p.owner_email || '',
       p.medical_vaccinated || 'No', p.medical_vaccines || '', p.medical_vet || '',
@@ -129,14 +129,14 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
     }
 
     await db.run(`UPDATE pets SET
-      carnet_number=$1, name=$2, species=$3, breed=$4, sex=$5, birth_date=$6, color=$7, weight=$8, category=$9, status=$10,
-      photo=$11, fingerprint=$12, offspring=$13, registration_date=$14,
-      owner_name=$15, owner_ci=$16, owner_address=$17, owner_city=$18, owner_phone=$19, owner_email=$20,
-      medical_vaccinated=$21, medical_vaccines=$22, medical_vet=$23, medical_observations=$24, medical_diseases=$25, medical_allergies=$26,
-      signature=$27, age_years=$28, age_months=$29,
-      updated_at=$30
-      WHERE id=$31`, [
-      p.carnet_number || existing.carnet_number, p.name, p.species, p.breed, p.sex, p.birth_date, p.color, p.weight, p.category, p.status,
+      carnet_number=$1, name=$2, species=$3, breed=$4, sex=$5, birth_date=$6, color=$7, distinctive_marks=$8, weight=$9, category=$10, status=$11,
+      photo=$12, fingerprint=$13, offspring=$14, registration_date=$15,
+      owner_name=$16, owner_ci=$17, owner_address=$18, owner_city=$19, owner_phone=$20, owner_email=$21,
+      medical_vaccinated=$22, medical_vaccines=$23, medical_vet=$24, medical_observations=$25, medical_diseases=$26, medical_allergies=$27,
+      signature=$28, age_years=$29, age_months=$30,
+      updated_at=$31
+      WHERE id=$32`, [
+      p.carnet_number || existing.carnet_number, p.name, p.species, p.breed, p.sex, p.birth_date, p.color, p.distinctive_marks || '', p.weight || '', p.category || 'General', p.status || 'Activo',
       p.photo, p.fingerprint, p.offspring || '', p.registration_date,
       p.owner_name, p.owner_ci, p.owner_address, p.owner_city, p.owner_phone, p.owner_email,
       p.medical_vaccinated, p.medical_vaccines, p.medical_vet, p.medical_observations, p.medical_diseases, p.medical_allergies,
@@ -173,5 +173,169 @@ async function nextCarnetNumber() {
   }
   return `PLI-BO-${year}-${String(max + 1).padStart(5, '0')}`;
 }
+
+// ============================================
+// ENDPOINTS DE REGISTROS DE SALUD (carnet sanitario)
+// ============================================
+
+// Listar registros de salud de una mascota (autenticado)
+router.get('/:id/health-records', authenticateToken, async (req, res) => {
+  try {
+    const pet = await db.get('SELECT id, owner_ci FROM pets WHERE id = $1', [req.params.id]);
+    if (!pet) return res.status(404).json({ error: 'Mascota no encontrada' });
+    if (req.user.role === 'Espectador' && pet.owner_ci !== req.user.username) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+    const rows = await db.query(
+      'SELECT * FROM pet_health_records WHERE pet_id = $1 ORDER BY record_date DESC, created_at DESC',
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (e) {
+    console.error('GET /api/pets/:id/health-records error:', e);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Crear registro de salud
+router.post('/:id/health-records', authenticateToken, requireAdminOrOperator, async (req, res) => {
+  try {
+    const pet = await db.get('SELECT id FROM pets WHERE id = $1', [req.params.id]);
+    if (!pet) return res.status(404).json({ error: 'Mascota no encontrada' });
+
+    const p = req.body;
+    if (!p.type || !p.title) {
+      return res.status(400).json({ error: 'Tipo y título son requeridos' });
+    }
+    const validTypes = ['vacuna', 'desparasitacion', 'historial'];
+    if (!validTypes.includes(p.type)) {
+      return res.status(400).json({ error: 'Tipo inválido' });
+    }
+
+    const id = 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const now = new Date().toISOString();
+    const applied = p.applied ? 1 : 0;
+    const appliedAt = applied ? now : null;
+
+    await db.run(`INSERT INTO pet_health_records (
+      id, pet_id, type, title, record_date, notes, applied, next_due, vet, product, weight, applied_at, created_at, updated_at
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [
+      id, req.params.id, p.type, p.title, p.record_date || '', p.notes || '', applied,
+      p.next_due || '', p.vet || '', p.product || '', p.weight || '', appliedAt, now, now
+    ]);
+
+    await db.run('INSERT INTO history (action, entity, "user", date, time) VALUES ($1,$2,$3,$4,$5)', [
+      'Registro de salud', `${p.title} (${p.type})`, req.user.name,
+      new Date().toLocaleDateString('es-BO'), new Date().toLocaleTimeString('es-BO')
+    ]);
+
+    res.status(201).json({ id, success: true });
+  } catch (e) {
+    console.error('POST /api/pets/:id/health-records error:', e);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Editar registro de salud
+router.put('/health-records/:id', authenticateToken, requireAdminOrOperator, async (req, res) => {
+  try {
+    const existing = await db.get('SELECT * FROM pet_health_records WHERE id = $1', [req.params.id]);
+    if (!existing) return res.status(404).json({ error: 'Registro no encontrado' });
+
+    const p = req.body;
+    const validTypes = ['vacuna', 'desparasitacion', 'historial'];
+    if (p.type && !validTypes.includes(p.type)) {
+      return res.status(400).json({ error: 'Tipo inválido' });
+    }
+
+    const now = new Date().toISOString();
+    let applied = existing.applied;
+    let appliedAt = existing.applied_at;
+    if (p.applied !== undefined) {
+      applied = p.applied ? 1 : 0;
+      appliedAt = applied ? now : null;
+    }
+
+    await db.run(`UPDATE pet_health_records SET
+      type=$1, title=$2, record_date=$3, notes=$4, applied=$5, next_due=$6, vet=$7, product=$8, weight=$9,
+      applied_at=$10, updated_at=$11
+      WHERE id=$12`, [
+      p.type || existing.type, p.title || existing.title, p.record_date !== undefined ? p.record_date : existing.record_date,
+      p.notes !== undefined ? p.notes : existing.notes, applied,
+      p.next_due !== undefined ? p.next_due : existing.next_due,
+      p.vet !== undefined ? p.vet : existing.vet,
+      p.product !== undefined ? p.product : existing.product,
+      p.weight !== undefined ? p.weight : existing.weight,
+      appliedAt, now, req.params.id
+    ]);
+
+    await db.run('INSERT INTO history (action, entity, "user", date, time) VALUES ($1,$2,$3,$4,$5)', [
+      'Edición de registro de salud', existing.title, req.user.name,
+      new Date().toLocaleDateString('es-BO'), new Date().toLocaleTimeString('es-BO')
+    ]);
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('PUT /api/health-records/:id error:', e);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Marcar / desmarcar registro como aplicado
+router.patch('/health-records/:id/apply', authenticateToken, requireAdminOrOperator, async (req, res) => {
+  try {
+    const existing = await db.get('SELECT * FROM pet_health_records WHERE id = $1', [req.params.id]);
+    if (!existing) return res.status(404).json({ error: 'Registro no encontrado' });
+
+    const applied = req.body.applied !== false;
+    const now = new Date().toISOString();
+    await db.run('UPDATE pet_health_records SET applied = $1, applied_at = $2, updated_at = $3 WHERE id = $4', [
+      applied ? 1 : 0, applied ? now : null, now, req.params.id
+    ]);
+
+    await db.run('INSERT INTO history (action, entity, "user", date, time) VALUES ($1,$2,$3,$4,$5)', [
+      applied ? 'Vacuna aplicada' : 'Registro desmarcado', existing.title, req.user.name,
+      new Date().toLocaleDateString('es-BO'), new Date().toLocaleTimeString('es-BO')
+    ]);
+
+    res.json({ success: true, applied });
+  } catch (e) {
+    console.error('PATCH /api/health-records/:id/apply error:', e);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Eliminar registro de salud
+router.delete('/health-records/:id', authenticateToken, requireAdminOrOperator, async (req, res) => {
+  try {
+    const existing = await db.get('SELECT * FROM pet_health_records WHERE id = $1', [req.params.id]);
+    if (!existing) return res.status(404).json({ error: 'Registro no encontrado' });
+    await db.run('DELETE FROM pet_health_records WHERE id = $1', [req.params.id]);
+    await db.run('INSERT INTO history (action, entity, "user", date, time) VALUES ($1,$2,$3,$4,$5)', [
+      'Eliminación de registro de salud', existing.title, req.user.name,
+      new Date().toLocaleDateString('es-BO'), new Date().toLocaleTimeString('es-BO')
+    ]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('DELETE /api/health-records/:id error:', e);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Resumen público de salud (vacunas y desparasitación) para la página pública del QR
+router.get('/public/:id/health', async (req, res) => {
+  try {
+    const pet = await db.get('SELECT id, carnet_number FROM pets WHERE id = $1', [req.params.id]);
+    if (!pet) return res.status(404).json({ error: 'No encontrada' });
+    const rows = await db.query(
+      "SELECT id, type, title, record_date, notes, applied, next_due, vet, product, weight FROM pet_health_records WHERE pet_id = $1 AND type IN ('vacuna','desparasitacion') ORDER BY record_date DESC, created_at DESC",
+      [req.params.id]
+    );
+    res.json({ pet: { id: pet.id, carnet_number: pet.carnet_number }, records: rows });
+  } catch (e) {
+    console.error('GET /api/pets/public/:id/health error:', e);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 
 module.exports = router;

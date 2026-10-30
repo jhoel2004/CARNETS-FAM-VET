@@ -40,6 +40,7 @@ async function init() {
       const client = await pool.connect();
       try {
         await client.query('SELECT 1');
+        await ensurePgSchema(client);
       } finally {
         client.release();
       }
@@ -117,6 +118,23 @@ async function createSqliteTables() {
     signature TEXT DEFAULT '',
     age_years TEXT DEFAULT '',
     age_months TEXT DEFAULT '',
+    distinctive_marks TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    updated_at TEXT DEFAULT (datetime('now','localtime'))
+  )`);
+  sqlJsDb.run(`CREATE TABLE IF NOT EXISTS pet_health_records (
+    id TEXT PRIMARY KEY,
+    pet_id TEXT NOT NULL,
+    type TEXT DEFAULT 'historial',
+    title TEXT NOT NULL,
+    record_date TEXT DEFAULT '',
+    notes TEXT DEFAULT '',
+    applied INTEGER DEFAULT 0,
+    next_due TEXT DEFAULT '',
+    vet TEXT DEFAULT '',
+    product TEXT DEFAULT '',
+    weight TEXT DEFAULT '',
+    applied_at TEXT DEFAULT (datetime('now','localtime')),
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
@@ -141,6 +159,7 @@ async function createSqliteTables() {
   addCol('pets', "signature TEXT DEFAULT ''");
   addCol('pets', "age_years TEXT DEFAULT ''");
   addCol('pets', "age_months TEXT DEFAULT ''");
+  addCol('pets', "distinctive_marks TEXT DEFAULT ''");
 
   // Seed admin user if not exists
   const adminExists = sqlJsDb.exec("SELECT id FROM users WHERE username = 'admin'");
@@ -211,6 +230,49 @@ function save() {
     const data = sqlJsDb.export();
     fs.writeFileSync(DB_PATH, Buffer.from(data));
   }
+}
+
+// Asegura esquema de carnet sanitario en PostgreSQL (Supabase) al iniciar.
+async function ensurePgSchema(client) {
+  await client.query(`
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS distinctive_marks TEXT DEFAULT '';
+    CREATE TABLE IF NOT EXISTS pet_health_records (
+      id TEXT PRIMARY KEY,
+      pet_id TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'historial',
+      title TEXT NOT NULL,
+      record_date TEXT DEFAULT '',
+      notes TEXT DEFAULT '',
+      applied INTEGER DEFAULT 0,
+      next_due TEXT DEFAULT '',
+      vet TEXT DEFAULT '',
+      product TEXT DEFAULT '',
+      weight TEXT DEFAULT '',
+      applied_at TIMESTAMP DEFAULT NOW(),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_pet_health_records_pet_id ON pet_health_records(pet_id);
+    CREATE INDEX IF NOT EXISTS idx_pet_health_records_type ON pet_health_records(type);
+    CREATE INDEX IF NOT EXISTS idx_pet_health_records_date ON pet_health_records(record_date DESC);
+  `);
+  for (const [key, value] of [
+    ['healthTagline', 'Amor, cuidado y salud para toda la vida'],
+    ['healthServices', 'Control sanitario · Vacunación · Desparasitación · Historial clínico'],
+    ['healthMotto', 'Porque su bienestar es nuestra prioridad'],
+    ['healthCardWidth', '100'],
+    ['healthCardHeight', '155'],
+    ['systemName', 'FAM J VET'],
+    ['systemSub', 'Sistema Nacional de Identificación de Mascotas'],
+    ['defaultTemplate', 'bolivia'],
+    ['cardFormat', 'CR80 (85.6 × 54 mm)']
+  ]) {
+    await client.query(
+      'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING',
+      [key, value]
+    );
+  }
+  console.log('[DB] Esquema de carnet sanitario verificado');
 }
 
 module.exports = { init, close, query, get, run, state };

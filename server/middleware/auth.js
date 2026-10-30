@@ -26,4 +26,10 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { authenticateToken, requireAdmin };
+function requireAdminOrOperator(req, res, next) {
+  if (req.user.role !== 'Administrador' && req.user.role !== 'Operador')
+    return res.status(403).json({ error: 'Se requiere rol de Administrador u Operador' });
+  next();
+}
+
+module.exports = { authenticateToken, requireAdmin, requireAdminOrOperator };

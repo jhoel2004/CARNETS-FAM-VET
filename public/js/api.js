@@ -37,6 +37,14 @@ export const api = {
   deletePet: (id) => request('DELETE', '/pets/' + id),
   getPublicPet: (id) => request('GET', '/pets/public/' + id),
   getPublicPetByCarnet: (carnet) => request('GET', '/pets/public/carnet/' + encodeURIComponent(carnet)),
+  getPublicPetHealth: (id) => request('GET', '/pets/public/' + id + '/health'),
+
+  // Health records
+  getHealthRecords: (petId) => request('GET', '/pets/' + petId + '/health-records'),
+  createHealthRecord: (petId, record) => request('POST', '/pets/' + petId + '/health-records', record),
+  updateHealthRecord: (id, record) => request('PUT', '/health-records/' + id, record),
+  applyHealthRecord: (id, applied) => request('PATCH', '/health-records/' + id + '/apply', { applied }),
+  deleteHealthRecord: (id) => request('DELETE', '/health-records/' + id),
 
   // Settings
   getSettings: () => request('GET', '/settings'),
