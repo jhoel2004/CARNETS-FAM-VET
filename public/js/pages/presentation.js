@@ -1,8 +1,6 @@
 /* ============================================================
-   PRESENTACIÓN DE MASCOTA — FAMUVET (libreta veterinaria digital)
-   Página pública independiente, aparte del carnet del admin.
-   Diseño fiel a la libreta de papel: crema, azul marino, verde,
-   animaciones suaves y detalles que reaccionan.
+   PRESENTACIÓN DE MASCOTA — FAMUVET (diseño fiel a "Conoce a Max")
+   Página pública del QR — datos reales de la API.
    ============================================================ */
 
 import { api } from '../api.js';
@@ -11,7 +9,6 @@ import { escapeHtml, speciesLabel, placeholderPhoto, publicUrl, toast } from '..
 
 let pet = null;
 let records = [];
-let medicalDetails = {};
 let tab = 'vac';
 let photoTemp = '';
 let isOpen = false;
@@ -47,7 +44,7 @@ function daysFromNow(d) {
 }
 
 function showToast(msg) {
-  const el = document.getElementById('hc-toast');
+  const el = document.getElementById('toast');
   if (el) {
     el.textContent = msg;
     el.classList.add('on');
@@ -77,7 +74,6 @@ function placeholderPhotoSvg() {
 /* ---------- Carga de datos ---------- */
 
 export async function viewPresentation(petId) {
-  // Cargar datos de la mascota desde la API
   try {
     pet = await api.getPublicPet(petId);
   } catch {
@@ -85,17 +81,24 @@ export async function viewPresentation(petId) {
   }
   if (!pet) {
     return `
-    <div class="hc-view" style="padding:40px 20px; text-align:center; max-width:440px; margin:0 auto;">
-      <div style="font-size:48px; margin-bottom:16px;">🐾</div>
-      <h2 style="color:var(--hc-navy); margin-bottom:8px;">No encontrado</h2>
-      <p style="color:var(--hc-ink); opacity:.8;">Este código no corresponde a ninguna mascota registrada.</p>
-      <a href="#/" class="btn btn-primary" style="margin-top:16px;">Ir al sistema</a>
+    <div class="scene">
+      <div class="tilt">
+        <div class="book">
+          <section class="face front">
+            <div style="padding:40px 20px; text-align:center;">
+              <div style="font-size:48px; margin-bottom:16px;">🐾</div>
+              <h2 style="color:var(--hc-navy); margin-bottom:8px;">No encontrado</h2>
+              <p style="color:#1d2b4f; opacity:.8;">Este código QR no corresponde a ninguna mascota registrada.</p>
+              <a href="#/" style="color:var(--hc-blue); text-decoration:none;">Ir al sistema</a>
+            </div>
+          </section>
+        </div>
+      </div>
     </div>`;
   }
 
   photoTemp = pet.photo || '';
   records = state.getHealthRecords(pet.id) || [];
-  medicalDetails = await api.getMedicalDetails(pet.id).catch(() => ({}));
 
   const s = state.getSettings();
   const appliedCount = records.filter(r => r.applied).length;
@@ -103,128 +106,81 @@ export async function viewPresentation(petId) {
   const pct = total ? Math.round((appliedCount / total) * 100) : 0;
 
   return `
-  <div class="hc-view">
-    <div id="hc-toast" class="hc-toast"></div>
-
-    <!-- Loader inicial (perrito + huellas) -->
-    <div class="loader" id="hc-loader" role="status" aria-label="Cargando">
-      <span class="dog" aria-hidden="true">🐕</span>
-      <div class="trail" aria-hidden="true">
-        <span>🐾</span><span>🐾</span><span>🐾</span><span>🐾</span><span>🐾</span><span>🐾</span>
-      </div>
-      <p>Buscando a ${escapeHtml(pet.name)}…</p>
+  <div class="loader" id="loader" role="status" aria-label="Cargando">
+    <span class="dog" aria-hidden="true">🐕</span>
+    <div class="trail" aria-hidden="true">
+      <span>🐾</span><span>🐾</span><span>🐾</span><span>🐾</span><span>🐾</span><span>🐾</span>
     </div>
+    <p>Buscando a ${escapeHtml(pet.name)}…</p>
+  </div>
 
-    <!-- Contenedor libro -->
-    <div class="hc-scene" id="hc-scene">
-      <div class="hc-tilt" id="hc-tilt">
-        <div class="hc-book" id="hc-book">
+  <div class="scene"><div class="tilt" id="tilt"><div class="book" id="book">
 
-          <!-- PORTADA — Presentación -->
-          <section class="hc-face hc-front" aria-label="Presentación de la mascota">
-            <div class="hc-logo">
-              <span class="pets" aria-hidden="true">🐶🐱🐦</span>
-              <span class="hc-brand">FAM<svg viewBox="0 0 40 52" aria-hidden="true">
-                <path d="M7 4V27a13 13 0 0 0 26 0V4"/>
-                <path class="tl" d="M33 27c0 14-8 20-20 21"/>
-              </svg>VET</span>
-            </div>
-            <svg class="hc-beat" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true">
-              <path d="M0 12 H70 l6-9 l8 18 l6-9 H200"/>
-            </svg>
-            <div class="hc-tag">${escapeHtml(s.healthTagline || 'Amor, cuidado y salud para toda la vida')}</div>
-            <h1 class="hc-title">PRESENTACIÓN</h1>
-            <div class="hc-ribbon">de mi mascota</div>
-            <p class="hc-list">${escapeHtml(s.healthServices || 'Control sanitario · Vacunación · Desparasitación · Historial clínico')}</p>
-            <div class="hc-stage">
-              <button class="hc-frame" id="hc-frame" aria-label="Cambiar foto de la mascota">
-                ${photoTemp
-                  ? `<img src="${escapeHtmlAttr(photoTemp)}" alt="Foto de ${escapeHtml(pet.name)}">`
-                  : placeholderPhotoSvg()}
-                <span class="hint">Tocar para cambiar foto</span>
-              </button>
-              <div class="hc-motto">
-                ${escapeHtml(s.healthMotto || 'Porque su bienestar es nuestra prioridad')}
-                <button class="hc-heart" id="hc-heart" aria-label="Dar cariño">🐾</button>
-              </div>
-            </div>
-            <div class="hc-form">
-              <div class="hc-row"><b>NOMBRE:</b><span class="v" id="hc-nm" contenteditable="true" spellcheck="false">${escapeHtml(pet.name || '—')}</span></div>
-              <div class="hc-row">
-                <b>ESPECIE:</b><span class="v" contenteditable="true">${speciesLabel(pet.species) || '—'}</span>
-                <b>RAZA:</b><span class="v" contenteditable="true">${escapeHtml(pet.breed || '—')}</span>
-              </div>
-              <div class="hc-row">
-                <b>NACIMIENTO / EDAD:</b><span class="v" contenteditable="true">${pet.age_mode === 'years_months' ? `${pet.age_years || '—'} años, ${pet.age_months || '—'} meses` : pet.birth_date || '—'}</span>
-                <span class="hc-sex">
-                  <b>SEXO:</b>
-                  <button class="hc-chk" data-s="m" aria-label="Macho">${pet.sex === 'Macho' ? '✓' : ''}</button>
-                  <b>Macho</b>
-                  <button class="hc-chk" data-s="h" aria-label="Hembra">${pet.sex === 'Hembra' ? '✓' : ''}</button>
-                  <b>Hembra</b>
-                </span>
-              </div>
-              <div class="hc-row"><b>COLOR / SEÑAS:</b><span class="v" contenteditable="true">${escapeHtml(pet.distinctive_marks || pet.color || '—')}</span></div>
-              ${pet.vaccines_list ? `<div class="hc-row"><b>VACUNAS:</b><span class="v" contenteditable="true">${escapeHtml(pet.vaccines_list)}</span></div>` : ''}
-              <div class="hc-row"><b>PROPIETARIO:</b><span class="v" contenteditable="true">${escapeHtml(pet.owner_name || '—')}</span><b>N.º REG.:</b><span class="v" contenteditable="true">${pet.carnet_number || '—'}</span></div>
-              <div class="hc-row"><b>TELÉFONO:</b><span class="v" contenteditable="true">${pet.owner_phone || '—'}</span></div>
-              <div class="hc-addr">${escapeHtml(pet.owner_address || '')}${pet.owner_city ? ' · ' + escapeHtml(pet.owner_city) : ''}${pet.owner_address || pet.owner_city ? ' · Bolivia' : ''}</div>
-            </div>
-            <button class="hc-open-btn" id="hc-open" aria-label="Ver la salud de la mascota">VER SALUD ›</button>
-          </section>
-
-          <!-- REVERSO — Registros de salud -->
-          <section class="hc-face hc-back" aria-label="Registros de salud">
-            <div class="hc-head">
-              <div class="hc-ring">
-                <svg viewBox="0 0 36 36">
-                  <circle class="tr" cx="18" cy="18" r="15.5"/>
-                  <circle class="pr" id="hc-pr" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="${97.4 * (1 - pct / 100)}"/>
-                </svg>
-                <span id="hc-pct">${pct}%</span>
-              </div>
-              <div>
-                <h2 id="hc-nm2">${escapeHtml(pet.name || 'Mascota')}</h2>
-                <p id="hc-sub">${pct === 100 ? 'Vacunas al día' : total - appliedCount + ' registro pendiente'}</p>
-              </div>
-              <button class="hc-close" id="hc-close">‹ Portada</button>
-            </div>
-            <div class="hc-tabs" role="tablist"><i id="hc-ind"></i>
-              <button role="tab" aria-selected="true" data-t="vac">Vacunas</button>
-              <button role="tab" aria-selected="false" data-t="des">Desparasitación</button>
-              <button role="tab" aria-selected="false" data-t="his">Historial</button>
-            </div>
-            <div class="hc-next" id="hc-next"></div>
-            <div class="hc-items" id="hc-items" role="tabpanel"></div>
-          </section>
-
+    <section class="face front" aria-label="Presentación de la mascota">
+      <div class="logo">
+        <span class="pets" aria-hidden="true">🐶🐱🐦</span>
+        <span class="brand">FAM<svg viewBox="0 0 40 52" aria-hidden="true"><path d="M7 4V27a13 13 0 0 0 26 0V4"/><path class="tl" d="M33 27c0 14-8 20-20 21"/></svg>VET</span>
+      </div>
+      <svg class="beat" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M0 12 H70 l6-9 l8 18 l6-9 H200"/></svg>
+      <div class="tag">${escapeHtml(s.healthTagline || 'Amor, cuidado y salud para toda la vida')}</div>
+      <h1>PRESENTACIÓN</h1>
+      <div class="ribbon">de mi mascota</div>
+      <p class="list">${escapeHtml(s.healthServices || 'Control sanitario · Vacunación · Desparasitación · Historial clínico')}</p>
+      <div class="stage">
+        <button class="frame" id="frame" aria-label="Cambiar foto de la mascota">
+          ${photoTemp
+            ? `<img src="${escapeHtmlAttr(photoTemp)}" alt="Foto de ${escapeHtml(pet.name)}">`
+            : placeholderPhotoSvg()}
+          <span class="hint">Tocar para cambiar foto</span>
+        </button>
+        <div class="motto">
+          ${escapeHtml(s.healthMotto || 'Porque su bienestar es nuestra prioridad')}
+          <button class="heart" id="heart" aria-label="Dar cariño">🐾</button>
         </div>
       </div>
-    </div>
+      <div class="form">
+        <div class="row"><b>NOMBRE:</b><span class="v" id="nm" contenteditable="true" spellcheck="false">${escapeHtml(pet.name || '—')}</span></div>
+        <div class="row"><b>ESPECIE:</b><span class="v" contenteditable="true">${speciesLabel(pet.species) || '—'}</span><b>RAZA:</b><span class="v" contenteditable="true">${escapeHtml(pet.breed || '—')}</span></div>
+        <div class="row"><b>NACIMIENTO:</b><span class="v" contenteditable="true">${pet.birth_date || '—'}</span>
+          <span class="sex"><b>SEXO:</b><button class="chk" data-s="m" aria-label="Macho">${pet.sex === 'Macho' ? '✓' : ''}</button><b>Macho</b><button class="chk" data-s="h" aria-label="Hembra">${pet.sex === 'Hembra' ? '✓' : ''}</button><b>Hembra</b></span></div>
+        <div class="row"><b>COLOR / SEÑAS:</b><span class="v" contenteditable="true">${escapeHtml(pet.distinctive_marks || pet.color || '—')}</span></div>
+        <div class="row"><b>PROPIETARIO:</b><span class="v" contenteditable="true">${escapeHtml(pet.owner_name || '—')}</span><b>N.º REG.:</b><span class="v" contenteditable="true">${pet.carnet_number || '—'}</span></div>
+        <div class="row"><b>TELÉFONO:</b><span class="v" contenteditable="true">${pet.owner_phone || '—'}</span></div>
+        <div class="addr">${escapeHtml(pet.owner_address || '')}${pet.owner_city ? ' · ' + escapeHtml(pet.owner_city) : ''}${pet.owner_address || pet.owner_city ? ' · Bolivia' : ''}</div>
+      </div>
+      <button class="open-btn" id="open" aria-label="Ver la salud de la mascota">VER SALUD ›</button>
+    </section>
 
-    <!-- Acciones debajo del carnet -->
-    <div class="hc-actions">
-      <button class="btn btn-primary" id="hc-btn-open">${isOpen ? 'Cerrar salud' : 'Ver salud'}</button>
-      <button class="btn btn-outline" id="hc-btn-add-record">Agregar registro de salud</button>
-      <button class="btn btn-outline" id="hc-btn-download-png">Descargar PNG</button>
-      <button class="btn btn-outline" id="hc-btn-download-pdf">Descargar PDF</button>
-      <button class="btn btn-outline" id="hc-btn-print">Imprimir</button>
-      <a href="#/" class="btn btn-outline">Volver al sistema</a>
-    </div>
+    <section class="face back" aria-label="Registros de salud">
+      <div class="head">
+        <div class="ring"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="pr" id="pr" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="${97.4 * (1 - pct / 100)}"/></svg><span id="pct">${pct}%</span></div>
+        <div><h2 id="nm2">${escapeHtml(pet.name || 'Mascota')}</h2><p id="sub">${pct === 100 ? 'Vacunas al día' : total - appliedCount + ' registro pendiente'}</p></div>
+        <button class="close" id="close">‹ Portada</button>
+      </div>
+      <div class="tabs" role="tablist"><i id="ind"></i>
+        <button role="tab" aria-selected="true" data-t="vac">Vacunas</button>
+        <button role="tab" aria-selected="false" data-t="des">Desparasitación</button>
+        <button role="tab" aria-selected="false" data-t="his">Historial</button>
+      </div>
+      <div class="next" id="next"></div>
+      <div class="items" id="items" role="tabpanel"></div>
+    </section>
 
-    <div id="hc-print-area" class="hc-print-only"></div>
-  </div>`;
+  </div></div></div>
+
+  <div class="toast" id="toast" role="status"></div>
+  `;
 }
 
 /* ---------- Render del reverso ---------- */
 
 function renderBack() {
-  const itemsEl = document.getElementById('hc-items');
-  const pr = document.getElementById('hc-pr');
-  const pctEl = document.getElementById('hc-pct');
-  const subEl = document.getElementById('hc-sub');
-  const nextEl = document.getElementById('hc-next');
-  const ind = document.getElementById('hc-ind');
+  const itemsEl = document.getElementById('hc-items') || document.getElementById('items');
+  const pr = document.getElementById('hc-pr') || document.getElementById('pr');
+  const pctEl = document.getElementById('hc-pct') || document.getElementById('pct');
+  const subEl = document.getElementById('hc-sub') || document.getElementById('sub');
+  const nextEl = document.getElementById('hc-next') || document.getElementById('next');
+  const ind = document.getElementById('hc-ind') || document.getElementById('ind');
 
   if (!itemsEl) return;
 
@@ -254,16 +210,16 @@ function renderBack() {
   list.forEach((it, i) => {
     const done = !!it.applied;
     const e = document.createElement('div');
-    e.className = 'hc-it' + (done ? ' done' : '');
+    e.className = 'it' + (done ? ' done' : '');
     e.style.animationDelay = i * 70 + 'ms';
     const pendItem = !done && tab !== 'his';
     e.innerHTML = `
-      <button class="hc-top" aria-expanded="false">
-        <span class="hc-dot">${done ? '✓' : ''}</span>
-        <span class="hc-t"><strong>${escapeHtml(it.title)}</strong><small>${fmtDate(it.record_date)}</small></span>
-        <span class="hc-chev">›</span>
+      <button class="top" aria-expanded="false">
+        <span class="dot">${done ? '✓' : ''}</span>
+        <span class="t"><strong>${escapeHtml(it.title)}</strong><small>${fmtDate(it.record_date)}</small></span>
+        <span class="chev">›</span>
       </button>
-      <div class="hc-more">
+      <div class="more">
         <div>
           <p>${escapeHtml(it.notes || '')}</p>
           ${it.vet ? `<p><b>Veterinaria:</b> ${escapeHtml(it.vet)}</p>` : ''}
@@ -272,15 +228,15 @@ function renderBack() {
           ${it.batch ? `<p><b>Lote:</b> ${escapeHtml(it.batch)}</p>` : ''}
           ${it.scheduled_date ? `<p><b>Programada:</b> ${fmtDate(it.scheduled_date)}</p>` : ''}
           ${it.next_due ? `<p><b>Próxima dosis:</b> ${fmtDate(it.next_due)}</p>` : ''}
-          ${pendItem ? `<button class="hc-mark" data-id="${it.id}">Marcar como aplicada</button>` : ''}
+          ${pendItem ? `<button class="mark">Marcar como aplicada</button>` : ''}
         </div>
       </div>
     `;
-    e.querySelector('.hc-top').onclick = () => {
+    e.querySelector('.top').onclick = () => {
       const o = e.classList.toggle('x');
-      e.querySelector('.hc-top').setAttribute('aria-expanded', o);
+      e.querySelector('.top').setAttribute('aria-expanded', o);
     };
-    const m = e.querySelector('.hc-mark');
+    const m = e.querySelector('.mark');
     if (m) {
       m.onclick = async () => {
         try {
@@ -301,36 +257,34 @@ function renderBack() {
 /* ---------- Eventos ---------- */
 
 export function bindPresentationEvents() {
-  // Ocultar loader tras 2.5s
+  // Ocultar loader tras 2.3s
   setTimeout(() => {
-    const loader = document.getElementById('hc-loader');
+    const loader = document.getElementById('loader');
     if (loader) loader.classList.add('off');
-  }, 2500);
+  }, 2300);
 
-  const openBtn = document.getElementById('hc-open');
-  const closeBtn = document.getElementById('hc-close');
-  const book = document.getElementById('hc-book');
-  const tilt = document.getElementById('hc-tilt');
-  const btnOpenApp = document.getElementById('hc-btn-open');
+  const openBtn = document.getElementById('hc-open') || document.getElementById('open');
+  const closeBtn = document.getElementById('hc-close') || document.getElementById('close');
+  const book = document.getElementById('hc-book') || document.getElementById('book');
+  const tilt = document.getElementById('hc-tilt') || document.getElementById('tilt');
+  const btnOpenApp = document.getElementById('hc-btn-open') || document.getElementById('open');
   const btnAdd = document.getElementById('hc-btn-add-record');
-  const btnDlPng = document.getElementById('hc-btn-download-png');
-  const btnDlPdf = document.getElementById('hc-btn-download-pdf');
-  const btnPrint = document.getElementById('hc-btn-print');
-  const nm = document.getElementById('hc-nm');
-  const nm2 = document.getElementById('hc-nm2');
+  const nm = document.getElementById('hc-nm') || document.getElementById('nm');
+  const nm2 = document.getElementById('hc-nm2') || document.getElementById('nm2');
 
-  if (openBtn) openBtn.onclick = () => { book.classList.add('open'); tilt.style.transform = ''; isOpen = true; if (btnOpenApp) btnOpenApp.textContent = 'Cerrar salud'; };
-  if (closeBtn) closeBtn.onclick = () => { book.classList.remove('open'); isOpen = false; if (btnOpenApp) btnOpenApp.textContent = 'Ver salud'; };
+  if (openBtn) openBtn.onclick = () => { book.classList.add('open'); tilt.style.transform = ''; isOpen = true; };
+  if (closeBtn) closeBtn.onclick = () => { book.classList.remove('open'); isOpen = false; };
   if (btnOpenApp) btnOpenApp.onclick = () => {
-    if (isOpen) { book.classList.remove('open'); isOpen = false; btnOpenApp.textContent = 'Ver salud'; }
-    else { book.classList.add('open'); tilt.style.transform = ''; isOpen = true; btnOpenApp.textContent = 'Cerrar salud'; }
+    if (isOpen) { book.classList.remove('open'); isOpen = false; }
+    else { book.classList.add('open'); tilt.style.transform = ''; isOpen = true; }
   };
 
   // Pestañas
-  document.querySelectorAll('.hc-tabs button').forEach((b, i) => {
+  document.querySelectorAll('.hc-tabs button, .tabs button').forEach((b, i) => {
     b.onclick = () => {
       tab = b.dataset.t;
-      document.querySelectorAll('.hc-tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+      document.querySelectorAll('.hc-tabs button, .tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+      if (document.getElementById('ind')) document.getElementById('ind').style.transform = `translateX(${['vac', 'des', 'his'].indexOf(tab) * 100}%)`;
       renderBack();
     };
   });
@@ -341,7 +295,7 @@ export function bindPresentationEvents() {
   }
 
   // Corazón
-  const heart = document.getElementById('hc-heart');
+  const heart = document.getElementById('hc-heart') || document.getElementById('heart');
   if (heart) {
     heart.onclick = (e) => {
       const h = e.currentTarget;
@@ -354,7 +308,7 @@ export function bindPresentationEvents() {
   }
 
   // Cambiar foto
-  const frame = document.getElementById('hc-frame');
+  const frame = document.getElementById('hc-frame') || document.getElementById('frame');
   const fi = document.createElement('input');
   fi.type = 'file';
   fi.accept = 'image/*';
@@ -365,7 +319,7 @@ export function bindPresentationEvents() {
     const r = new FileReader();
     r.onload = () => {
       photoTemp = r.result;
-      const fr = document.getElementById('hc-frame');
+      const fr = document.getElementById('hc-frame') || document.getElementById('frame');
       if (fr) {
         const existing = fr.querySelector('svg, img');
         if (existing) existing.replaceWith(Object.assign(new Image(), { src: r.result, alt: 'Foto de la mascota' }));
@@ -375,9 +329,9 @@ export function bindPresentationEvents() {
   };
 
   // Sexo
-  document.querySelectorAll('.hc-chk').forEach(b => {
+  document.querySelectorAll('.hc-chk, .chk').forEach(b => {
     b.onclick = () => {
-      document.querySelectorAll('.hc-chk').forEach(x => { x.textContent = x === b ? '✓' : ''; });
+      document.querySelectorAll('.hc-chk, .chk').forEach(x => { x.textContent = x === b ? '✓' : ''; });
     };
   });
 
@@ -393,25 +347,19 @@ export function bindPresentationEvents() {
     s.querySelectorAll('.p').forEach(p => {
       p.style.transform = `translate(${Math.cos(a) * k}px,${Math.sin(a) * k}px)`;
     });
-    if (!document.getElementById('hc-book').classList.contains('open')) {
-      const sc = document.getElementById('hc-scene').getBoundingClientRect();
-      const x = (e.clientX - (sc.left + sc.width / 2)) / sc.width;
-      const y = (e.clientY - (sc.top + sc.height / 2)) / sc.height;
-      document.getElementById('hc-tilt').style.transform = `rotateY(${Math.max(-1, Math.min(1, x)) * 7}deg) rotateX(${Math.max(-1, Math.min(1, y)) * -5}deg)`;
+    if (!document.getElementById('hc-book') && !document.getElementById('book')) return;
+    const bookEl = document.getElementById('hc-book') || document.getElementById('book');
+    if (!bookEl.classList.contains('open')) {
+      const sc = document.getElementById('hc-scene') || document.getElementById('scene') || document.querySelector('.scene');
+      if (sc) {
+        const x = (e.clientX - (sc.left + sc.width / 2)) / sc.width;
+        const y = (e.clientY - (sc.top + sc.height / 2)) / sc.height;
+        document.getElementById('hc-tilt') || document.getElementById('tilt');
+        const tiltEl = document.getElementById('hc-tilt') || document.getElementById('tilt');
+        if (tiltEl) tiltEl.style.transform = `rotateY(${Math.max(-1, Math.min(1, x)) * 7}deg) rotateX(${Math.max(-1, Math.min(1, y)) * -5}deg)`;
+      }
     }
   });
-
-  // Agregar registro de salud
-  if (btnAdd) {
-    btnAdd.onclick = () => openRecordModal();
-  }
-
-  // Descargar PNG
-  if (btnDlPng) btnDlPng.onclick = () => downloadCard('png');
-  // Descargar PDF
-  if (btnDlPdf) btnDlPdf.onclick = () => downloadCard('pdf');
-  // Imprimir
-  if (btnPrint) btnPrint.onclick = printCard;
 
   renderBack();
 }
@@ -449,19 +397,8 @@ async function openRecordModal(existingId) {
             <input name="title" required value="${escapeHtmlAttrInput(existing ? existing.title : '')}">
           </div>
           <div class="field">
-            <label>Fecha aplicada</label>
+            <label>Fecha</label>
             <input type="date" name="record_date" value="${existing ? existing.record_date : ''}">
-          </div>
-          <div class="field">
-            <label>Fecha programada</label>
-            <input type="date" name="scheduled_date" value="${existing ? existing.scheduled_date : ''}">
-          </div>
-          <div class="field">
-            <label>Aplicada</label>
-            <select name="applied">
-              <option value="0" ${existing && existing.applied ? '' : 'selected'}>No</option>
-              <option value="1" ${existing && existing.applied ? 'selected' : ''}>Sí</option>
-            </select>
           </div>
           <div class="field">
             <label>Próxima dosis</label>
@@ -476,12 +413,12 @@ async function openRecordModal(existingId) {
             <input name="product" value="${escapeHtmlAttrInput(existing ? existing.product : '')}">
           </div>
           <div class="field full">
-            <label>Lote (vacuna)</label>
-            <input name="batch" value="${escapeHtmlAttrInput(existing ? existing.batch : '')}">
-          </div>
-          <div class="field full">
             <label>Peso (kg)</label>
             <input type="number" step="0.1" name="weight" value="${existing ? existing.weight : ''}">
+          </div>
+          <div class="field full">
+            <label>Lote (vacuna)</label>
+            <input name="batch" value="${escapeHtmlAttrInput(existing ? existing.batch : '')}">
           </div>
           <div class="field full">
             <label>Notas / observaciones</label>
@@ -506,8 +443,6 @@ async function openRecordModal(existingId) {
       type: get('type'),
       title: get('title'),
       record_date: get('record_date'),
-      scheduled_date: get('scheduled_date'),
-      applied: get('applied') === '1',
       next_due: get('next_due'),
       vet: get('vet'),
       product: get('product'),
@@ -542,12 +477,12 @@ function escapeHtmlAttrInput(s) {
 export async function downloadCard(type) {
   if (!pet) { toast('Selecciona una mascota primero', 'error'); return; }
 
-  const scene = document.getElementById('hc-scene');
-  const book = document.getElementById('hc-book');
+  const scene = document.getElementById('hc-scene') || document.querySelector('.scene');
+  const book = document.getElementById('hc-book') || document.getElementById('book');
   if (!scene || !book) return;
 
-  const front = document.querySelector('.hc-front');
-  const back = document.querySelector('.hc-back');
+  const front = document.querySelector('.hc-front') || document.querySelector('.face.front');
+  const back = document.querySelector('.hc-back') || document.querySelector('.face.back');
   if (!front || !back) return;
 
   renderBack();
@@ -589,8 +524,8 @@ export async function downloadCard(type) {
 
 export function printCard() {
   if (!pet) { toast('Selecciona una mascota', 'error'); return; }
-  const front = document.querySelector('.hc-front');
-  const back = document.querySelector('.hc-back');
+  const front = document.querySelector('.hc-front') || document.querySelector('.face.front');
+  const back = document.querySelector('.hc-back') || document.querySelector('.face.back');
   if (!front || !back) return;
 
   renderBack();
