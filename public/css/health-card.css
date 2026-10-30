@@ -520,6 +520,79 @@ button:focus-visible,
 }
 .hc-print-only { display: none; }
 
+/* ---------- Loader inicial (Presentación) ---------- */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 22px;
+  background: var(--hc-bg);
+  transition: opacity .7s, visibility .7s;
+}
+.loader.off {
+  opacity: 0;
+  visibility: hidden;
+}
+.trail {
+  display: flex;
+  gap: 12px;
+  font-size: 34px;
+  align-items: flex-start;
+}
+.trail span {
+  opacity: 0;
+  animation: step 2s infinite;
+}
+.trail span:nth-child(even) { margin-top: 22px; }
+.trail span:nth-child(1) { animation-delay: 0s; }
+.trail span:nth-child(2) { animation-delay: .2s; }
+.trail span:nth-child(3) { animation-delay: .4s; }
+.trail span:nth-child(4) { animation-delay: .6s; }
+.trail span:nth-child(5) { animation-delay: .8s; }
+.trail span:nth-child(6) { animation-delay: 1s; }
+@keyframes step {
+  0% { opacity: 0; transform: scale(.3) rotate(-30deg); }
+  15% { opacity: 1; transform: scale(1) rotate(0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.loader .dog {
+  font-size: 46px;
+  animation: hop .7s ease-in-out infinite;
+}
+@keyframes hop { 50% { transform: translateY(-12px); } }
+.loader p {
+  margin: 0;
+  font: italic 600 20px 'Fraunces', serif;
+  color: var(--hc-navy);
+}
+@media (prefers-color-scheme: dark) { .loader p { color: #dbe5ff; } }
+
+/* ---------- Logo FAMUVET con SVG ---------- */
+.hc-brand {
+  display: flex;
+  align-items: flex-end;
+}
+.hc-brand svg {
+  width: 8cqw;
+  height: 10.5cqw;
+  margin: 0 .4cqw;
+  overflow: visible;
+}
+.hc-brand svg path {
+  fill: none;
+  stroke: var(--hc-blue);
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-dasharray: 140;
+  stroke-dashoffset: 140;
+  animation: draw 1.8s 2.6s ease-out forwards;
+}
+.hc-brand svg .tl { stroke: var(--hc-green); }
+
 @media print {
   body { background: #fff !important; }
   body * { visibility: hidden !important; }
