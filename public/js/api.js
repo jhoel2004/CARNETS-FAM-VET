@@ -46,6 +46,10 @@ export const api = {
   applyHealthRecord: (id, applied) => request('PATCH', '/health-records/' + id + '/apply', { applied }),
   deleteHealthRecord: (id) => request('DELETE', '/health-records/' + id),
 
+  // Medical details
+  getMedicalDetails: (petId) => request('GET', '/pets/' + petId + '/medical-details'),
+  updateMedicalDetails: (petId, details) => request('PUT', '/pets/' + petId + '/medical-details', details),
+
   // Settings
   getSettings: () => request('GET', '/settings'),
   updateSettings: (settings) => request('PUT', '/settings', settings),

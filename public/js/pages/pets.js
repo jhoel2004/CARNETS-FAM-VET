@@ -263,7 +263,9 @@ function blankPet() {
     owner_name: '', owner_ci: '', owner_address: '', owner_city: '', owner_phone: '', owner_email: '',
     distinctive_marks: '',
     medical_vaccinated: 'No', medical_vaccines: '', medical_vet: '', medical_observations: '', medical_diseases: '', medical_allergies: '',
-    signature: '', age_years: '', age_months: ''
+    signature: '', age_years: '', age_months: '',
+    vaccines_list: '', deworming_history: '', medical_conditions: '', allergies: '', surgeries: '', medications: '',
+    sterilized: 0, microchip: '', blood_type: ''
   };
 }
 
@@ -282,6 +284,7 @@ export async function openPetModal(id) {
         <div class="tab-btn" data-ftab="foto">Fotografía</div>
         <div class="tab-btn" data-ftab="prop">Propietario</div>
         <div class="tab-btn" data-ftab="med">Datos médicos</div>
+        <div class="tab-btn" data-ftab="med-ext">Médico extendido</div>
       </div>
       <form id="pet-form">
         <div id="ftab-animal" class="form-grid">
@@ -328,6 +331,17 @@ export async function openPetModal(id) {
           <div class="field"><label>Alergias</label><input name="medical_allergies" value="${escapeHtml(pet.medical_allergies || '')}"></div>
           <div class="field full"><label>Observaciones</label><textarea name="medical_observations" rows="3">${escapeHtml(pet.medical_observations || '')}</textarea></div>
         </div>
+        <div id="ftab-med-ext" class="form-grid hidden">
+          <div class="field full"><label>Vacunas que tiene</label><textarea name="vaccines_list" rows="3" placeholder="Ej: Quíntuple, Séxtuple, Antirrábica">${escapeHtml(pet.vaccines_list || '')}</textarea></div>
+          <div class="field full"><label>Historial de desparasitaciones</label><textarea name="deworming_history" rows="3" placeholder="Ej: Pyrantel (3 meses), Albendazol (6 meses)">${escapeHtml(pet.deworming_history || '')}</textarea></div>
+          <div class="field full"><label>Enfermedades crónicas</label><input name="medical_conditions" value="${escapeHtml(pet.medical_conditions || '')}"></div>
+          <div class="field"><label>Alergias</label><input name="allergies" value="${escapeHtml(pet.allergies || '')}"></div>
+          <div class="field"><label>Cirugías previas</label><input name="surgeries" value="${escapeHtml(pet.surgeries || '')}"></div>
+          <div class="field"><label>Medicamentos actuales</label><input name="medications" value="${escapeHtml(pet.medications || '')}"></div>
+          <div class="field"><label>Esterilizado</label><select name="sterilized"><option ${pet.sterilized ? 'selected' : ''}>No</option><option ${!pet.sterilized ? 'selected' : ''}>Sí</option></select></div>
+          <div class="field"><label>Microchip</label><input name="microchip" value="${escapeHtml(pet.microchip || '')}"></div>
+          <div class="field"><label>Tipo de sangre</label><input name="blood_type" value="${escapeHtml(pet.blood_type || '')}"></div>
+        </div>
       </form>
     </div>
     <div class="modal-foot">
@@ -339,7 +353,7 @@ export async function openPetModal(id) {
   document.querySelectorAll('[data-ftab]').forEach(el => el.addEventListener('click', () => {
     document.querySelectorAll('[data-ftab]').forEach(x => x.classList.remove('active'));
     el.classList.add('active');
-    ['animal', 'foto', 'prop', 'med'].forEach(k => document.getElementById('ftab-' + k).classList.add('hidden'));
+    ['animal', 'foto', 'prop', 'med', 'med-ext'].forEach(k => document.getElementById('ftab-' + k).classList.add('hidden'));
     document.getElementById('ftab-' + el.dataset.ftab).classList.remove('hidden');
   }));
 
@@ -413,7 +427,11 @@ async function savePet(id, isEdit) {
     medical_vaccinated: get('medical_vaccinated'), medical_vaccines: get('medical_vaccines'),
     medical_vet: get('medical_vet'), medical_observations: get('medical_observations'),
     medical_diseases: get('medical_diseases'), medical_allergies: get('medical_allergies'),
-    signature: get('signature'), age_years: get('age_years'), age_months: get('age_months')
+    signature: get('signature'), age_years: get('age_years'), age_months: get('age_months'),
+    vaccines_list: get('vaccines_list'), deworming_history: get('deworming_history'),
+    medical_conditions: get('medical_conditions'), allergies_ext: get('allergies'),
+    surgeries: get('surgeries'), medications: get('medications'),
+    sterilized: get('sterilized') === '1' ? 1 : 0, microchip: get('microchip'), blood_type: get('blood_type')
   };
 
   try {
@@ -426,6 +444,23 @@ async function savePet(id, isEdit) {
     }
     await state.loadPets();
     api.logHistory(isEdit ? 'Edición' : 'Creación', `${petData.name} (${petData.carnet_number})`);
+
+    // Guardar detalles médicos extendidos
+    const medicalDetails = {
+      vaccines_list: petData.vaccines_list,
+      deworming_history: petData.deworming_history,
+      medical_conditions: petData.medical_conditions,
+      allergies: petData.allergies_ext,
+      surgeries: petData.surgeries,
+      medications: petData.medications,
+      sterilized: petData.sterilized,
+      microchip: petData.microchip,
+      blood_type: petData.blood_type
+    };
+    try {
+      await api.updateMedicalDetails(createdId, medicalDetails);
+    } catch (_) { /* no bloquear si falla */ }
+
     if (!isEdit) {
       const newPet = state.getPets().find(x => x.id === createdId);
       if (newPet) {

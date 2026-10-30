@@ -4,7 +4,7 @@ const db = require('../db');
 const { authenticateToken, requireAdmin, requireAdminOrOperator } = require('../middleware/auth');
 
 const router = express.Router();
-const publicPetColumns = 'id, carnet_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight, category, status, photo, fingerprint, offspring, registration_date, owner_name, owner_phone, medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_allergies';
+const publicPetColumns = 'id, carnet_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight, category, status, photo, fingerprint, offspring, registration_date, owner_name, owner_phone, medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_allergies, batch, scheduled_date';
 
 // ============================================
 // RUTAS PÚBLICAS PRIMERO (antes de /:id)
@@ -328,12 +328,75 @@ router.get('/public/:id/health', async (req, res) => {
     const pet = await db.get('SELECT id, carnet_number FROM pets WHERE id = $1', [req.params.id]);
     if (!pet) return res.status(404).json({ error: 'No encontrada' });
     const rows = await db.query(
-      "SELECT id, type, title, record_date, notes, applied, next_due, vet, product, weight FROM pet_health_records WHERE pet_id = $1 AND type IN ('vacuna','desparasitacion') ORDER BY record_date DESC, created_at DESC",
+      "SELECT id, type, title, record_date, notes, applied, next_due, vet, product, weight, batch, scheduled_date FROM pet_health_records WHERE pet_id = $1 AND type IN ('vacuna','desparasitacion') ORDER BY record_date DESC, created_at DESC",
       [req.params.id]
     );
     res.json({ pet: { id: pet.id, carnet_number: pet.carnet_number }, records: rows });
   } catch (e) {
     console.error('GET /api/pets/public/:id/health error:', e);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// ============================================
+// ENDPOINTS DE DATOS MÉDICOS DETALLADOS
+// ============================================
+
+// Obtener detalles médicos de una mascota
+router.get('/:id/medical-details', authenticateToken, async (req, res) => {
+  try {
+    const pet = await db.get('SELECT id, owner_ci FROM pets WHERE id = $1', [req.params.id]);
+    if (!pet) return res.status(404).json({ error: 'Mascota no encontrada' });
+    if (req.user.role === 'Espectador' && pet.owner_ci !== req.user.username) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+    const details = await db.get('SELECT * FROM pet_medical_details WHERE pet_id = $1', [req.params.id]);
+    res.json(details || {});
+  } catch (e) {
+    console.error('GET /api/pets/:id/medical-details error:', e);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Guardar o actualizar detalles médicos de una mascota
+router.put('/:id/medical-details', authenticateToken, requireAdminOrOperator, async (req, res) => {
+  try {
+    const pet = await db.get('SELECT id FROM pets WHERE id = $1', [req.params.id]);
+    if (!pet) return res.status(404).json({ error: 'Mascota no encontrada' });
+
+    const d = req.body;
+    const existing = await db.get('SELECT id FROM pet_medical_details WHERE pet_id = $1', [req.params.id]);
+    const now = new Date().toISOString();
+
+    if (existing) {
+      await db.run(`UPDATE pet_medical_details SET
+        vaccines_list=$1, deworming_history=$2, medical_conditions=$3, allergies=$4, surgeries=$5,
+        medications=$6, sterilized=$7, microchip=$8, blood_type=$9, updated_at=$10
+        WHERE pet_id=$11`, [
+        d.vaccines_list || '', d.deworming_history || '', d.medical_conditions || '',
+        d.allergies || '', d.surgeries || '', d.medications || '',
+        d.sterilized ? 1 : 0, d.microchip || '', d.blood_type || '', now, req.params.id
+      ]);
+    } else {
+      const id = 'md' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      await db.run(`INSERT INTO pet_medical_details (
+        id, pet_id, vaccines_list, deworming_history, medical_conditions, allergies, surgeries,
+        medications, sterilized, microchip, blood_type, created_at, updated_at
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [
+        id, req.params.id, d.vaccines_list || '', d.deworming_history || '',
+        d.medical_conditions || '', d.allergies || '', d.surgeries || '',
+        d.medications || '', d.sterilized ? 1 : 0, d.microchip || '', d.blood_type || '', now, now
+      ]);
+    }
+
+    await db.run('INSERT INTO history (action, entity, "user", date, time) VALUES ($1,$2,$3,$4,$5)', [
+      'Actualización de datos médicos', 'Datos médicos extendidos', req.user.name,
+      new Date().toLocaleDateString('es-BO'), new Date().toLocaleTimeString('es-BO')
+    ]);
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('PUT /api/pets/:id/medical-details error:', e);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

@@ -11,6 +11,7 @@ import { escapeHtml, speciesLabel, placeholderPhoto, publicUrl, toast } from '..
 
 let pet = null;
 let records = [];
+let medicalDetails = {};
 let tab = 'vac';
 let photoTemp = '';
 let isOpen = false;
@@ -94,6 +95,7 @@ export async function viewPresentation(petId) {
 
   photoTemp = pet.photo || '';
   records = state.getHealthRecords(pet.id) || [];
+  medicalDetails = await api.getMedicalDetails(pet.id).catch(() => ({}));
 
   const s = state.getSettings();
   const appliedCount = records.filter(r => r.applied).length;
@@ -266,6 +268,8 @@ function renderBack() {
           ${it.vet ? `<p><b>Veterinaria:</b> ${escapeHtml(it.vet)}</p>` : ''}
           ${it.product ? `<p><b>Producto:</b> ${escapeHtml(it.product)}</p>` : ''}
           ${it.weight ? `<p><b>Peso:</b> ${escapeHtml(it.weight)} kg</p>` : ''}
+          ${it.batch ? `<p><b>Lote:</b> ${escapeHtml(it.batch)}</p>` : ''}
+          ${it.scheduled_date ? `<p><b>Programada:</b> ${fmtDate(it.scheduled_date)}</p>` : ''}
           ${it.next_due ? `<p><b>Próxima dosis:</b> ${fmtDate(it.next_due)}</p>` : ''}
           ${pendItem ? `<button class="hc-mark" data-id="${it.id}">Marcar como aplicada</button>` : ''}
         </div>
@@ -376,6 +380,26 @@ export function bindPresentationEvents() {
     };
   });
 
+  // Ojos que siguen al cursor
+  addEventListener('pointermove', (e) => {
+    const s = document.getElementById('pup');
+    if (!s) return;
+    const r = s.getBoundingClientRect();
+    const dx = e.clientX - (r.left + r.width / 2);
+    const dy = e.clientY - (r.top + r.height / 2);
+    const a = Math.atan2(dy, dx);
+    const k = Math.min(3.2, Math.hypot(dx, dy) / 60);
+    s.querySelectorAll('.p').forEach(p => {
+      p.style.transform = `translate(${Math.cos(a) * k}px,${Math.sin(a) * k}px)`;
+    });
+    if (!document.getElementById('hc-book').classList.contains('open')) {
+      const sc = document.getElementById('hc-scene').getBoundingClientRect();
+      const x = (e.clientX - (sc.left + sc.width / 2)) / sc.width;
+      const y = (e.clientY - (sc.top + sc.height / 2)) / sc.height;
+      document.getElementById('hc-tilt').style.transform = `rotateY(${Math.max(-1, Math.min(1, x)) * 7}deg) rotateX(${Math.max(-1, Math.min(1, y)) * -5}deg)`;
+    }
+  });
+
   // Agregar registro de salud
   if (btnAdd) {
     btnAdd.onclick = () => openRecordModal();
@@ -424,8 +448,12 @@ async function openRecordModal(existingId) {
             <input name="title" required value="${escapeHtmlAttrInput(existing ? existing.title : '')}">
           </div>
           <div class="field">
-            <label>Fecha</label>
+            <label>Fecha aplicada</label>
             <input type="date" name="record_date" value="${existing ? existing.record_date : ''}">
+          </div>
+          <div class="field">
+            <label>Fecha programada</label>
+            <input type="date" name="scheduled_date" value="${existing ? existing.scheduled_date : ''}">
           </div>
           <div class="field">
             <label>Aplicada</label>
@@ -445,6 +473,10 @@ async function openRecordModal(existingId) {
           <div class="field full">
             <label>Producto (desparasitación)</label>
             <input name="product" value="${escapeHtmlAttrInput(existing ? existing.product : '')}">
+          </div>
+          <div class="field full">
+            <label>Lote (vacuna)</label>
+            <input name="batch" value="${escapeHtmlAttrInput(existing ? existing.batch : '')}">
           </div>
           <div class="field full">
             <label>Peso (kg)</label>
@@ -473,10 +505,12 @@ async function openRecordModal(existingId) {
       type: get('type'),
       title: get('title'),
       record_date: get('record_date'),
+      scheduled_date: get('scheduled_date'),
       applied: get('applied') === '1',
       next_due: get('next_due'),
       vet: get('vet'),
       product: get('product'),
+      batch: get('batch'),
       weight: get('weight'),
       notes: get('notes'),
     };

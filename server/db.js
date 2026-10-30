@@ -134,7 +134,24 @@ async function createSqliteTables() {
     vet TEXT DEFAULT '',
     product TEXT DEFAULT '',
     weight TEXT DEFAULT '',
+    batch TEXT DEFAULT '',
+    scheduled_date TEXT DEFAULT '',
     applied_at TEXT DEFAULT (datetime('now','localtime')),
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    updated_at TEXT DEFAULT (datetime('now','localtime'))
+  )`);
+  sqlJsDb.run(`CREATE TABLE IF NOT EXISTS pet_medical_details (
+    id TEXT PRIMARY KEY,
+    pet_id TEXT NOT NULL,
+    vaccines_list TEXT DEFAULT '',
+    deworming_history TEXT DEFAULT '',
+    medical_conditions TEXT DEFAULT '',
+    allergies TEXT DEFAULT '',
+    surgeries TEXT DEFAULT '',
+    medications TEXT DEFAULT '',
+    sterilized INTEGER DEFAULT 0,
+    microchip TEXT DEFAULT '',
+    blood_type TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
@@ -160,6 +177,25 @@ async function createSqliteTables() {
   addCol('pets', "age_years TEXT DEFAULT ''");
   addCol('pets', "age_months TEXT DEFAULT ''");
   addCol('pets', "distinctive_marks TEXT DEFAULT ''");
+  addCol('pet_health_records', "batch TEXT DEFAULT ''");
+  addCol('pet_health_records', "scheduled_date TEXT DEFAULT ''");
+
+  // Create pet_medical_details table if missing
+  sqlJsDb.run(`CREATE TABLE IF NOT EXISTS pet_medical_details (
+    id TEXT PRIMARY KEY,
+    pet_id TEXT NOT NULL,
+    vaccines_list TEXT DEFAULT '',
+    deworming_history TEXT DEFAULT '',
+    medical_conditions TEXT DEFAULT '',
+    allergies TEXT DEFAULT '',
+    surgeries TEXT DEFAULT '',
+    medications TEXT DEFAULT '',
+    sterilized INTEGER DEFAULT 0,
+    microchip TEXT DEFAULT '',
+    blood_type TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    updated_at TEXT DEFAULT (datetime('now','localtime'))
+  )`);
 
   // Seed admin user if not exists
   const adminExists = sqlJsDb.exec("SELECT id FROM users WHERE username = 'admin'");
@@ -236,6 +272,8 @@ function save() {
 async function ensurePgSchema(client) {
   await client.query(`
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS distinctive_marks TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pet_health_records ADD COLUMN IF NOT EXISTS batch TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pet_health_records ADD COLUMN IF NOT EXISTS scheduled_date TEXT DEFAULT '';
     CREATE TABLE IF NOT EXISTS pet_health_records (
       id TEXT PRIMARY KEY,
       pet_id TEXT NOT NULL,
@@ -248,13 +286,31 @@ async function ensurePgSchema(client) {
       vet TEXT DEFAULT '',
       product TEXT DEFAULT '',
       weight TEXT DEFAULT '',
+      batch TEXT DEFAULT '',
+      scheduled_date TEXT DEFAULT '',
       applied_at TIMESTAMP DEFAULT NOW(),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS pet_medical_details (
+      id TEXT PRIMARY KEY,
+      pet_id TEXT NOT NULL,
+      vaccines_list TEXT DEFAULT '',
+      deworming_history TEXT DEFAULT '',
+      medical_conditions TEXT DEFAULT '',
+      allergies TEXT DEFAULT '',
+      surgeries TEXT DEFAULT '',
+      medications TEXT DEFAULT '',
+      sterilized INTEGER DEFAULT 0,
+      microchip TEXT DEFAULT '',
+      blood_type TEXT DEFAULT '',
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_pet_health_records_pet_id ON pet_health_records(pet_id);
     CREATE INDEX IF NOT EXISTS idx_pet_health_records_type ON pet_health_records(type);
     CREATE INDEX IF NOT EXISTS idx_pet_health_records_date ON pet_health_records(record_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_pet_medical_details_pet_id ON pet_medical_details(pet_id);
   `);
   for (const [key, value] of [
     ['healthTagline', 'Amor, cuidado y salud para toda la vida'],
