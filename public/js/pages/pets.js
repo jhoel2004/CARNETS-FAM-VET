@@ -284,16 +284,9 @@ function renderVaccineItems(jsonStr) {
 
 function renderVaccineItem(item = {}) {
   return `
-  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
+  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
     <input type="text" name="vaccine_name" placeholder="Nombre de la vacuna" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
     <input type="date" name="vaccine_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="text" name="vaccine_lot" placeholder="Lote" value="${escapeHtml(item.lot || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="text" name="vaccine_vet" placeholder="Veterinaria" value="${escapeHtml(item.vet || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <select name="vaccine_applied" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-      <option value="1" ${item.applied !== '0' ? 'selected' : ''}>Aplicada</option>
-      <option value="0" ${item.applied === '0' ? 'selected' : ''}>Pendiente</option>
-    </select>
-    <input type="date" name="vaccine_next_due" placeholder="Próxima dosis" value="${escapeHtml(item.next_due || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
     <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
   </div>`;
 }
@@ -305,12 +298,9 @@ function renderDewormingItems(jsonStr) {
 
 function renderDewormingItem(item = {}) {
   return `
-  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
-    <input type="text" name="deworming_product" placeholder="Producto" value="${escapeHtml(item.product || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="text" name="deworming_weight" placeholder="Peso (kg)" value="${escapeHtml(item.weight || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
+    <input type="text" name="deworming_name" placeholder="Nombre de la desparasitación" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
     <input type="date" name="deworming_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="text" name="deworming_vet" placeholder="Veterinaria" value="${escapeHtml(item.vet || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="text" name="deworming_next_due" placeholder="Próxima dosis" value="${escapeHtml(item.next_due || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
     <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
   </div>`;
 }
@@ -324,8 +314,7 @@ function renderConditionItem(item = {}) {
   return `
   <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
     <input type="text" name="condition_name" placeholder="Enfermedad" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="date" name="condition_date" placeholder="Fecha diagnóstico" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="text" name="condition_notes" placeholder="Notas" value="${escapeHtml(item.notes || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="date" name="condition_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
     <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
   </div>`;
 }
@@ -340,8 +329,6 @@ function renderSurgeryItem(item = {}) {
   <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
     <input type="text" name="surgery_name" placeholder="Cirugía" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
     <input type="date" name="surgery_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="text" name="surgery_vet" placeholder="Veterinaria" value="${escapeHtml(item.vet || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="text" name="surgery_notes" placeholder="Notas" value="${escapeHtml(item.notes || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
     <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
   </div>`;
 }
@@ -353,11 +340,9 @@ function renderMedicationItems(jsonStr) {
 
 function renderMedicationItem(item = {}) {
   return `
-  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
+  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
     <input type="text" name="medication_name" placeholder="Medicamento" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="text" name="medication_dose" placeholder="Dosis" value="${escapeHtml(item.dose || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="text" name="medication_freq" placeholder="Frecuencia" value="${escapeHtml(item.frequency || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="date" name="medication_start" placeholder="Fecha inicio" value="${escapeHtml(item.start_date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="date" name="medication_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
     <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
   </div>`;
 }
@@ -382,7 +367,6 @@ export async function openPetModal(id) {
     <div class="modal-body">
       <div class="tabs">
         <div class="tab-btn active" data-ftab="animal">Datos del animal</div>
-        <div class="tab-btn" data-ftab="foto">Fotografía</div>
         <div class="tab-btn" data-ftab="prop">Propietario</div>
         <div class="tab-btn" data-ftab="med">Datos médicos</div>
       </div>
@@ -417,15 +401,17 @@ export async function openPetModal(id) {
           <div class="field"><label>Huella (opcional, texto/código)</label><input name="fingerprint" value="${escapeHtml(pet.fingerprint || '')}"></div>
           <div class="field"><label>Hijos (camada)</label><input name="offspring" value="${escapeHtml(pet.offspring || '')}" placeholder="Ej: 3 cachorros"></div>
           <div class="field"><label>Fecha de registro</label><input type="date" name="registration_date" value="${pet.registration_date || ''}"></div>
-        </div>
-        <div id="ftab-foto" class="hidden">
-          <div class="photo-drop" id="photo-drop">
-            ${photoTemp ? `<img id="photo-preview" src="${photoTemp}">` : `<div style="padding:20px 0;">${iconUpload}<p class="muted" style="margin-top:8px;">Haz clic para subir una fotografía</p></div>`}
-            <input type="file" id="photo-input" accept="image/*" class="hidden">
-          </div>
-          <div class="flex gap-2" style="margin-top:12px;">
-            <button type="button" class="btn btn-outline btn-sm" id="btn-rotate">Girar 90°</button>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-remove-photo">Quitar foto</button>
+          <!-- Foto de la mascota -->
+          <div class="field full" style="margin-top:16px;">
+            <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Fotografía de la mascota</label>
+            <div class="photo-drop" id="photo-drop">
+              ${photoTemp ? `<img id="photo-preview" src="${photoTemp}">` : `<div style="padding:20px 0;">${iconUpload}<p class="muted" style="margin-top:8px;">Haz clic para subir una fotografía</p></div>`}
+              <input type="file" id="photo-input" accept="image/*" class="hidden">
+            </div>
+            <div class="flex gap-2" style="margin-top:12px;">
+              <button type="button" class="btn btn-outline btn-sm" id="btn-rotate">Girar 90°</button>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-remove-photo">Quitar foto</button>
+            </div>
           </div>
         </div>
         <div id="ftab-prop" class="form-grid hidden">
@@ -502,7 +488,7 @@ export async function openPetModal(id) {
   document.querySelectorAll('[data-ftab]').forEach(el => el.addEventListener('click', () => {
     document.querySelectorAll('[data-ftab]').forEach(x => x.classList.remove('active'));
     el.classList.add('active');
-    ['animal', 'foto', 'prop', 'med'].forEach(k => document.getElementById('ftab-' + k).classList.add('hidden'));
+    ['animal', 'prop', 'med'].forEach(k => document.getElementById('ftab-' + k).classList.add('hidden'));
     document.getElementById('ftab-' + el.dataset.ftab).classList.remove('hidden');
   }));
 
@@ -626,27 +612,27 @@ async function savePet(id, isEdit) {
     return;
   }
 
-  // Recolectar items dinámicos de cada sección médica
-  const collectDynamicList = (containerId, fieldNames) => {
+  // Recolectar items dinámicos de cada sección médica (solo nombre y fecha)
+  const collectDynamicList = (containerId, nameField, dateField) => {
     const container = document.getElementById(containerId);
     if (!container) return [];
     const items = [];
     container.querySelectorAll('.dynamic-item').forEach(el => {
-      const item = {};
-      fieldNames.forEach(fn => {
-        const input = el.querySelector(`input[name="${fn}"], select[name="${fn}"]`);
-        if (input) item[fn] = input.value;
+      const nameInput = el.querySelector(`input[name="${nameField}"]`);
+      const dateInput = el.querySelector(`input[name="${dateField}"]`);
+      items.push({
+        name: nameInput ? nameInput.value : '',
+        date: dateInput ? dateInput.value : ''
       });
-      items.push(item);
     });
-    return items;
+    return items.filter(i => i.name.trim());
   };
 
-  const vaccines = collectDynamicList('vaccines-list', ['vaccine_name', 'vaccine_date', 'vaccine_lot', 'vaccine_vet', 'vaccine_applied', 'vaccine_next_due']);
-  const dewormings = collectDynamicList('deworming-list', ['deworming_product', 'deworming_weight', 'deworming_date', 'deworming_vet', 'deworming_next_due']);
-  const conditions = collectDynamicList('conditions-list', ['condition_name', 'condition_date', 'condition_notes']);
-  const surgeries = collectDynamicList('surgeries-list', ['surgery_name', 'surgery_date', 'surgery_vet', 'surgery_notes']);
-  const medications = collectDynamicList('medications-list', ['medication_name', 'medication_dose', 'medication_freq', 'medication_start']);
+  const vaccines = collectDynamicList('vaccines-list', 'vaccine_name', 'vaccine_date');
+  const dewormings = collectDynamicList('deworming-list', 'deworming_name', 'deworming_date');
+  const conditions = collectDynamicList('conditions-list', 'condition_name', 'condition_date');
+  const surgeries = collectDynamicList('surgeries-list', 'surgery_name', 'surgery_date');
+  const medications = collectDynamicList('medications-list', 'medication_name', 'medication_date');
 
   const petData = {
     id,
@@ -667,11 +653,11 @@ async function savePet(id, isEdit) {
     age_years: get('age_mode') === 'years_months' ? get('age_years') : '',
     age_months: get('age_mode') === 'years_months' ? get('age_months') : '',
     age_mode: get('age_mode'),
-    vaccines_list: vaccines.map(v => v.vaccine_name).filter(Boolean).join(', '),
-    deworming_history: dewormings.map(d => d.deworming_product).filter(Boolean).join(', '),
-    medical_conditions: conditions.map(c => c.condition_name).filter(Boolean).join(', '),
-    surgeries: surgeries.map(s => s.surgery_name).filter(Boolean).join(', '),
-    medications: medications.map(m => m.medication_name).filter(Boolean).join(', '),
+    vaccines_list: vaccines.map(v => v.name).filter(Boolean).join(', '),
+    deworming_history: dewormings.map(d => d.name).filter(Boolean).join(', '),
+    medical_conditions: conditions.map(c => c.name).filter(Boolean).join(', '),
+    surgeries: surgeries.map(s => s.name).filter(Boolean).join(', '),
+    medications: medications.map(m => m.name).filter(Boolean).join(', '),
     sterilized: get('sterilized') === '1' ? 1 : 0, microchip: get('microchip'), blood_type: get('blood_type')
   };
 
