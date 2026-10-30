@@ -7,7 +7,8 @@ class AppState {
     this._users = [];
     this._settings = {};
     this._history = [];
-    this._healthRecords = {};
+    this._healthRecords = {};        // Map petId -> records[]
+    this._allHealthRecordsMap = null; // Map petId -> records[] (para dashboard)
     this._user = null;
     this.view = 'dashboard';
     this.search = '';
@@ -28,6 +29,7 @@ class AppState {
   getSettings() { return this._settings; }
   getHistory() { return this._history; }
   getHealthRecords(petId) { return this._healthRecords[petId] || []; }
+  getAllHealthRecordsMap() { return this._allHealthRecordsMap || new Map(); }
 
   setView(v) { this.view = v; }
 
@@ -50,6 +52,7 @@ class AppState {
       tasks.push(this.loadUsers());
     }
     await Promise.all(tasks);
+    await this.loadAllHealthRecords();
   }
 
   async loadPets() {
@@ -58,6 +61,20 @@ class AppState {
 
   async loadHealthRecords(petId) {
     try { this._healthRecords[petId] = await api.getHealthRecords(petId); } catch { this._healthRecords[petId] = []; }
+  }
+
+  async loadAllHealthRecords() {
+    try {
+      const map = new Map();
+      for (const p of this._pets) {
+        try {
+          const recs = await api.getHealthRecords(p.id);
+          map.set(p.id, recs);
+          this._healthRecords[p.id] = recs;
+        } catch { map.set(p.id, []); }
+      }
+      this._allHealthRecordsMap = map;
+    } catch { this._allHealthRecordsMap = new Map(); }
   }
 
   async loadUsers() {

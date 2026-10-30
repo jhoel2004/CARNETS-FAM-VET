@@ -1,6 +1,8 @@
 /* ============================================================
-   CARNET SANITARIO — diseño inspirado en "Carnet sanitario de Max"
-   Clases con prefijo hc-* para no colisionar con el estilo actual.
+   CARNET SANITARIO — diseño fiel a "Carnet sanitario de Max.html"
+   Colores: navy #27407a, blue #2f6fb5, green #3f9a58,
+            paper #f6f2d9, ink #1d2b4f, bg #e6ebf4, bg2 #cfd8ea, warn #c0642a
+   Fuentes: Barlow, Barlow Condensed, Fraunces
    ============================================================ */
 
 .hc-root {
@@ -22,10 +24,10 @@
   background: transparent;
 }
 
-/* Contenedor libro: proporción 2:3.1 */
+/* ---------- Contenedor libro (proporción 2:3.1) ---------- */
 .hc-scene {
   container-type: inline-size;
-  width: min(92vw, 460px);
+  width: min(92vw, 440px);
   aspect-ratio: 2 / 3.1;
   margin: 0 auto;
 }
@@ -499,12 +501,13 @@ button:focus-visible,
   .hc-beat path { stroke-dashoffset: 0; }
 }
 
-/* ---------- Contenedor de la vista en la app ---------- */
+/* ---------- Vista integrada en la app ---------- */
 .hc-view {
   display: flex;
   flex-direction: column;
   gap: 16px;
   align-items: center;
+  padding-bottom: 40px;
 }
 .hc-view .hc-actions {
   width: 100%;
@@ -513,11 +516,11 @@ button:focus-visible,
   gap: 8px;
   flex-wrap: wrap;
   justify-content: center;
+  margin-top: 12px;
 }
 .hc-print-only { display: none; }
 
 @media print {
-  .hc-print-only { display: block; }
   body { background: #fff !important; }
   body * { visibility: hidden !important; }
   .hc-print-root, .hc-print-root * { visibility: visible !important; position: static !important; }
@@ -525,9 +528,8 @@ button:focus-visible,
   .hc-book { transform: none !important; }
   .hc-back { transform: none !important; visibility: visible !important; }
   .hc-front { visibility: visible !important; }
-  .hc-scene { width: 100% !important; max-width: 460px !important; }
-  .hc-face { position: static !important; width: 100% !important; height: auto !important; min-height: 460px; border: none; box-shadow: none; overflow: visible; }
-  .hc-back { visibility: visible !important; }
+  .hc-scene { width: 100% !important; max-width: 440px !important; }
+  .hc-face { position: static !important; width: 100% !important; height: auto !important; min-height: 440px; border: none; box-shadow: none; overflow: visible; }
   .hc-tilt { transform: none !important; }
   .hc-open-btn, .hc-actions, .hc-close { display: none !important; }
 }

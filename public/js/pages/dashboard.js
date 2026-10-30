@@ -1,5 +1,5 @@
-import { escapeHtml, statusBadge, placeholderPhoto, groupHistoryByDay, describeHistory, calcDashboardStats, pctOf, monthShort, petAgeYears } from '../utils.js';
-import { iconPaw, iconCheckCircle, iconAlert, iconCard, iconPlus, iconDog, iconCat } from '../icons.js';
+import { escapeHtml, statusBadge, placeholderPhoto, groupHistoryByDay, describeHistory, calcDashboardStats, calcHealthStats, pctOf, monthShort, petAgeYears } from '../utils.js';
+import { iconPaw, iconCheckCircle, iconAlert, iconCard, iconPlus, iconDog, iconCat, iconChart } from '../icons.js';
 
 let state = null;
 let charts = {};
@@ -28,6 +28,7 @@ function initials(name) {
 export function viewDashboard() {
   const pets = state.getPets();
   const st = calcDashboardStats(pets, state.getHistory());
+  const hs = calcHealthStats(pets, state.getAllHealthRecordsMap());
   const pct = (v) => pctOf(v, st.total);
 
   const sorted = [...pets].sort((a, b) => new Date(b.registration_date) - new Date(a.registration_date));
@@ -35,14 +36,14 @@ export function viewDashboard() {
   const groups = groupHistoryByDay(state.getHistory().slice(0, 10));
 
   const ageEntries = Object.entries(st.byAge);
-  const ageMax = Math.max(1, ...ageEntries.map(([, v]) => v));
   const breedMax = Math.max(1, ...st.topBreeds.map(b => b.count));
   const sexTotal = st.males + st.females + st.sexND;
   const unster = Math.max(0, st.total - st.sterilized);
 
   return `
-  <div class="page-head"><div><h1>Panel principal</h1><p>Resumen de registros y carnets · FAM J VET Bolivia</p></div></div>
+  <div class="page-head"><div><h1>Panel principal</h1><p>Resumen de registros, carnets y salud · FAM J VET Bolivia</p></div></div>
 
+  <!-- KPIs generales -->
   <div class="kpi-grid" style="margin-bottom:16px;">
     <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconPaw}</span></div><div class="kpi-num">${st.total}</div><div class="kpi-lbl">Mascotas registradas</div>${st.thisMonth ? `<div class="kpi-delta">+${st.thisMonth} este mes</div>` : ''}</div>
     <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconCheckCircle}</span></div><div class="kpi-num">${st.active}</div><div class="kpi-lbl">Mascotas activas</div></div>
@@ -52,12 +53,41 @@ export function viewDashboard() {
     <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconPlus}</span></div><div class="kpi-num">${st.thisMonth}</div><div class="kpi-lbl">Registradas este mes</div></div>
   </div>
 
+  <!-- KPIs de salud -->
+  <div class="kpi-grid" style="margin-bottom:16px;">
+    <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconCheckCircle}</span></div><div class="kpi-num">${hs.totalVacunasAplicadas}</div><div class="kpi-lbl">Vacunas aplicadas</div><div class="kpi-delta">${hs.vacunasPendientes} pendiente${hs.vacunasPendientes !== 1 ? 's' : ''}</div></div>
+    <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconAlert}</span></div><div class="kpi-num">${hs.totalVacunas}</div><div class="kpi-lbl">Total vacunas</div><div class="kpi-delta">${hs.pctVacunas}% al día</div></div>
+    <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconCheckCircle}</span></div><div class="kpi-num">${hs.totalDesparasitacionesAplicadas}</div><div class="kpi-lbl">Desparasitaciones aplicadas</div><div class="kpi-delta">${hs.desparasitacionesPendientes} pendiente${hs.desparasitacionesPendientes !== 1 ? 's' : ''}</div></div>
+    <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconPlus}</span></div><div class="kpi-num">${hs.totalDesparasitaciones}</div><div class="kpi-lbl">Total desparasitaciones</div><div class="kpi-delta">${hs.pctDesparasitaciones}% al día</div></div>
+    <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconCard}</span></div><div class="kpi-num">${hs.totalHistorial}</div><div class="kpi-lbl">Registros clínicos</div></div>
+    <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconPaw}</span></div><div class="kpi-num">${hs.mascotasConSalud}</div><div class="kpi-lbl">Mascotas con historial</div></div>
+  </div>
+
   <div class="dash12">
+    <!-- Gráfico: registros de mascotas por mes -->
     <div class="panel span-8">
       <div class="dash-sec-title"><span>Registros de mascotas</span></div>
       <div class="sec-sub" style="margin:-8px 0 10px;">Nuevas mascotas por mes · últimos 12 meses</div>
       <div class="chart-box"><canvas id="chart-months"></canvas></div>
     </div>
+
+    <!-- Gráfico: estado de salud (vacunas/desparasitaciones) -->
+    <div class="panel span-4">
+      <div class="dash-sec-title"><span>Estado de salud</span></div>
+      <div class="donut-wrap">
+        <div class="donut-box">
+          <canvas id="chart-health" width="132" height="132"></canvas>
+          <div class="donut-center"><b>${hs.totalVacunasAplicadas + hs.totalDesparasitacionesAplicadas}</b><span>aplicadas</span></div>
+        </div>
+        <div class="legend">
+          <div class="legend-row"><span class="sw" style="background:#16B79A;"></span>Aplicadas<b>${hs.totalVacunasAplicadas + hs.totalDesparasitacionesAplicadas}</b><span class="pct">${hs.totalVacunas + hs.totalDesparasitaciones ? Math.round(((hs.totalVacunasAplicadas + hs.totalDesparasitacionesAplicadas) / (hs.totalVacunas + hs.totalDesparasitaciones)) * 100) : 0}%</span></div>
+          <div class="legend-row"><span class="sw" style="background:#E85A5A;"></span>Pendientes<b>${hs.vacunasPendientes + hs.desparasitacionesPendientes}</b><span class="pct">${hs.totalVacunas + hs.totalDesparasitaciones ? Math.round(((hs.vacunasPendientes + hs.desparasitacionesPendientes) / (hs.totalVacunas + hs.totalDesparasitaciones)) * 100) : 0}%</span></div>
+        </div>
+      </div>
+      <div class="mini-note">Vacunas y desparasitaciones del sistema</div>
+    </div>
+
+    <!-- Distribución por especie -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Distribución por especie</span></div>
       <div class="donut-wrap">
@@ -74,6 +104,7 @@ export function viewDashboard() {
       <div class="mini-note">Activas ${st.active} · Inactivas ${st.inactive} · Perdidas ${st.lost}</div>
     </div>
 
+    <!-- Mascotas recientes -->
     <div class="panel span-8 table-span">
       <div class="dash-sec-title"><span>Mascotas registradas recientemente</span><button class="btn btn-ghost btn-sm" data-nav="mascotas">Ver todas</button></div>
       ${latest.length ? `<div style="overflow-x:auto;"><table class="records-table"><thead><tr><th>Mascota</th><th>Especie</th><th>Sexo</th><th>Edad</th><th>Propietario</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>
@@ -89,6 +120,25 @@ export function viewDashboard() {
           </tr>`).join('')}
       </tbody></table></div>` : `<div class="empty-state" style="padding:28px 16px;"><div><b>Todavía no hay fichas</b><p>Registra la primera mascota para verla aquí.</p></div></div>`}
     </div>
+
+    <!-- Próximas citas de salud -->
+    <div class="panel span-4">
+      <div class="dash-sec-title"><span>Próximas citas</span><button class="btn btn-ghost btn-sm" data-nav="mascotas">Gestionar salud</button></div>
+      ${hs.proximasCitas.length ? `<div class="activity-list">
+        ${hs.proximasCitas.map(c => `
+          <div class="activity-row">
+            <span class="dot" style="background:${c.type === 'vacuna' ? '#16B79A' : '#C89A3D'}"></span>
+            <div class="activity-main">
+              <div style="font-weight:600;">${escapeHtml(c.title)}</div>
+              <div style="font-size:11px; color:var(--text-2);">${escapeHtml(c.petName)} · ${c.type === 'vacuna' ? 'Vacuna' : 'Desparasitación'}</div>
+            </div>
+            <div style="font-size:11px; color:var(--text-2); white-space:nowrap;">${fmtDateDash(c.date)}</div>
+          </div>
+        `).join('')}
+      </div>` : `<p class="faint" style="text-align:center; padding:20px 0;">Sin citas programadas.</p>`}
+    </div>
+
+    <!-- Actividad reciente -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Actividad reciente</span><button class="btn btn-ghost btn-sm" data-nav="historial">Historial</button></div>
       ${groups.length ? groups.map(g => `
@@ -101,6 +151,7 @@ export function viewDashboard() {
       `).join('') : `<p class="faint">Sin actividad registrada.</p>`}
     </div>
 
+    <!-- Edad -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Edad de las mascotas</span></div>
       <div class="hbar-list">
@@ -110,6 +161,8 @@ export function viewDashboard() {
       </div>
       <div class="mini-note">Calculada desde años/meses registrados.</div>
     </div>
+
+    <!-- Sexo y esterilización -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Sexo y esterilización</span></div>
       <div class="sex-row"><span class="sex-dot" style="background:#16B79A;"></span>Machos<b style="margin-left:auto;">${st.males}</b><span class="faint">${pctOf(st.males, sexTotal)}%</span></div>
@@ -120,13 +173,17 @@ export function viewDashboard() {
       <div class="sex-row"><span class="sex-dot" style="background:#E3E9E7; border:1px solid #c6d0cc;"></span>Sin registrar<b style="margin-left:auto;">${unster}</b></div>
       <div class="mini-note">Según información de la ficha médica.</div>
     </div>
+
+    <!-- Atención -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Atención</span></div>
       <div class="alert-row red"><div class="alert-num">${st.lost}</div><div><div class="a-lbl">Mascotas reportadas perdidas</div><div class="a-sub">Requieren seguimiento</div></div></div>
       <div class="alert-row gold"><div class="alert-num">${st.incomplete}</div><div><div class="a-lbl">Registros incompletos</div><div class="a-sub">Sin raza, foto o peso</div></div></div>
       <div class="alert-row"><div class="alert-num">${st.pendingCards}</div><div><div class="a-lbl">Carnets pendientes</div><div class="a-sub">Emitidos sin impresión registrada</div></div></div>
+      <div class="alert-row"><div class="alert-num">${hs.vacunasPendientes + hs.desparasitacionesPendientes}</div><div><div class="a-lbl">Dosis pendientes</div><div class="a-sub">Vacunas o desparasitaciones sin aplicar</div></div></div>
     </div>
 
+    <!-- Razas más registradas -->
     <div class="panel span-6">
       <div class="dash-sec-title"><span>Razas más registradas</span></div>
       ${st.topBreeds.length ? `<div class="hbar-list">
@@ -135,6 +192,8 @@ export function viewDashboard() {
           <div class="hbar-track gold"><i style="width:${Math.round((b.count / breedMax) * 100)}%;"></i></div></div>`).join('')}
       </div>` : `<p class="faint">Sin información de razas todavía.</p>`}
     </div>
+
+    <!-- Propietarios -->
     <div class="panel span-6">
       <div class="dash-sec-title"><span>Propietarios</span></div>
       <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:12px;">
@@ -148,12 +207,18 @@ export function viewDashboard() {
   </div>`;
 }
 
+function fmtDateDash(d) {
+  if (!d) return '—';
+  try { return new Date(d + 'T12:00').toLocaleDateString('es-BO', { day: 'numeric', month: 'short' }); } catch { return d; }
+}
+
 export function drawCharts() {
   Object.values(charts).forEach(c => { try { c && c.destroy(); } catch (_) {} });
   charts = {};
   if (typeof Chart === 'undefined') return;
   const pets = state.getPets();
   const st = calcDashboardStats(pets, state.getHistory());
+  const hs = calcHealthStats(pets, state.getAllHealthRecordsMap());
   Chart.defaults.font.family = 'Inter, sans-serif';
   Chart.defaults.animation.duration = 200;
 
@@ -181,6 +246,34 @@ export function drawCharts() {
         scales: {
           y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#EDF1EF' } },
           x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // Gráfico de salud: vacunas/desparasitaciones aplicadas vs pendientes
+  const ctxH = document.getElementById('chart-health');
+  if (ctxH) {
+    const total = hs.totalVacunas + hs.totalDesparasitaciones;
+    const applied = hs.totalVacunasAplicadas + hs.totalDesparasitacionesAplicadas;
+    const pending = hs.vacunasPendientes + hs.desparasitacionesPendientes;
+    charts.health = new Chart(ctxH, {
+      type: 'doughnut',
+      data: {
+        labels: ['Aplicadas', 'Pendientes'],
+        datasets: [{
+          data: total ? [applied, pending] : [1],
+          backgroundColor: total ? ['#16B79A', '#E85A5A'] : ['#E3E9E7'],
+          borderColor: '#FFFFFF',
+          borderWidth: 3,
+          hoverOffset: 2
+        }]
+      },
+      options: {
+        cutout: '72%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: !!total }
         }
       }
     });

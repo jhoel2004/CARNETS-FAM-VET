@@ -456,3 +456,12 @@ tbody tr:hover td{background:rgba(255,255,255,.03);}
   #print-area, #print-area *{visibility:visible;}
   #print-area{position:absolute; left:0; top:0; width:100%;}
 }
+
+/* ---------- Dashboard: lista de actividad y próximas citas ---------- */
+.activity-list{display:flex; flex-direction:column; gap:8px;}
+.activity-row{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; line-height:1.4;}
+.activity-row:last-child{border-bottom:none;}
+.activity-row .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;margin-top:2px;}
+.activity-main{flex:1; min-width:0;}
+.activity-main div:first-child{font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.activity-main div:last-child{font-size:11px; color:var(--text-2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}

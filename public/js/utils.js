@@ -219,6 +219,57 @@ export function calcDashboardStats(pets, history) {
   };
 }
 
+// Estadísticas de salud para el dashboard
+export function calcHealthStats(pets, allHealthRecords) {
+  // allHealthRecords: Map<petId, records[]>
+  let totalVacunas = 0;
+  let totalVacunasAplicadas = 0;
+  let totalDesparasitaciones = 0;
+  let totalDesparasitacionesAplicadas = 0;
+  let totalHistorial = 0;
+  let proximasCitas = [];
+  let vacunasPendientes = 0;
+  let desparasitacionesPendientes = 0;
+
+  pets.forEach(p => {
+    const recs = allHealthRecords.get(p.id) || [];
+    recs.forEach(r => {
+      if (r.type === 'vacuna') {
+        totalVacunas++;
+        if (r.applied) totalVacunasAplicadas++;
+        else vacunasPendientes++;
+        if (r.next_due) proximasCitas.push({ petId: p.id, petName: p.name, title: r.title, date: r.next_due, type: 'vacuna' });
+      } else if (r.type === 'desparasitacion') {
+        totalDesparasitaciones++;
+        if (r.applied) totalDesparasitacionesAplicadas++;
+        else desparasitacionesPendientes++;
+        if (r.next_due) proximasCitas.push({ petId: p.id, petName: p.name, title: r.title, date: r.next_due, type: 'desparasitacion' });
+      } else if (r.type === 'historial') {
+        totalHistorial++;
+      }
+    });
+  });
+
+  proximasCitas.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  return {
+    totalVacunas,
+    totalVacunasAplicadas,
+    vacunasPendientes,
+    pctVacunas: totalVacunas ? Math.round((totalVacunasAplicadas / totalVacunas) * 100) : 0,
+    totalDesparasitaciones,
+    totalDesparasitacionesAplicadas,
+    desparasitacionesPendientes,
+    pctDesparasitaciones: totalDesparasitaciones ? Math.round((totalDesparasitacionesAplicadas / totalDesparasitaciones) * 100) : 0,
+    totalHistorial,
+    proximasCitas: proximasCitas.slice(0, 8),
+    mascotasConSalud: pets.filter(p => {
+      const recs = allHealthRecords.get(p.id) || [];
+      return recs.length > 0;
+    }).length,
+  };
+}
+
 export function toast(msg, type) {
   const el = document.createElement('div');
   el.className = 'toast' + (type === 'error' ? ' error' : '');

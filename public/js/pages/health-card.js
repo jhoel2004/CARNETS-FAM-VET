@@ -1,17 +1,15 @@
 /* ============================================================
-   CARNET SANITARIO — render basado en "Carnet sanitario de Max"
+   CARNET SANITARIO — diseño fiel a "Carnet sanitario de Max.html"
    Datos reales de la API + persistencia de registros de salud.
    ============================================================ */
 
 import { api } from '../api.js';
 import { state } from '../state.js';
-import {
-  escapeHtml, speciesLabel, placeholderPhoto, publicUrl, toast,
-} from '../utils.js';
+import { escapeHtml, speciesLabel, placeholderPhoto, publicUrl, toast } from '../utils.js';
 
 let pet = null;
-let records = [];        // [{id,type,title,record_date,notes,applied,next_due,vet,product,weight}]
-let tab = 'vac';         // vac | des | his
+let records = [];
+let tab = 'vac';
 let photoTemp = '';
 let isOpen = false;
 
@@ -25,7 +23,55 @@ export function initHealthCard() {
   // Nada que inicializar globalmente.
 }
 
-/* ---------- Render principal ---------- */
+/* ---------- Helpers ---------- */
+
+function escapeHtmlAttr(s) {
+  return String(s || '').replace(/"/g, '&quot;');
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  try {
+    return new Date(d + 'T12:00').toLocaleDateString('es-BO', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    });
+  } catch { return d; }
+}
+
+function daysFromNow(d) {
+  if (!d) return 0;
+  return Math.round((new Date(d + 'T12:00') - new Date()) / 864e5);
+}
+
+function showToast(msg) {
+  const el = document.getElementById('hc-toast');
+  if (el) {
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(showToast.t);
+    showToast.t = setTimeout(() => el.classList.remove('on'), 2200);
+  } else {
+    toast(msg);
+  }
+}
+
+function placeholderPhotoSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+    <rect width="200" height="200" fill="#e4eefc"/>
+    <ellipse cx="45" cy="95" rx="24" ry="44" fill="#b9762c" transform="rotate(18 45 95)"/>
+    <ellipse cx="155" cy="95" rx="24" ry="44" fill="#b9762c" transform="rotate(-18 155 95)"/>
+    <circle cx="100" cy="108" r="62" fill="#e9b564"/>
+    <ellipse cx="100" cy="134" rx="35" ry="27" fill="#f8e5ba"/>
+    <g class="eye"><circle cx="76" cy="100" r="9" fill="#fff"/><circle class="p" cx="76" cy="100" r="6" fill="#2a2320"/></g>
+    <g class="eye"><circle cx="124" cy="100" r="9" fill="#fff"/><circle class="p" cx="124" cy="100" r="6" fill="#2a2320"/></g>
+    <ellipse cx="100" cy="120" rx="12" ry="8" fill="#2a2320"/>
+    <path d="M100 128v8M100 136q-12 12-22 2M100 136q12 12 22 2" fill="none" stroke="#2a2320" stroke-width="3" stroke-linecap="round"/>
+    <path d="M92 142q8 22 16 0z" fill="#ef7f8f"/>
+    <rect y="178" width="200" height="22" fill="#3f9a58"/>
+  </svg>`;
+}
+
+/* ---------- Render principal (portada + reverso) ---------- */
 
 export function viewHealthCard(p) {
   pet = p;
@@ -40,10 +86,13 @@ export function viewHealthCard(p) {
 
   return `
   <div class="hc-view">
+    <div id="hc-toast" class="hc-toast"></div>
+
     <!-- Contenedor libro -->
     <div class="hc-scene" id="hc-scene">
       <div class="hc-tilt" id="hc-tilt">
         <div class="hc-book" id="hc-book">
+
           <!-- PORTADA -->
           <section class="hc-face hc-front" aria-label="Portada del carnet sanitario">
             <div class="hc-logo">
@@ -117,6 +166,7 @@ export function viewHealthCard(p) {
             <div class="hc-next" id="hc-next"></div>
             <div class="hc-items" id="hc-items" role="tabpanel"></div>
           </section>
+
         </div>
       </div>
     </div>
@@ -136,41 +186,7 @@ export function viewHealthCard(p) {
   </div>`;
 }
 
-/* ---------- Helpers ---------- */
-
-function placeholderPhotoSvg() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="#e4eefc"/><ellipse cx="45" cy="95" rx="24" ry="44" fill="#b9762c" transform="rotate(18 45 95)"/><ellipse cx="155" cy="95" rx="24" ry="44" fill="#b9762c" transform="rotate(-18 155 95)"/><circle cx="100" cy="108" r="62" fill="#e9b564"/><ellipse cx="100" cy="134" rx="35" ry="27" fill="#f8e5ba"/><g class="eye"><circle cx="76" cy="100" r="9" fill="#fff"/><circle class="p" cx="76" cy="100" r="6" fill="#2a2320"/></g><g class="eye"><circle cx="124" cy="100" r="9" fill="#fff"/><circle class="p" cx="124" cy="100" r="6" fill="#2a2320"/></g><ellipse cx="100" cy="120" rx="12" ry="8" fill="#2a2320"/><path d="M100 128v8M100 136q-12 12-22 2M100 136q12 12 22 2" fill="none" stroke="#2a2320" stroke-width="3" stroke-linecap="round"/><path d="M92 142q8 22 16 0z" fill="#ef7f8f"/></svg>`;
-}
-
-function escapeHtmlAttr(s) {
-  return String(s || '').replace(/"/g, '&quot;');
-}
-
-function fmtDate(d) {
-  if (!d) return '—';
-  try {
-    return new Date(d + 'T12:00').toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' });
-  } catch { return d; }
-}
-
-function daysFromNow(d) {
-  if (!d) return 0;
-  return Math.round((new Date(d + 'T12:00') - new Date()) / 864e5);
-}
-
-function showToast(msg) {
-  const el = document.getElementById('hc-toast');
-  if (el) {
-    el.textContent = msg;
-    el.classList.add('on');
-    clearTimeout(showToast.t);
-    showToast.t = setTimeout(() => el.classList.remove('on'), 2200);
-  } else {
-    toast(msg);
-  }
-}
-
-/* ---------- Render del reverso ---------- */
+/* ---------- Render del reverso (registros) ---------- */
 
 function renderBack() {
   const itemsEl = document.getElementById('hc-items');
@@ -210,7 +226,7 @@ function renderBack() {
     const e = document.createElement('div');
     e.className = 'hc-it' + (done ? ' done' : '');
     e.style.animationDelay = i * 70 + 'ms';
-    const pend = !done && tab !== 'his';
+    const pendItem = !done && tab !== 'his';
     e.innerHTML = `
       <button class="hc-top" aria-expanded="false">
         <span class="hc-dot">${done ? '✓' : ''}</span>
@@ -224,7 +240,7 @@ function renderBack() {
           ${it.product ? `<p><b>Producto:</b> ${escapeHtml(it.product)}</p>` : ''}
           ${it.weight ? `<p><b>Peso:</b> ${escapeHtml(it.weight)} kg</p>` : ''}
           ${it.next_due ? `<p><b>Próxima dosis:</b> ${fmtDate(it.next_due)}</p>` : ''}
-          ${pend ? `<button class="hc-mark" data-id="${it.id}">Marcar como aplicada</button>` : ''}
+          ${pendItem ? `<button class="hc-mark" data-id="${it.id}">Marcar como aplicada</button>` : ''}
         </div>
       </div>
     `;
@@ -328,10 +344,9 @@ export function bindHealthCardEvents() {
     };
   });
 
-  // Editar ficha de mascota (abre el modal existente)
+  // Editar ficha de mascota
   if (btnEdit) {
     btnEdit.onclick = () => {
-      const { openPetModal } = null; // se resuelve dinámicamente abajo
       import('../pages/pets.js').then((m) => {
         if (m.openPetModal) m.openPetModal(pet.id);
       });
@@ -473,12 +488,10 @@ export async function downloadCard(type) {
   const book = document.getElementById('hc-book');
   if (!scene || !book) return;
 
-  // Clonar estático sin transform 3D para html2canvas
   const front = document.querySelector('.hc-front');
   const back = document.querySelector('.hc-back');
   if (!front || !back) return;
 
-  // Asegurar render del reverso actual antes de capturar
   renderBack();
 
   const w = scene.offsetWidth || 320;
@@ -503,7 +516,6 @@ export async function downloadCard(type) {
     a.click();
   } else {
     const { jsPDF } = window.jspdf;
-    // Tamaño real del carnet: 100 x 155 mm (proporción 2:3.1)
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [100, 155] });
     pdf.addImage(canvasF.toDataURL('image/png'), 'PNG', 0, 0, 100, 155);
     pdf.addPage([100, 155], 'portrait');
