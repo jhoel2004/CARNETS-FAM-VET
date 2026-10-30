@@ -23,9 +23,10 @@ export async function renderPublicPage(id) {
     const s = await api.getSettings().catch(() => ({}));
     state.setSettings(s);
 
-    app.innerHTML = await viewPresentation(id);
+    app.innerHTML = await viewPresentation(pet.id || id);
     bindPresentationEvents();
-  } catch {
+  } catch (e) {
+    console.error('Error cargando mascota pública:', e);
     app.innerHTML = `
     <div class="hc-view" style="padding:40px 20px; text-align:center; max-width:440px; margin:0 auto;">
       <div style="font-size:48px; margin-bottom:16px;">🐾</div>

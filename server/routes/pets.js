@@ -4,7 +4,7 @@ const db = require('../db');
 const { authenticateToken, requireAdmin, requireAdminOrOperator } = require('../middleware/auth');
 
 const router = express.Router();
-const publicPetColumns = 'id, carnet_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight, category, status, photo, fingerprint, offspring, registration_date, owner_name, owner_phone, medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_allergies, batch, scheduled_date';
+const publicPetColumns = 'id, carnet_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight, category, status, photo, fingerprint, offspring, registration_date, owner_name, owner_phone, medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_allergies';
 
 // ============================================
 // RUTAS PÚBLICAS PRIMERO (antes de /:id)

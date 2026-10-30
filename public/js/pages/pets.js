@@ -263,7 +263,7 @@ function blankPet() {
     owner_name: '', owner_ci: '', owner_address: '', owner_city: '', owner_phone: '', owner_email: '',
     distinctive_marks: '',
     medical_vaccinated: 'No', medical_vaccines: '', medical_vet: '', medical_observations: '', medical_diseases: '', medical_allergies: '',
-    signature: '', age_years: '', age_months: '',
+    signature: '', age_years: '', age_months: '', age_mode: 'birth_date',
     vaccines_list: '', deworming_history: '', medical_conditions: '', allergies: '', surgeries: '', medications: '',
     sterilized: 0, microchip: '', blood_type: ''
   };
@@ -284,7 +284,6 @@ export async function openPetModal(id) {
         <div class="tab-btn" data-ftab="foto">Fotografía</div>
         <div class="tab-btn" data-ftab="prop">Propietario</div>
         <div class="tab-btn" data-ftab="med">Datos médicos</div>
-        <div class="tab-btn" data-ftab="med-ext">Médico extendido</div>
       </div>
       <form id="pet-form">
         <div id="ftab-animal" class="form-grid">
@@ -292,10 +291,23 @@ export async function openPetModal(id) {
           <div class="field"><label>N° de carnet / CI *</label><input required name="carnet_number" value="${escapeHtml(pet.carnet_number || '')}" placeholder="Ej: PLI-BO-2026-00001"></div>
           <div class="field"><label>Especie</label><select name="species"><option value="perro" ${pet.species === 'perro' ? 'selected' : ''}>Perro</option><option value="gato" ${pet.species === 'gato' ? 'selected' : ''}>Gato</option><option value="otro" ${pet.species === 'otro' ? 'selected' : ''}>Otro</option></select></div>
           <div class="field"><label>Raza</label><input name="breed" value="${escapeHtml(pet.breed || '')}"></div>
-          <div class="field"><label>Fecha de nacimiento</label><input type="date" name="birth_date" value="${pet.birth_date || ''}"></div>
+          <div class="field">
+            <label>¿Cómo registrar la edad?</label>
+            <select name="age_mode" id="age-mode-select" style="width:100%;">
+              <option value="birth_date" ${pet.age_mode !== 'years_months' ? 'selected' : ''}>Fecha de nacimiento</option>
+              <option value="years_months" ${pet.age_mode === 'years_months' ? 'selected' : ''}>Años / Meses (directo)</option>
+            </select>
+          </div>
+          <div id="age-birth-date-group" class="field" style="${pet.age_mode === 'years_months' ? 'display:none;' : ''}">
+            <label>Fecha de nacimiento</label><input type="date" name="birth_date" value="${pet.birth_date || ''}">
+          </div>
+          <div id="age-years-months-group" class="field" style="${pet.age_mode === 'years_months' ? '' : 'display:none;'}">
+            <div class="flex gap-2">
+              <div class="field" style="flex:1;"><label>Años</label><input type="number" min="0" max="30" name="age_years" value="${escapeHtml(pet.age_years || '')}" placeholder="Ej: 3"></div>
+              <div class="field" style="flex:1;"><label>Meses</label><input type="number" min="0" max="11" name="age_months" value="${escapeHtml(pet.age_months || '')}" placeholder="Ej: 6"></div>
+            </div>
+          </div>
           <div class="field"><label>Sexo</label><select name="sex"><option ${pet.sex === 'Macho' ? 'selected' : ''}>Macho</option><option ${pet.sex === 'Hembra' ? 'selected' : ''}>Hembra</option></select></div>
-          <div class="field"><label>Edad - Años</label><input type="number" min="0" max="30" name="age_years" value="${escapeHtml(pet.age_years || '')}" placeholder="Ej: 3"></div>
-          <div class="field"><label>Edad - Meses</label><input type="number" min="0" max="11" name="age_months" value="${escapeHtml(pet.age_months || '')}" placeholder="Ej: 6"></div>
           <div class="field"><label>Color / señas distintivas</label><input name="distinctive_marks" value="${escapeHtml(pet.distinctive_marks || pet.color || '')}"></div>
           <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" name="weight" value="${pet.weight || ''}"></div>
           <div class="field"><label>Categoría</label><input name="category" value="${escapeHtml(pet.category || '')}"></div>
@@ -324,23 +336,49 @@ export async function openPetModal(id) {
           <div class="field full"><label>Dirección</label><input name="owner_address" value="${escapeHtml(pet.owner_address || '')}"></div>
         </div>
         <div id="ftab-med" class="form-grid hidden">
-          <div class="field"><label>Vacunado</label><select name="medical_vaccinated"><option ${pet.medical_vaccinated === 'Sí' ? 'selected' : ''}>Sí</option><option ${pet.medical_vaccinated === 'No' ? 'selected' : ''}>No</option></select></div>
+          <div class="field"><label>Vacunado</label><select name="medical_vaccinated" id="vaccinated-select"><option ${pet.medical_vaccinated === 'Sí' ? 'selected' : ''}>Sí</option><option ${pet.medical_vaccinated === 'No' ? 'selected' : ''}>No</option></select></div>
+          <div class="field full" id="vaccines-checkboxes-group" style="${pet.medical_vaccinated === 'Sí' ? '' : 'display:none;'}">
+            <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Vacunas que tiene la mascota</label>
+            <div class="vacuna-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
+                <input type="checkbox" name="vacuna_Quíntuple" value="Quíntuple" ${pet.vaccines_list && pet.vaccines_list.includes('Quíntuple') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
+                <span>Quíntuple</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
+                <input type="checkbox" name="vacuna_Séxtuple" value="Séxtuple" ${pet.vaccines_list && pet.vaccines_list.includes('Séxtuple') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
+                <span>Séxtuple</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
+                <input type="checkbox" name="vacuna_Antirrábica" value="Antirrábica" ${pet.vaccines_list && pet.vaccines_list.includes('Antirrábica') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
+                <span>Antirrábica</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
+                <input type="checkbox" name="vacuna_Tos de las perreras" value="Tos de las perreras" ${pet.vaccines_list && pet.vaccines_list.includes('Tos de las perreras') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
+                <span>Tos de las perreras</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
+                <input type="checkbox" name="vacuna_Leptospirosis" value="Leptospirosis" ${pet.vaccines_list && pet.vaccines_list.includes('Leptospirosis') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
+                <span>Leptospirosis</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px;">
+                <input type="checkbox" name="vacuna_Otra" value="" ${pet.vaccines_list && pet.vaccines_list.includes('__OTRA__') ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
+                <input type="text" name="vacuna_personalizada" placeholder="Nombre de la vacuna" value="${pet.vaccines_list && pet.vaccines_list.includes('__OTRA__') ? '' : ''}" style="flex:1; border:none; background:transparent; font-size:13px; padding-left:5px;" ${!pet.vaccines_list || !pet.vaccines_list.includes('__OTRA__') ? 'disabled' : ''}>
+              </label>
+            </div>
+            <div style="margin-top:8px;">
+              <small style="color:var(--text-2);">Selecciona las vacunas que tiene. Si no aparece, marca "Otra" y escribe el nombre.</small>
+            </div>
+          </div>
           <div class="field"><label>Veterinaria</label><input name="medical_vet" value="${escapeHtml(pet.medical_vet || '')}"></div>
-          <div class="field full"><label>Vacunas aplicadas</label><input name="medical_vaccines" value="${escapeHtml(pet.medical_vaccines || '')}" placeholder="Ej: Rabia, Parvovirus, Moquillo"></div>
-          <div class="field"><label>Enfermedades</label><input name="medical_diseases" value="${escapeHtml(pet.medical_diseases || '')}"></div>
-          <div class="field"><label>Alergias</label><input name="medical_allergies" value="${escapeHtml(pet.medical_allergies || '')}"></div>
-          <div class="field full"><label>Observaciones</label><textarea name="medical_observations" rows="3">${escapeHtml(pet.medical_observations || '')}</textarea></div>
-        </div>
-        <div id="ftab-med-ext" class="form-grid hidden">
-          <div class="field full"><label>Vacunas que tiene</label><textarea name="vaccines_list" rows="3" placeholder="Ej: Quíntuple, Séxtuple, Antirrábica">${escapeHtml(pet.vaccines_list || '')}</textarea></div>
-          <div class="field full"><label>Historial de desparasitaciones</label><textarea name="deworming_history" rows="3" placeholder="Ej: Pyrantel (3 meses), Albendazol (6 meses)">${escapeHtml(pet.deworming_history || '')}</textarea></div>
-          <div class="field full"><label>Enfermedades crónicas</label><input name="medical_conditions" value="${escapeHtml(pet.medical_conditions || '')}"></div>
+          <div class="field full"><label>Desparasitaciones (historial)</label><textarea name="deworming_history" rows="2" placeholder="Ej: Pyrantel (3 meses), Albendazol (6 meses)">${escapeHtml(pet.deworming_history || '')}</textarea></div>
+          <div class="field"><label>Enfermedades crónicas</label><input name="medical_conditions" value="${escapeHtml(pet.medical_conditions || '')}"></div>
           <div class="field"><label>Alergias</label><input name="allergies" value="${escapeHtml(pet.allergies || '')}"></div>
           <div class="field"><label>Cirugías previas</label><input name="surgeries" value="${escapeHtml(pet.surgeries || '')}"></div>
           <div class="field"><label>Medicamentos actuales</label><input name="medications" value="${escapeHtml(pet.medications || '')}"></div>
           <div class="field"><label>Esterilizado</label><select name="sterilized"><option ${pet.sterilized ? 'selected' : ''}>No</option><option ${!pet.sterilized ? 'selected' : ''}>Sí</option></select></div>
           <div class="field"><label>Microchip</label><input name="microchip" value="${escapeHtml(pet.microchip || '')}"></div>
           <div class="field"><label>Tipo de sangre</label><input name="blood_type" value="${escapeHtml(pet.blood_type || '')}"></div>
+          <div class="field"><label>Observaciones</label><textarea name="medical_observations" rows="3">${escapeHtml(pet.medical_observations || '')}</textarea></div>
         </div>
       </form>
     </div>
@@ -353,9 +391,42 @@ export async function openPetModal(id) {
   document.querySelectorAll('[data-ftab]').forEach(el => el.addEventListener('click', () => {
     document.querySelectorAll('[data-ftab]').forEach(x => x.classList.remove('active'));
     el.classList.add('active');
-    ['animal', 'foto', 'prop', 'med', 'med-ext'].forEach(k => document.getElementById('ftab-' + k).classList.add('hidden'));
+    ['animal', 'foto', 'prop', 'med'].forEach(k => document.getElementById('ftab-' + k).classList.add('hidden'));
     document.getElementById('ftab-' + el.dataset.ftab).classList.remove('hidden');
   }));
+
+  // Toggle modo de edad
+  const ageModeSelect = document.getElementById('age-mode-select');
+  if (ageModeSelect) {
+    ageModeSelect.addEventListener('change', (e) => {
+      const bdGroup = document.getElementById('age-birth-date-group');
+      const ymGroup = document.getElementById('age-years-months-group');
+      if (e.target.value === 'years_months') {
+        bdGroup.style.display = 'none';
+        ymGroup.style.display = '';
+      } else {
+        bdGroup.style.display = '';
+        ymGroup.style.display = 'none';
+      }
+    });
+  }
+
+  // Toggle vacunas según vacunado
+  const vaccinatedSelect = document.getElementById('vaccinated-select');
+  if (vaccinatedSelect) {
+    vaccinatedSelect.addEventListener('change', (e) => {
+      const group = document.getElementById('vaccines-checkboxes-group');
+      if (group) group.style.display = e.target.value === 'Sí' ? '' : 'none';
+    });
+  }
+
+  // Habilitar/deshabilitar input de vacuna personalizada
+  document.querySelectorAll('input[name="vacuna_Otra"]').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const input = e.target.closest('label').querySelector('input[name="vacuna_personalizada"]');
+      if (input) input.disabled = !e.target.checked;
+    });
+  });
 
   bindPhotoEditor();
   document.getElementById('btn-save-pet').addEventListener('click', () => savePet(pet.id, isEdit));
@@ -413,11 +484,26 @@ async function savePet(id, isEdit) {
     return;
   }
 
+  // Recolectar vacunas seleccionadas de los checkboxes
+  const vacunasSeleccionadas = [];
+  document.querySelectorAll('input[name^="vacuna_"]').forEach(cb => {
+    if (cb.checked) {
+      if (cb.name === 'vacuna_Otra' && cb.value === '') {
+        const inputPersonalizada = cb.closest('label')?.querySelector('input[name="vacuna_personalizada"]');
+        const nombrePersonalizada = inputPersonalizada ? inputPersonalizada.value.trim() : '';
+        if (nombrePersonalizada) vacunasSeleccionadas.push(nombrePersonalizada);
+      } else {
+        vacunasSeleccionadas.push(cb.value);
+      }
+    }
+  });
+
   const petData = {
     id,
     carnet_number: get('carnet_number'),
     name: get('name'), species: get('species'), breed: get('breed'), sex: get('sex'),
-    birth_date: get('birth_date'), color: get('color') || get('distinctive_marks'), weight: get('weight'),
+    birth_date: get('age_mode') === 'birth_date' ? get('birth_date') : '',
+    color: get('color') || get('distinctive_marks'), weight: get('weight'),
     category: get('category') || 'General', status: get('status'),
     distinctive_marks: get('distinctive_marks'),
     fingerprint: get('fingerprint'), offspring: get('offspring'), registration_date: get('registration_date'),
@@ -427,8 +513,12 @@ async function savePet(id, isEdit) {
     medical_vaccinated: get('medical_vaccinated'), medical_vaccines: get('medical_vaccines'),
     medical_vet: get('medical_vet'), medical_observations: get('medical_observations'),
     medical_diseases: get('medical_diseases'), medical_allergies: get('medical_allergies'),
-    signature: get('signature'), age_years: get('age_years'), age_months: get('age_months'),
-    vaccines_list: get('vaccines_list'), deworming_history: get('deworming_history'),
+    signature: get('signature'),
+    age_years: get('age_mode') === 'years_months' ? get('age_years') : '',
+    age_months: get('age_mode') === 'years_months' ? get('age_months') : '',
+    age_mode: get('age_mode'),
+    vaccines_list: vacunasSeleccionadas.join(', '),
+    deworming_history: get('deworming_history'),
     medical_conditions: get('medical_conditions'), allergies_ext: get('allergies'),
     surgeries: get('surgeries'), medications: get('medications'),
     sterilized: get('sterilized') === '1' ? 1 : 0, microchip: get('microchip'), blood_type: get('blood_type')

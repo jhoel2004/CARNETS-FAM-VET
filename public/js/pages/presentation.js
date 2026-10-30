@@ -155,7 +155,7 @@ export async function viewPresentation(petId) {
                 <b>RAZA:</b><span class="v" contenteditable="true">${escapeHtml(pet.breed || '—')}</span>
               </div>
               <div class="hc-row">
-                <b>NACIMIENTO:</b><span class="v" contenteditable="true">${pet.birth_date || '—'}</span>
+                <b>NACIMIENTO / EDAD:</b><span class="v" contenteditable="true">${pet.age_mode === 'years_months' ? `${pet.age_years || '—'} años, ${pet.age_months || '—'} meses` : pet.birth_date || '—'}</span>
                 <span class="hc-sex">
                   <b>SEXO:</b>
                   <button class="hc-chk" data-s="m" aria-label="Macho">${pet.sex === 'Macho' ? '✓' : ''}</button>
@@ -165,6 +165,7 @@ export async function viewPresentation(petId) {
                 </span>
               </div>
               <div class="hc-row"><b>COLOR / SEÑAS:</b><span class="v" contenteditable="true">${escapeHtml(pet.distinctive_marks || pet.color || '—')}</span></div>
+              ${pet.vaccines_list ? `<div class="hc-row"><b>VACUNAS:</b><span class="v" contenteditable="true">${escapeHtml(pet.vaccines_list)}</span></div>` : ''}
               <div class="hc-row"><b>PROPIETARIO:</b><span class="v" contenteditable="true">${escapeHtml(pet.owner_name || '—')}</span><b>N.º REG.:</b><span class="v" contenteditable="true">${pet.carnet_number || '—'}</span></div>
               <div class="hc-row"><b>TELÉFONO:</b><span class="v" contenteditable="true">${pet.owner_phone || '—'}</span></div>
               <div class="hc-addr">${escapeHtml(pet.owner_address || '')}${pet.owner_city ? ' · ' + escapeHtml(pet.owner_city) : ''}${pet.owner_address || pet.owner_city ? ' · Bolivia' : ''}</div>

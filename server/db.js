@@ -118,6 +118,8 @@ async function createSqliteTables() {
     signature TEXT DEFAULT '',
     age_years TEXT DEFAULT '',
     age_months TEXT DEFAULT '',
+    age_mode TEXT DEFAULT 'birth_date',
+    vaccines_list TEXT DEFAULT '',
     distinctive_marks TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
@@ -176,6 +178,8 @@ async function createSqliteTables() {
   addCol('pets', "signature TEXT DEFAULT ''");
   addCol('pets', "age_years TEXT DEFAULT ''");
   addCol('pets', "age_months TEXT DEFAULT ''");
+  addCol('pets', "age_mode TEXT DEFAULT 'birth_date'");
+  addCol('pets', "vaccines_list TEXT DEFAULT ''");
   addCol('pets', "distinctive_marks TEXT DEFAULT ''");
   addCol('pet_health_records', "batch TEXT DEFAULT ''");
   addCol('pet_health_records', "scheduled_date TEXT DEFAULT ''");
@@ -272,6 +276,8 @@ function save() {
 async function ensurePgSchema(client) {
   await client.query(`
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS distinctive_marks TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS age_mode TEXT DEFAULT 'birth_date';
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS vaccines_list TEXT DEFAULT '';
     ALTER TABLE IF EXISTS pet_health_records ADD COLUMN IF NOT EXISTS batch TEXT DEFAULT '';
     ALTER TABLE IF EXISTS pet_health_records ADD COLUMN IF NOT EXISTS scheduled_date TEXT DEFAULT '';
     CREATE TABLE IF NOT EXISTS pet_health_records (
