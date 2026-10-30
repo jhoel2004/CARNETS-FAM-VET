@@ -6,7 +6,6 @@
 
 import { api } from '../api.js';
 import { state } from '../state.js';
-import { escapeHtml, speciesLabel, placeholderPhoto } from '../utils.js';
 import { initPresentation, viewPresentation, bindPresentationEvents } from './presentation.js';
 
 let currentPetId = null;
@@ -15,24 +14,33 @@ export async function renderPublicPage(id) {
   const app = document.getElementById('app');
   currentPetId = id;
 
-  try {
-    // Cargar datos de la mascota y sus registros de salud
-    const pet = await api.getPublicPet(id);
-    await state.loadHealthRecords(id);
+  // Aplicar fondo del body para la vista pública
+  document.body.style.background = 'none';
 
-    const s = await api.getSettings().catch(() => ({}));
-    state.setSettings(s);
+  try {
+    // Cargar mascota y sus registros de salud en paralelo
+    const pet = await api.getPublicPet(id);
+    await Promise.all([
+      state.loadHealthRecords(id),
+      api.getSettings().catch(() => ({})).then(s => state.setSettings(s)),
+    ]);
 
     app.innerHTML = await viewPresentation(pet.id || id);
     bindPresentationEvents();
   } catch (e) {
     console.error('Error cargando mascota pública:', e);
     app.innerHTML = `
-    <div class="hc-view" style="padding:40px 20px; text-align:center; max-width:440px; margin:0 auto;">
-      <div style="font-size:48px; margin-bottom:16px;">🐾</div>
-      <h2 style="color:var(--hc-navy); margin-bottom:8px;">No encontrado</h2>
-      <p style="color:var(--hc-ink); opacity:.8;">Este código QR no corresponde a ningún registro activo en FAM J VET.</p>
-      <a href="#/" class="btn btn-primary" style="margin-top:16px;">Ir al sistema</a>
+    <div class="hc-view" style="text-align:center;">
+      <div>
+        <div style="font-size:64px; margin-bottom:16px;">🐾</div>
+        <h2 style="color:var(--navy); margin-bottom:8px; font-family:'Barlow Condensed',sans-serif; font-size:28px;">No encontrado</h2>
+        <p style="color:var(--ink); opacity:.8; font-family:Barlow,sans-serif; max-width:300px; margin:0 auto 20px;">
+          Este código QR no corresponde a ningún registro activo en FAMUVET.
+        </p>
+        <a href="#/" style="color:var(--blue); text-decoration:none; font-family:Barlow,sans-serif; font-weight:600;">
+          ← Ir al sistema
+        </a>
+      </div>
     </div>`;
   }
 }
@@ -42,8 +50,7 @@ export { initPresentation };
 
 // Helper para establecer settings en el estado (usado por la presentación)
 export function setPublicSettings(settings) {
-  if (state && state.getSettings) {
-    const current = state.getSettings();
-    state.getSettings = () => ({ ...current, ...settings });
+  if (state && state.setSettings) {
+    state.setSettings({ ...state.getSettings(), ...settings });
   }
 }

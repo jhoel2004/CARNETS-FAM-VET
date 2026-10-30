@@ -13,12 +13,6 @@ let tab = 'vac';
 let photoTemp = '';
 let isOpen = false;
 
-const TYPE_LABEL = {
-  vacuna: 'Vacuna',
-  desparasitacion: 'Desparasitación',
-  historial: 'Historial clínico',
-};
-
 export function initPresentation() {
   // Nada que inicializar globalmente.
 }
@@ -55,8 +49,9 @@ function showToast(msg) {
   }
 }
 
+/** SVG placeholder animado de perrito (idéntico al HTML de referencia) */
 function placeholderPhotoSvg() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  return `<svg id="pup" viewBox="0 0 200 200" aria-hidden="true">
     <rect width="200" height="200" fill="#e4eefc"/>
     <ellipse cx="45" cy="95" rx="24" ry="44" fill="#b9762c" transform="rotate(18 45 95)"/>
     <ellipse cx="155" cy="95" rx="24" ry="44" fill="#b9762c" transform="rotate(-18 155 95)"/>
@@ -66,7 +61,9 @@ function placeholderPhotoSvg() {
     <g class="eye"><circle cx="124" cy="100" r="9" fill="#fff"/><circle class="p" cx="124" cy="100" r="6" fill="#2a2320"/></g>
     <ellipse cx="100" cy="120" rx="12" ry="8" fill="#2a2320"/>
     <path d="M100 128v8M100 136q-12 12-22 2M100 136q12 12 22 2" fill="none" stroke="#2a2320" stroke-width="3" stroke-linecap="round"/>
-    <path d="M92 142q8 22 16 0z" fill="#ef7f8f"/>
+    <path d="M92 142q8 22 16 0z" fill="#ef7f8f">
+      <animate attributeName="d" values="M92 142q8 14 16 0z;M92 142q8 26 16 0z;M92 142q8 14 16 0z" dur="1.6s" repeatCount="indefinite"/>
+    </path>
     <rect y="178" width="200" height="22" fill="#3f9a58"/>
   </svg>`;
 }
@@ -81,17 +78,19 @@ export async function viewPresentation(petId) {
   }
   if (!pet) {
     return `
-    <div class="scene">
-      <div class="tilt">
-        <div class="book">
-          <section class="face front">
-            <div style="padding:40px 20px; text-align:center;">
-              <div style="font-size:48px; margin-bottom:16px;">🐾</div>
-              <h2 style="color:var(--hc-navy); margin-bottom:8px;">No encontrado</h2>
-              <p style="color:#1d2b4f; opacity:.8;">Este código QR no corresponde a ninguna mascota registrada.</p>
-              <a href="#/" style="color:var(--hc-blue); text-decoration:none;">Ir al sistema</a>
-            </div>
-          </section>
+    <div class="hc-view">
+      <div class="scene">
+        <div class="tilt">
+          <div class="book">
+            <section class="face front">
+              <div style="padding:40px 20px; text-align:center;">
+                <div style="font-size:48px; margin-bottom:16px;">🐾</div>
+                <h2 style="color:var(--navy); margin-bottom:8px;">No encontrado</h2>
+                <p style="color:var(--ink); opacity:.8;">Este código QR no corresponde a ninguna mascota registrada.</p>
+                <a href="#/" style="color:var(--blue); text-decoration:none;">Ir al sistema</a>
+              </div>
+            </section>
+          </div>
         </div>
       </div>
     </div>`;
@@ -101,11 +100,36 @@ export async function viewPresentation(petId) {
   records = state.getHealthRecords(pet.id) || [];
 
   const s = state.getSettings();
-  const appliedCount = records.filter(r => r.applied).length;
-  const total = records.length;
-  const pct = total ? Math.round((appliedCount / total) * 100) : 0;
+
+  // Calcular progreso de vacunas
+  const vacRecords = records.filter(r => r.type === 'vacuna');
+  const appliedVac = vacRecords.filter(r => r.applied).length;
+  const totalVac = vacRecords.length;
+  const pct = totalVac ? Math.round((appliedVac / totalVac) * 100) : 0;
+
+  // Próxima cita pendiente (vacunas + desparasitación)
+  const pendAll = records
+    .filter(r => !r.applied && r.type !== 'historial')
+    .sort((a, b) => (a.record_date || '').localeCompare(b.record_date || ''))[0];
+
+  const nextHtml = pendAll
+    ? (() => {
+        const d = daysFromNow(pendAll.record_date);
+        return `<span>📅</span><span>Próxima cita: <b>${escapeHtml(pendAll.title)}</b> · ${d >= 0 ? 'en ' + d + ' días' : 'atrasada ' + (-d) + ' días'}</span>`;
+      })()
+    : '<span>🎉</span><span>Todo al día</span>';
+
+  // Datos del propietario para mostrar dirección
+  const addrParts = [
+    pet.owner_address,
+    pet.owner_city,
+    (pet.owner_address || pet.owner_city) ? 'Bolivia' : null,
+  ].filter(Boolean);
+  const addrLine = addrParts.join(' · ');
 
   return `
+  <div class="hc-view">
+
   <div class="loader" id="loader" role="status" aria-label="Cargando">
     <span class="dog" aria-hidden="true">🐕</span>
     <div class="trail" aria-hidden="true">
@@ -116,16 +140,25 @@ export async function viewPresentation(petId) {
 
   <div class="scene"><div class="tilt" id="tilt"><div class="book" id="book">
 
+    <!-- ====== PORTADA ====== -->
     <section class="face front" aria-label="Presentación de la mascota">
+
       <div class="logo">
         <span class="pets" aria-hidden="true">🐶🐱🐦</span>
         <span class="brand">FAM<svg viewBox="0 0 40 52" aria-hidden="true"><path d="M7 4V27a13 13 0 0 0 26 0V4"/><path class="tl" d="M33 27c0 14-8 20-20 21"/></svg>VET</span>
       </div>
-      <svg class="beat" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M0 12 H70 l6-9 l8 18 l6-9 H200"/></svg>
+
+      <svg class="beat" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 12 H70 l6-9 l8 18 l6-9 H200"/>
+      </svg>
+
       <div class="tag">${escapeHtml(s.healthTagline || 'Amor, cuidado y salud para toda la vida')}</div>
+
       <h1>PRESENTACIÓN</h1>
       <div class="ribbon">de mi mascota</div>
+
       <p class="list">${escapeHtml(s.healthServices || 'Control sanitario · Vacunación · Desparasitación · Historial clínico')}</p>
+
       <div class="stage">
         <button class="frame" id="frame" aria-label="Cambiar foto de la mascota">
           ${photoTemp
@@ -138,62 +171,97 @@ export async function viewPresentation(petId) {
           <button class="heart" id="heart" aria-label="Dar cariño">🐾</button>
         </div>
       </div>
+
       <div class="form">
         <div class="row"><b>NOMBRE:</b><span class="v" id="nm" contenteditable="true" spellcheck="false">${escapeHtml(pet.name || '—')}</span></div>
-        <div class="row"><b>ESPECIE:</b><span class="v" contenteditable="true">${speciesLabel(pet.species) || '—'}</span><b>RAZA:</b><span class="v" contenteditable="true">${escapeHtml(pet.breed || '—')}</span></div>
-        <div class="row"><b>NACIMIENTO:</b><span class="v" contenteditable="true">${pet.birth_date || '—'}</span>
-          <span class="sex"><b>SEXO:</b><button class="chk" data-s="m" aria-label="Macho">${pet.sex === 'Macho' ? '✓' : ''}</button><b>Macho</b><button class="chk" data-s="h" aria-label="Hembra">${pet.sex === 'Hembra' ? '✓' : ''}</button><b>Hembra</b></span></div>
+        <div class="row">
+          <b>ESPECIE:</b><span class="v" contenteditable="true">${escapeHtml(speciesLabel(pet.species) || '—')}</span>
+          <b>RAZA:</b><span class="v" contenteditable="true">${escapeHtml(pet.breed || '—')}</span>
+        </div>
+        <div class="row">
+          <b>NACIMIENTO:</b><span class="v" contenteditable="true">${escapeHtml(pet.birth_date || '—')}</span>
+          <span class="sex">
+            <b>SEXO:</b>
+            <button class="chk" data-s="m" aria-label="Macho">${pet.sex === 'Macho' ? '✓' : ''}</button><b>Macho</b>
+            <button class="chk" data-s="h" aria-label="Hembra">${pet.sex === 'Hembra' ? '✓' : ''}</button><b>Hembra</b>
+          </span>
+        </div>
         <div class="row"><b>COLOR / SEÑAS:</b><span class="v" contenteditable="true">${escapeHtml(pet.distinctive_marks || pet.color || '—')}</span></div>
-        <div class="row"><b>PROPIETARIO:</b><span class="v" contenteditable="true">${escapeHtml(pet.owner_name || '—')}</span><b>N.º REG.:</b><span class="v" contenteditable="true">${pet.carnet_number || '—'}</span></div>
-        <div class="row"><b>TELÉFONO:</b><span class="v" contenteditable="true">${pet.owner_phone || '—'}</span></div>
-        <div class="addr">${escapeHtml(pet.owner_address || '')}${pet.owner_city ? ' · ' + escapeHtml(pet.owner_city) : ''}${pet.owner_address || pet.owner_city ? ' · Bolivia' : ''}</div>
+        <div class="row">
+          <b>PROPIETARIO:</b><span class="v" contenteditable="true">${escapeHtml(pet.owner_name || '—')}</span>
+          <b>N.º REG.:</b><span class="v" contenteditable="true">${escapeHtml(String(pet.carnet_number || '—'))}</span>
+        </div>
+        <div class="row"><b>TELÉFONO:</b><span class="v" contenteditable="true">${escapeHtml(pet.owner_phone || '—')}</span></div>
+        ${addrLine ? `<div class="addr">${escapeHtml(addrLine)}</div>` : ''}
       </div>
+
       <button class="open-btn" id="open" aria-label="Ver la salud de la mascota">VER SALUD ›</button>
     </section>
 
+    <!-- ====== REVERSO / SALUD ====== -->
     <section class="face back" aria-label="Registros de salud">
       <div class="head">
-        <div class="ring"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="pr" id="pr" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="${97.4 * (1 - pct / 100)}"/></svg><span id="pct">${pct}%</span></div>
-        <div><h2 id="nm2">${escapeHtml(pet.name || 'Mascota')}</h2><p id="sub">${pct === 100 ? 'Vacunas al día' : total - appliedCount + ' registro pendiente'}</p></div>
+        <div class="ring">
+          <svg viewBox="0 0 36 36">
+            <circle class="tr" cx="18" cy="18" r="15.5"/>
+            <circle class="pr" id="pr" cx="18" cy="18" r="15.5"
+              stroke-dasharray="97.4"
+              stroke-dashoffset="${97.4 * (1 - pct / 100)}"/>
+          </svg>
+          <span id="pct">${pct}%</span>
+        </div>
+        <div>
+          <h2 id="nm2">${escapeHtml(pet.name || 'Mascota')}</h2>
+          <p id="sub">${pct === 100 ? 'Vacunas al día' : (totalVac - appliedVac) + ' vacuna pendiente'}</p>
+        </div>
         <button class="close" id="close">‹ Portada</button>
       </div>
-      <div class="tabs" role="tablist"><i id="ind"></i>
-        <button role="tab" aria-selected="true" data-t="vac">Vacunas</button>
+
+      <div class="tabs" role="tablist">
+        <i id="ind"></i>
+        <button role="tab" aria-selected="true"  data-t="vac">Vacunas</button>
         <button role="tab" aria-selected="false" data-t="des">Desparasitación</button>
         <button role="tab" aria-selected="false" data-t="his">Historial</button>
       </div>
-      <div class="next" id="next"></div>
+
+      <div class="next" id="next">${nextHtml}</div>
       <div class="items" id="items" role="tabpanel"></div>
     </section>
 
   </div></div></div>
 
   <div class="toast" id="toast" role="status"></div>
-  `;
+
+  </div>`;
 }
 
 /* ---------- Render del reverso ---------- */
 
 function renderBack() {
-  const itemsEl = document.getElementById('hc-items') || document.getElementById('items');
-  const pr = document.getElementById('hc-pr') || document.getElementById('pr');
-  const pctEl = document.getElementById('hc-pct') || document.getElementById('pct');
-  const subEl = document.getElementById('hc-sub') || document.getElementById('sub');
-  const nextEl = document.getElementById('hc-next') || document.getElementById('next');
-  const ind = document.getElementById('hc-ind') || document.getElementById('ind');
+  const itemsEl = document.getElementById('items');
+  const pr      = document.getElementById('pr');
+  const pctEl   = document.getElementById('pct');
+  const subEl   = document.getElementById('sub');
+  const nextEl  = document.getElementById('next');
+  const ind     = document.getElementById('ind');
 
   if (!itemsEl) return;
 
-  const appliedCount = records.filter(r => r.applied).length;
-  const total = records.length;
-  const pct = total ? Math.round((appliedCount / total) * 100) : 0;
+  // Recalcular progreso con vacunas
+  const vacRecords   = records.filter(r => r.type === 'vacuna');
+  const appliedVac   = vacRecords.filter(r => r.applied).length;
+  const totalVac     = vacRecords.length;
+  const pct          = totalVac ? Math.round((appliedVac / totalVac) * 100) : 0;
 
-  if (pr) pr.style.strokeDashoffset = 97.4 * (1 - pct / 100);
+  if (pr)    pr.style.strokeDashoffset = 97.4 * (1 - pct / 100);
   if (pctEl) pctEl.textContent = pct + '%';
-  if (subEl) subEl.textContent = pct === 100 ? 'Vacunas al día' : total - appliedCount + ' registro pendiente';
+  if (subEl) subEl.textContent = pct === 100 ? 'Vacunas al día' : (totalVac - appliedVac) + ' vacuna pendiente';
 
-  const pend = [...records].filter(r => !r.applied && r.type !== 'historial')
+  // Próxima cita
+  const pend = records
+    .filter(r => !r.applied && r.type !== 'historial')
     .sort((a, b) => (a.record_date || '').localeCompare(b.record_date || ''))[0];
+
   if (nextEl) {
     if (pend) {
       const d = daysFromNow(pend.record_date);
@@ -203,39 +271,55 @@ function renderBack() {
     }
   }
 
-  if (ind) ind.style.transform = `translateX(${['vac', 'des', 'his'].indexOf(tab) * 100}%)`;
+  // Indicador de tab (slider)
+  const tabIndex = ['vac', 'des', 'his'].indexOf(tab);
+  if (ind) ind.style.transform = `translateX(${tabIndex * 100}%)`;
+
+  // Mapeo tipo de registro → tab
+  const typeMap = { vac: 'vacuna', des: 'desparasitacion', his: 'historial' };
+  const currentType = typeMap[tab] || 'vacuna';
 
   itemsEl.innerHTML = '';
-  const list = records.filter(r => r.type === tab);
+  const list = records.filter(r => r.type === currentType);
+
   list.forEach((it, i) => {
-    const done = !!it.applied;
-    const e = document.createElement('div');
-    e.className = 'it' + (done ? ' done' : '');
-    e.style.animationDelay = i * 70 + 'ms';
+    const done    = !!it.applied;
     const pendItem = !done && tab !== 'his';
+    const e       = document.createElement('div');
+    e.className   = 'it' + (done ? ' done' : '');
+    e.style.animationDelay = i * 70 + 'ms';
+
+    // Construir detalles extra
+    const extras = [
+      it.notes    ? `<p>${escapeHtml(it.notes)}</p>` : '',
+      it.vet      ? `<p><b>Veterinaria:</b> ${escapeHtml(it.vet)}</p>` : '',
+      it.product  ? `<p><b>Producto:</b> ${escapeHtml(it.product)}</p>` : '',
+      it.weight   ? `<p><b>Peso:</b> ${escapeHtml(String(it.weight))} kg</p>` : '',
+      it.batch    ? `<p><b>Lote:</b> ${escapeHtml(it.batch)}</p>` : '',
+      it.scheduled_date ? `<p><b>Programada:</b> ${fmtDate(it.scheduled_date)}</p>` : '',
+      it.next_due ? `<p><b>Próxima dosis:</b> ${fmtDate(it.next_due)}</p>` : '',
+      pendItem    ? `<button class="mark">Marcar como aplicada</button>` : '',
+    ].join('');
+
     e.innerHTML = `
       <button class="top" aria-expanded="false">
         <span class="dot">${done ? '✓' : ''}</span>
-        <span class="t"><strong>${escapeHtml(it.title)}</strong><small>${fmtDate(it.record_date)}</small></span>
+        <span class="t">
+          <strong>${escapeHtml(it.title)}</strong>
+          <small>${fmtDate(it.record_date)}</small>
+        </span>
         <span class="chev">›</span>
       </button>
-      <div class="more">
-        <div>
-          <p>${escapeHtml(it.notes || '')}</p>
-          ${it.vet ? `<p><b>Veterinaria:</b> ${escapeHtml(it.vet)}</p>` : ''}
-          ${it.product ? `<p><b>Producto:</b> ${escapeHtml(it.product)}</p>` : ''}
-          ${it.weight ? `<p><b>Peso:</b> ${escapeHtml(it.weight)} kg</p>` : ''}
-          ${it.batch ? `<p><b>Lote:</b> ${escapeHtml(it.batch)}</p>` : ''}
-          ${it.scheduled_date ? `<p><b>Programada:</b> ${fmtDate(it.scheduled_date)}</p>` : ''}
-          ${it.next_due ? `<p><b>Próxima dosis:</b> ${fmtDate(it.next_due)}</p>` : ''}
-          ${pendItem ? `<button class="mark">Marcar como aplicada</button>` : ''}
-        </div>
-      </div>
+      <div class="more"><div>${extras}</div></div>
     `;
+
+    // Toggle acordeón
     e.querySelector('.top').onclick = () => {
-      const o = e.classList.toggle('x');
-      e.querySelector('.top').setAttribute('aria-expanded', o);
+      const open = e.classList.toggle('x');
+      e.querySelector('.top').setAttribute('aria-expanded', open);
     };
+
+    // Marcar como aplicada
     const m = e.querySelector('.mark');
     if (m) {
       m.onclick = async () => {
@@ -250,6 +334,7 @@ function renderBack() {
         }
       };
     }
+
     itemsEl.appendChild(e);
   });
 }
@@ -257,45 +342,43 @@ function renderBack() {
 /* ---------- Eventos ---------- */
 
 export function bindPresentationEvents() {
-  // Ocultar loader tras 2.3s
+  // Ocultar loader tras 2.3 s (como en el HTML de referencia)
   setTimeout(() => {
     const loader = document.getElementById('loader');
     if (loader) loader.classList.add('off');
   }, 2300);
 
-  const openBtn = document.getElementById('hc-open') || document.getElementById('open');
-  const closeBtn = document.getElementById('hc-close') || document.getElementById('close');
-  const book = document.getElementById('hc-book') || document.getElementById('book');
-  const tilt = document.getElementById('hc-tilt') || document.getElementById('tilt');
-  const btnOpenApp = document.getElementById('hc-btn-open') || document.getElementById('open');
-  const btnAdd = document.getElementById('hc-btn-add-record');
-  const nm = document.getElementById('hc-nm') || document.getElementById('nm');
-  const nm2 = document.getElementById('hc-nm2') || document.getElementById('nm2');
+  const openBtn  = document.getElementById('open');
+  const closeBtn = document.getElementById('close');
+  const book     = document.getElementById('book');
+  const tilt     = document.getElementById('tilt');
+  const nm       = document.getElementById('nm');
+  const nm2      = document.getElementById('nm2');
 
-  if (openBtn) openBtn.onclick = () => { book.classList.add('open'); tilt.style.transform = ''; isOpen = true; };
+  // Flip del libro
+  if (openBtn)  openBtn.onclick  = () => { book.classList.add('open');    tilt.style.transform = ''; isOpen = true; };
   if (closeBtn) closeBtn.onclick = () => { book.classList.remove('open'); isOpen = false; };
-  if (btnOpenApp) btnOpenApp.onclick = () => {
-    if (isOpen) { book.classList.remove('open'); isOpen = false; }
-    else { book.classList.add('open'); tilt.style.transform = ''; isOpen = true; }
-  };
 
   // Pestañas
-  document.querySelectorAll('.hc-tabs button, .tabs button').forEach((b, i) => {
+  document.querySelectorAll('.tabs button').forEach((b, i) => {
     b.onclick = () => {
       tab = b.dataset.t;
-      document.querySelectorAll('.hc-tabs button, .tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
-      if (document.getElementById('ind')) document.getElementById('ind').style.transform = `translateX(${['vac', 'des', 'his'].indexOf(tab) * 100}%)`;
+      document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+      const ind = document.getElementById('ind');
+      if (ind) ind.style.transform = `translateX(${i * 100}%)`;
       renderBack();
     };
   });
 
-  // Nombre se sincroniza con el reverso
+  // Sincronizar nombre portada ↔ reverso
   if (nm && nm2) {
-    nm.addEventListener('input', (e) => { nm2.textContent = e.target.textContent.trim() || 'Mascota'; });
+    nm.addEventListener('input', (e) => {
+      nm2.textContent = e.target.textContent.trim() || 'Mascota';
+    });
   }
 
-  // Corazón
-  const heart = document.getElementById('hc-heart') || document.getElementById('heart');
+  // Botón de corazón
+  const heart = document.getElementById('heart');
   if (heart) {
     heart.onclick = (e) => {
       const h = e.currentTarget;
@@ -303,15 +386,15 @@ export function bindPresentationEvents() {
       void h.offsetWidth;
       h.classList.add('pop');
       h.textContent = h.textContent === '🐾' ? '❤️' : '🐾';
-      if (h.textContent === '❤️') showToast(`¡${escapeHtml(pet.name || 'tu mascota')} mueve la cola!`);
+      if (h.textContent === '❤️') showToast(`¡${escapeHtml(pet?.name || 'tu mascota')} mueve la cola!`);
     };
   }
 
   // Cambiar foto
-  const frame = document.getElementById('hc-frame') || document.getElementById('frame');
-  const fi = document.createElement('input');
-  fi.type = 'file';
-  fi.accept = 'image/*';
+  const frame = document.getElementById('frame');
+  const fi    = document.createElement('input');
+  fi.type     = 'file';
+  fi.accept   = 'image/*';
   if (frame) frame.onclick = () => fi.click();
   fi.onchange = () => {
     const f = fi.files[0];
@@ -319,44 +402,50 @@ export function bindPresentationEvents() {
     const r = new FileReader();
     r.onload = () => {
       photoTemp = r.result;
-      const fr = document.getElementById('hc-frame') || document.getElementById('frame');
+      const fr = document.getElementById('frame');
       if (fr) {
         const existing = fr.querySelector('svg, img');
-        if (existing) existing.replaceWith(Object.assign(new Image(), { src: r.result, alt: 'Foto de la mascota' }));
+        if (existing) {
+          const img = new Image();
+          img.src = r.result;
+          img.alt = 'Foto de la mascota';
+          existing.replaceWith(img);
+        }
       }
     };
     r.readAsDataURL(f);
   };
 
-  // Sexo
-  document.querySelectorAll('.hc-chk, .chk').forEach(b => {
+  // Checkboxes de sexo
+  document.querySelectorAll('.chk').forEach(b => {
     b.onclick = () => {
-      document.querySelectorAll('.hc-chk, .chk').forEach(x => { x.textContent = x === b ? '✓' : ''; });
+      document.querySelectorAll('.chk').forEach(x => { x.textContent = x === b ? '✓' : ''; });
     };
   });
 
-  // Ojos que siguen al cursor
+  // Ojos que siguen al cursor + efecto tilt del libro
   addEventListener('pointermove', (e) => {
     const s = document.getElementById('pup');
-    if (!s) return;
-    const r = s.getBoundingClientRect();
-    const dx = e.clientX - (r.left + r.width / 2);
-    const dy = e.clientY - (r.top + r.height / 2);
-    const a = Math.atan2(dy, dx);
-    const k = Math.min(3.2, Math.hypot(dx, dy) / 60);
-    s.querySelectorAll('.p').forEach(p => {
-      p.style.transform = `translate(${Math.cos(a) * k}px,${Math.sin(a) * k}px)`;
-    });
-    if (!document.getElementById('hc-book') && !document.getElementById('book')) return;
-    const bookEl = document.getElementById('hc-book') || document.getElementById('book');
-    if (!bookEl.classList.contains('open')) {
-      const sc = document.getElementById('hc-scene') || document.getElementById('scene') || document.querySelector('.scene');
+    if (s) {
+      const rect = s.getBoundingClientRect();
+      const dx = e.clientX - (rect.left + rect.width / 2);
+      const dy = e.clientY - (rect.top  + rect.height / 2);
+      const a  = Math.atan2(dy, dx);
+      const k  = Math.min(3.2, Math.hypot(dx, dy) / 60);
+      s.querySelectorAll('.p').forEach(p => {
+        p.style.transform = `translate(${Math.cos(a) * k}px, ${Math.sin(a) * k}px)`;
+      });
+    }
+
+    const bookEl = document.getElementById('book');
+    const tiltEl = document.getElementById('tilt');
+    if (bookEl && tiltEl && !bookEl.classList.contains('open')) {
+      const sc = document.querySelector('.scene')?.getBoundingClientRect();
       if (sc) {
-        const x = (e.clientX - (sc.left + sc.width / 2)) / sc.width;
-        const y = (e.clientY - (sc.top + sc.height / 2)) / sc.height;
-        document.getElementById('hc-tilt') || document.getElementById('tilt');
-        const tiltEl = document.getElementById('hc-tilt') || document.getElementById('tilt');
-        if (tiltEl) tiltEl.style.transform = `rotateY(${Math.max(-1, Math.min(1, x)) * 7}deg) rotateX(${Math.max(-1, Math.min(1, y)) * -5}deg)`;
+        const x = (e.clientX - (sc.left + sc.width  / 2)) / sc.width;
+        const y = (e.clientY - (sc.top  + sc.height / 2)) / sc.height;
+        tiltEl.style.transform =
+          `rotateY(${Math.max(-1, Math.min(1, x)) * 7}deg) rotateX(${Math.max(-1, Math.min(1, y)) * -5}deg)`;
       }
     }
   });
@@ -366,16 +455,20 @@ export function bindPresentationEvents() {
 
 /* ---------- Modal de registro de salud ---------- */
 
+function escapeHtmlAttrInput(s) {
+  return String(s || '').replace(/"/g, '&quot;');
+}
+
 async function openRecordModal(existingId) {
   const { openModal, closeModal } = await import('../components/modal.js');
   const { iconX } = await import('../icons.js');
   const existing = records.find(r => r.id === existingId) || null;
-  const isEdit = !!existing;
+  const isEdit   = !!existing;
 
   const types = [
-    { value: 'vacuna', label: 'Vacuna' },
+    { value: 'vacuna',         label: 'Vacuna' },
     { value: 'desparasitacion', label: 'Desparasitación' },
-    { value: 'historial', label: 'Historial clínico' },
+    { value: 'historial',      label: 'Historial clínico' },
   ];
 
   openModal('modal-md', `
@@ -389,7 +482,7 @@ async function openRecordModal(existingId) {
           <div class="field full">
             <label>Tipo *</label>
             <select name="type" required>
-              ${types.map(t => `<option value="${t.value}" ${(existing && existing.type === t.value) ? 'selected' : ''}>${t.label}</option>`).join('')}
+              ${types.map(t => `<option value="${t.value}" ${existing && existing.type === t.value ? 'selected' : ''}>${t.label}</option>`).join('')}
             </select>
           </div>
           <div class="field full">
@@ -435,20 +528,20 @@ async function openRecordModal(existingId) {
 
   document.getElementById('hc-btn-save-record').onclick = async () => {
     const form = document.getElementById('hc-record-form');
-    const fd = new FormData(form);
-    const get = (k) => fd.get(k) || '';
+    const fd   = new FormData(form);
+    const get  = (k) => fd.get(k) || '';
     if (!get('title').trim()) { toast('El título es requerido', 'error'); return; }
 
     const payload = {
-      type: get('type'),
-      title: get('title'),
-      record_date: get('record_date'),
-      next_due: get('next_due'),
-      vet: get('vet'),
-      product: get('product'),
-      batch: get('batch'),
-      weight: get('weight'),
-      notes: get('notes'),
+      type:          get('type'),
+      title:         get('title'),
+      record_date:   get('record_date'),
+      next_due:      get('next_due'),
+      vet:           get('vet'),
+      product:       get('product'),
+      batch:         get('batch'),
+      weight:        get('weight'),
+      notes:         get('notes'),
     };
 
     try {
@@ -468,35 +561,31 @@ async function openRecordModal(existingId) {
   };
 }
 
-function escapeHtmlAttrInput(s) {
-  return String(s || '').replace(/"/g, '&quot;');
-}
-
 /* ---------- Exportar / imprimir ---------- */
 
 export async function downloadCard(type) {
   if (!pet) { toast('Selecciona una mascota primero', 'error'); return; }
 
-  const scene = document.getElementById('hc-scene') || document.querySelector('.scene');
-  const book = document.getElementById('hc-book') || document.getElementById('book');
+  const scene = document.querySelector('.scene');
+  const book  = document.getElementById('book');
   if (!scene || !book) return;
 
-  const front = document.querySelector('.hc-front') || document.querySelector('.face.front');
-  const back = document.querySelector('.hc-back') || document.querySelector('.face.back');
+  const front = document.querySelector('.face.front');
+  const back  = document.querySelector('.face.back');
   if (!front || !back) return;
 
   renderBack();
 
-  const w = scene.offsetWidth || 320;
+  const w = scene.offsetWidth  || 320;
   const h = scene.offsetHeight || 496;
 
   const canvasF = await html2canvas(front, { scale: 3, backgroundColor: null, width: w, height: h });
-  const canvasB = await html2canvas(back, { scale: 3, backgroundColor: null, width: w, height: h });
+  const canvasB = await html2canvas(back,  { scale: 3, backgroundColor: null, width: w, height: h });
 
   if (type === 'png') {
-    const gap = 40;
+    const gap   = 40;
     const combo = document.createElement('canvas');
-    combo.width = canvasF.width;
+    combo.width  = canvasF.width;
     combo.height = canvasF.height * 2 + gap;
     const ctx = combo.getContext('2d');
     ctx.fillStyle = '#f3f1ec';
@@ -504,7 +593,7 @@ export async function downloadCard(type) {
     ctx.drawImage(canvasF, 0, 0);
     ctx.drawImage(canvasB, 0, canvasF.height + gap);
     const a = document.createElement('a');
-    a.href = combo.toDataURL('image/png');
+    a.href     = combo.toDataURL('image/png');
     a.download = `presentacion-${pet.carnet_number || pet.id}.png`;
     a.click();
   } else {
@@ -524,19 +613,17 @@ export async function downloadCard(type) {
 
 export function printCard() {
   if (!pet) { toast('Selecciona una mascota', 'error'); return; }
-  const front = document.querySelector('.hc-front') || document.querySelector('.face.front');
-  const back = document.querySelector('.hc-back') || document.querySelector('.face.back');
+  const front = document.querySelector('.face.front');
+  const back  = document.querySelector('.face.back');
   if (!front || !back) return;
 
   renderBack();
 
   const printWrap = document.createElement('div');
   printWrap.className = 'hc-print-root';
-  printWrap.style.display = 'flex';
-  printWrap.style.flexDirection = 'column';
-  printWrap.style.alignItems = 'center';
+  printWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
   printWrap.innerHTML = `
-    <div style="page-break-after: always; width:100%;">${front.outerHTML}</div>
+    <div style="page-break-after:always;width:100%;">${front.outerHTML}</div>
     <div style="width:100%;">${back.outerHTML}</div>`;
   document.body.appendChild(printWrap);
   window.print();
