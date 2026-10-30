@@ -1,7 +1,8 @@
 /* ============================================================
-   PRESENTACIÓN DE MASCOTA — "Conoce a Max · FAMUVET"
-   Diseño aparte del carnet del admin. Estilo libro 2:3.1 con
-   loader inicial, portada de presentación y reverso de salud.
+   PRESENTACIÓN DE MASCOTA — FAMUVET (libreta veterinaria digital)
+   Página pública independiente, aparte del carnet del admin.
+   Diseño fiel a la libreta de papel: crema, azul marino, verde,
+   animaciones suaves y detalles que reaccionan.
    ============================================================ */
 
 import { api } from '../api.js';
@@ -72,15 +73,29 @@ function placeholderPhotoSvg() {
   </svg>`;
 }
 
-/* ---------- Render principal ---------- */
+/* ---------- Carga de datos ---------- */
 
-export function viewPresentation(p) {
-  pet = p;
+export async function viewPresentation(petId) {
+  // Cargar datos de la mascota desde la API
+  try {
+    pet = await api.getPublicPet(petId);
+  } catch {
+    pet = null;
+  }
+  if (!pet) {
+    return `
+    <div class="hc-view" style="padding:40px 20px; text-align:center; max-width:440px; margin:0 auto;">
+      <div style="font-size:48px; margin-bottom:16px;">🐾</div>
+      <h2 style="color:var(--hc-navy); margin-bottom:8px;">No encontrado</h2>
+      <p style="color:var(--hc-ink); opacity:.8;">Este código no corresponde a ninguna mascota registrada.</p>
+      <a href="#/" class="btn btn-primary" style="margin-top:16px;">Ir al sistema</a>
+    </div>`;
+  }
+
   photoTemp = pet.photo || '';
   records = state.getHealthRecords(pet.id) || [];
 
   const s = state.getSettings();
-  const isLost = pet.status === 'Perdido';
   const appliedCount = records.filter(r => r.applied).length;
   const total = records.length;
   const pct = total ? Math.round((appliedCount / total) * 100) : 0;
@@ -89,13 +104,13 @@ export function viewPresentation(p) {
   <div class="hc-view">
     <div id="hc-toast" class="hc-toast"></div>
 
-    <!-- Loader inicial (estilo Conoce a Max) -->
+    <!-- Loader inicial (perrito + huellas) -->
     <div class="loader" id="hc-loader" role="status" aria-label="Cargando">
       <span class="dog" aria-hidden="true">🐕</span>
       <div class="trail" aria-hidden="true">
         <span>🐾</span><span>🐾</span><span>🐾</span><span>🐾</span><span>🐾</span><span>🐾</span>
       </div>
-      <p>Buscando a ${escapeHtml(pet.name || 'tu mascota')}…</p>
+      <p>Buscando a ${escapeHtml(pet.name)}…</p>
     </div>
 
     <!-- Contenedor libro -->
@@ -187,12 +202,11 @@ export function viewPresentation(p) {
     <!-- Acciones debajo del carnet -->
     <div class="hc-actions">
       <button class="btn btn-primary" id="hc-btn-open">${isOpen ? 'Cerrar salud' : 'Ver salud'}</button>
-      <button class="btn btn-outline" id="hc-btn-edit">Editar ficha de mascota</button>
       <button class="btn btn-outline" id="hc-btn-add-record">Agregar registro de salud</button>
       <button class="btn btn-outline" id="hc-btn-download-png">Descargar PNG</button>
       <button class="btn btn-outline" id="hc-btn-download-pdf">Descargar PDF</button>
       <button class="btn btn-outline" id="hc-btn-print">Imprimir</button>
-      <a href="${publicUrl(pet.id)}" target="_blank" class="btn btn-outline">Ver página pública</a>
+      <a href="#/" class="btn btn-outline">Volver al sistema</a>
     </div>
 
     <div id="hc-print-area" class="hc-print-only"></div>
@@ -282,18 +296,17 @@ function renderBack() {
 /* ---------- Eventos ---------- */
 
 export function bindPresentationEvents() {
-  // Ocultar loader tras 2.3s
+  // Ocultar loader tras 2.5s
   setTimeout(() => {
     const loader = document.getElementById('hc-loader');
     if (loader) loader.classList.add('off');
-  }, 2300);
+  }, 2500);
 
   const openBtn = document.getElementById('hc-open');
   const closeBtn = document.getElementById('hc-close');
   const book = document.getElementById('hc-book');
   const tilt = document.getElementById('hc-tilt');
   const btnOpenApp = document.getElementById('hc-btn-open');
-  const btnEdit = document.getElementById('hc-btn-edit');
   const btnAdd = document.getElementById('hc-btn-add-record');
   const btnDlPng = document.getElementById('hc-btn-download-png');
   const btnDlPdf = document.getElementById('hc-btn-download-pdf');
@@ -362,15 +375,6 @@ export function bindPresentationEvents() {
       document.querySelectorAll('.hc-chk').forEach(x => { x.textContent = x === b ? '✓' : ''; });
     };
   });
-
-  // Editar ficha de mascota
-  if (btnEdit) {
-    btnEdit.onclick = () => {
-      import('../pages/pets.js').then((m) => {
-        if (m.openPetModal) m.openPetModal(pet.id);
-      });
-    };
-  }
 
   // Agregar registro de salud
   if (btnAdd) {

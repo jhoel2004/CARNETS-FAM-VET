@@ -7,7 +7,6 @@ import { initLogin, renderLogin } from './pages/login.js';
 import { initDashboard, viewDashboard, drawCharts } from './pages/dashboard.js';
 import { initPets, viewMascotas, bindPetsEvents, openPetModal } from './pages/pets.js';
 import { initCard, viewCarnet, renderCardPreview, bindCarnetEvents } from './pages/card-generator.js';
-import { initPresentation, viewPresentation, bindPresentationEvents } from './pages/presentation.js';
 import { initHistory, viewHistorial } from './pages/history.js';
 import { initConfig, viewConfig, bindConfigEvents } from './pages/config.js';
 import { renderPublicPage } from './pages/public.js';
@@ -16,7 +15,6 @@ initLogin(state);
 initDashboard(state);
 initPets(state);
 initCard(state);
-initPresentation(state);
 initHistory(state);
 initConfig(state);
 
@@ -118,7 +116,6 @@ function sidebarHtml() {
     { id: 'dashboard', label: 'Panel principal', icon: iconGrid },
     { id: 'mascotas', label: 'Mascotas', icon: iconPaw },
     { id: 'carnet', label: 'Generador de carnet', icon: iconCard },
-    { id: 'presentacion', label: 'Presentación', icon: iconPaw },
     { id: 'buscar', label: 'Búsqueda avanzada', icon: iconSearch },
     { id: 'historial', label: 'Historial', icon: iconClock },
     { id: 'config', label: 'Configuración', icon: iconGear, adminOnly: true },
@@ -218,26 +215,18 @@ export async function renderView() {
   if (state.view === 'dashboard') body.innerHTML = viewDashboard();
   else if (state.view === 'mascotas') body.innerHTML = viewMascotas();
   else if (state.view === 'carnet') body.innerHTML = viewCarnet();
-  else if (state.view === 'presentacion') body.innerHTML = viewPresentation(currentPetForPresentation());
   else if (state.view === 'buscar') body.innerHTML = viewMascotas(true);
   else if (state.view === 'historial') body.innerHTML = viewHistorial();
   else if (state.view === 'config') body.innerHTML = state.user.role === 'Administrador' ? viewConfig() : `<p>No autorizado.</p>`;
   bindViewEvents();
   if (state.view === 'dashboard') drawCharts();
   if (state.view === 'carnet') await renderCardPreview();
-  if (state.view === 'presentacion') bindPresentationEvents();
-}
-
-function currentPetForPresentation() {
-  const pets = state.getPets();
-  return pets.length ? pets[0] : null;
 }
 
 function bindViewEvents() {
   bindPetsEvents();
   bindConfigEvents();
   bindCarnetEvents();
-  bindPresentationEvents();
   document.querySelectorAll('#page-body [data-nav]').forEach(el => el.addEventListener('click', () => { state.view = el.dataset.nav; renderApp(); }));
   document.querySelectorAll('#page-body [data-pet]').forEach(el => el.addEventListener('click', () => { state.view = 'mascotas'; state.search = ''; renderApp(); }));
 }

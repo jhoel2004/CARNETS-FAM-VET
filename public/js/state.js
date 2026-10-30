@@ -27,6 +27,7 @@ class AppState {
   getPets() { return this._pets; }
   getUsers() { return this._users; }
   getSettings() { return this._settings; }
+  setSettings(s) { this._settings = s || {}; }
   getHistory() { return this._history; }
   getHealthRecords(petId) { return this._healthRecords[petId] || []; }
   getAllHealthRecordsMap() { return this._allHealthRecordsMap || new Map(); }
