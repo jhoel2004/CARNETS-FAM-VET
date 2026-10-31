@@ -283,7 +283,6 @@ function renderBack() {
 
   list.forEach((it, i) => {
     const done    = !!it.applied;
-    const pendItem = !done && tab !== 'his';
     const e       = document.createElement('div');
     e.className   = 'it' + (done ? ' done' : '');
     e.style.animationDelay = i * 70 + 'ms';
@@ -297,7 +296,7 @@ function renderBack() {
       it.batch    ? `<p><b>Lote:</b> ${escapeHtml(it.batch)}</p>` : '',
       it.scheduled_date ? `<p><b>Programada:</b> ${fmtDate(it.scheduled_date)}</p>` : '',
       it.next_due ? `<p><b>Próxima dosis:</b> ${fmtDate(it.next_due)}</p>` : '',
-      pendItem    ? `<button class="mark">Marcar como aplicada</button>` : '',
+       '',
     ].join('');
 
     e.innerHTML = `
@@ -317,22 +316,6 @@ function renderBack() {
       const open = e.classList.toggle('x');
       e.querySelector('.top').setAttribute('aria-expanded', open);
     };
-
-    // Marcar como aplicada
-    const m = e.querySelector('.mark');
-    if (m) {
-      m.onclick = async () => {
-        try {
-          await api.applyHealthRecord(it.id, true);
-          await state.loadHealthRecords(pet.id);
-          records = state.getHealthRecords(pet.id);
-          renderBack();
-          showToast('Registrado: ' + it.title);
-        } catch (err) {
-          toast(err.message, 'error');
-        }
-      };
-    }
 
     itemsEl.appendChild(e);
   });

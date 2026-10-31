@@ -64,6 +64,12 @@ class AppState {
     try { this._healthRecords[petId] = await api.getHealthRecords(petId); } catch { this._healthRecords[petId] = []; }
   }
 
+  async loadPublicHealthRecords(petId) {
+    const data = await api.getPublicPetHealth(petId);
+    this._healthRecords[petId] = data.records || [];
+    return this._healthRecords[petId];
+  }
+
   async loadAllHealthRecords() {
     try {
       const map = new Map();

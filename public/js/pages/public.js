@@ -18,10 +18,10 @@ export async function renderPublicPage(id) {
   document.body.style.background = 'none';
 
   try {
-    // Cargar mascota y sus registros de salud en paralelo
+    // La consulta pública no requiere token: el QR debe funcionar sin iniciar sesión.
     const pet = await api.getPublicPet(id);
     await Promise.all([
-      state.loadHealthRecords(id),
+      state.loadPublicHealthRecords(id),
       api.getSettings().catch(() => ({})).then(s => state.setSettings(s)),
     ]);
 

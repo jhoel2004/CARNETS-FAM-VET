@@ -6,6 +6,62 @@ const { authenticateToken, requireAdmin, requireAdminOrOperator } = require('../
 const router = express.Router();
 const publicPetColumns = 'id, carnet_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight, category, status, photo, fingerprint, offspring, registration_date, owner_name, owner_phone, medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_allergies';
 
+function parseDetailList(value) {
+  try {
+    const list = JSON.parse(value || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+// Las versiones anteriores guardaban vacunas dentro de pet_medical_details,
+// mientras que el carnet sanitario usa pet_health_records. Unimos ambas
+// fuentes para que ningún historial ya registrado desaparezca del carnet.
+async function getHealthRecordsForPet(petId) {
+  const rows = await db.query(
+    'SELECT * FROM pet_health_records WHERE pet_id = $1 ORDER BY record_date DESC, created_at DESC',
+    [petId]
+  );
+  const details = await db.get(
+    'SELECT vaccines_detail, deworming_detail FROM pet_medical_details WHERE pet_id = $1',
+    [petId]
+  );
+
+  const addLegacyRecords = (items, type, prefix) => {
+    items.forEach((item, index) => {
+      const title = String(item && item.name || '').trim();
+      const recordDate = String(item && item.date || '');
+      if (!title) return;
+      const duplicate = rows.some(row => row.type === type && row.title === title && String(row.record_date || '') === recordDate);
+      if (!duplicate) {
+        rows.push({
+          id: `${prefix}-${petId}-${index}`,
+          pet_id: petId,
+          type,
+          title,
+          record_date: recordDate,
+          notes: '',
+          applied: 1,
+          next_due: '',
+          vet: '',
+          product: '',
+          weight: '',
+          batch: '',
+          scheduled_date: '',
+          source: 'medical_details'
+        });
+      }
+    });
+  };
+
+  if (details) {
+    addLegacyRecords(parseDetailList(details.vaccines_detail), 'vacuna', 'medical-vaccine');
+    addLegacyRecords(parseDetailList(details.deworming_detail), 'desparasitacion', 'medical-deworming');
+  }
+  return rows.sort((a, b) => String(b.record_date || '').localeCompare(String(a.record_date || '')));
+}
+
 // ============================================
 // RUTAS PÚBLICAS PRIMERO (antes de /:id)
 // ============================================
@@ -186,10 +242,7 @@ router.get('/:id/health-records', authenticateToken, async (req, res) => {
     if (req.user.role === 'Espectador' && pet.owner_ci !== req.user.username) {
       return res.status(403).json({ error: 'No autorizado' });
     }
-    const rows = await db.query(
-      'SELECT * FROM pet_health_records WHERE pet_id = $1 ORDER BY record_date DESC, created_at DESC',
-      [req.params.id]
-    );
+    const rows = await getHealthRecordsForPet(req.params.id);
     res.json(rows);
   } catch (e) {
     console.error('GET /api/pets/:id/health-records error:', e);
@@ -218,10 +271,10 @@ router.post('/:id/health-records', authenticateToken, requireAdminOrOperator, as
     const appliedAt = applied ? now : null;
 
     await db.run(`INSERT INTO pet_health_records (
-      id, pet_id, type, title, record_date, notes, applied, next_due, vet, product, weight, applied_at, created_at, updated_at
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [
+      id, pet_id, type, title, record_date, notes, applied, next_due, vet, product, weight, batch, scheduled_date, applied_at, created_at, updated_at
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`, [
       id, req.params.id, p.type, p.title, p.record_date || '', p.notes || '', applied,
-      p.next_due || '', p.vet || '', p.product || '', p.weight || '', appliedAt, now, now
+      p.next_due || '', p.vet || '', p.product || '', p.weight || '', p.batch || '', p.scheduled_date || '', appliedAt, now, now
     ]);
 
     await db.run('INSERT INTO history (action, entity, "user", date, time) VALUES ($1,$2,$3,$4,$5)', [
@@ -257,15 +310,17 @@ router.put('/health-records/:id', authenticateToken, requireAdminOrOperator, asy
     }
 
     await db.run(`UPDATE pet_health_records SET
-      type=$1, title=$2, record_date=$3, notes=$4, applied=$5, next_due=$6, vet=$7, product=$8, weight=$9,
-      applied_at=$10, updated_at=$11
-      WHERE id=$12`, [
+      type=$1, title=$2, record_date=$3, notes=$4, applied=$5, next_due=$6, vet=$7, product=$8, weight=$9, batch=$10, scheduled_date=$11,
+      applied_at=$12, updated_at=$13
+      WHERE id=$14`, [
       p.type || existing.type, p.title || existing.title, p.record_date !== undefined ? p.record_date : existing.record_date,
       p.notes !== undefined ? p.notes : existing.notes, applied,
       p.next_due !== undefined ? p.next_due : existing.next_due,
       p.vet !== undefined ? p.vet : existing.vet,
       p.product !== undefined ? p.product : existing.product,
       p.weight !== undefined ? p.weight : existing.weight,
+      p.batch !== undefined ? p.batch : existing.batch,
+      p.scheduled_date !== undefined ? p.scheduled_date : existing.scheduled_date,
       appliedAt, now, req.params.id
     ]);
 
@@ -327,11 +382,13 @@ router.get('/public/:id/health', async (req, res) => {
   try {
     const pet = await db.get('SELECT id, carnet_number FROM pets WHERE id = $1', [req.params.id]);
     if (!pet) return res.status(404).json({ error: 'No encontrada' });
-    const rows = await db.query(
-      "SELECT id, type, title, record_date, notes, applied, next_due, vet, product, weight, batch, scheduled_date FROM pet_health_records WHERE pet_id = $1 AND type IN ('vacuna','desparasitacion') ORDER BY record_date DESC, created_at DESC",
-      [req.params.id]
-    );
-    res.json({ pet: { id: pet.id, carnet_number: pet.carnet_number }, records: rows });
+    const rows = await getHealthRecordsForPet(req.params.id);
+    const publicRecords = rows
+      .filter(row => row.type === 'vacuna' || row.type === 'desparasitacion')
+      .map(({ id, type, title, record_date, notes, applied, next_due, vet, product, weight, batch, scheduled_date, source }) =>
+        ({ id, type, title, record_date, notes, applied, next_due, vet, product, weight, batch, scheduled_date, source })
+      );
+    res.json({ pet: { id: pet.id, carnet_number: pet.carnet_number }, records: publicRecords });
   } catch (e) {
     console.error('GET /api/pets/public/:id/health error:', e);
     res.status(500).json({ error: 'Error interno del servidor' });

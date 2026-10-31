@@ -19,10 +19,16 @@ CREATE TABLE IF NOT EXISTS pet_health_records (
   vet TEXT DEFAULT '',
   product TEXT DEFAULT '',
   weight TEXT DEFAULT '',
+  batch TEXT DEFAULT '',
+  scheduled_date TEXT DEFAULT '',
   applied_at TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Compatibilidad con instalaciones que crearon la tabla antes de estos campos.
+ALTER TABLE pet_health_records ADD COLUMN IF NOT EXISTS batch TEXT DEFAULT '';
+ALTER TABLE pet_health_records ADD COLUMN IF NOT EXISTS scheduled_date TEXT DEFAULT '';
 
 -- Índices para búsquedas rápidas
 CREATE INDEX IF NOT EXISTS idx_pet_health_records_pet_id ON pet_health_records(pet_id);

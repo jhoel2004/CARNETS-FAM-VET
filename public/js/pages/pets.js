@@ -360,6 +360,13 @@ let photoTemp = '';
 export async function openPetModal(id) {
   const isEdit = !!id;
   const pet = isEdit ? { ...state.getPets().find(p => p.id === id) } : blankPet();
+  // Los detalles médicos viven en una tabla separada. Cargarlos al editar evita
+  // que las vacunas ya guardadas parezcan haber desaparecido.
+  if (isEdit) {
+    try {
+      Object.assign(pet, await api.getMedicalDetails(id));
+    } catch (_) { /* La ficha básica puede seguir editándose si faltan detalles. */ }
+  }
   photoTemp = pet.photo || '';
 
   openModal('modal-lg', `
@@ -472,7 +479,7 @@ export async function openPetModal(id) {
 
           <div class="field"><label>Veterinaria</label><input name="medical_vet" value="${escapeHtml(pet.medical_vet || '')}"></div>
           <div class="field"><label>Alergias</label><input name="allergies" value="${escapeHtml(pet.allergies || '')}"></div>
-          <div class="field"><label>Esterilizado</label><select name="sterilized"><option ${pet.sterilized ? 'selected' : ''}>No</option><option ${!pet.sterilized ? 'selected' : ''}>Sí</option></select></div>
+           <div class="field"><label>Esterilizado</label><select name="sterilized"><option value="0" ${!pet.sterilized ? 'selected' : ''}>No</option><option value="1" ${pet.sterilized ? 'selected' : ''}>Sí</option></select></div>
           <div class="field"><label>Microchip</label><input name="microchip" value="${escapeHtml(pet.microchip || '')}"></div>
           <div class="field"><label>Tipo de sangre</label><input name="blood_type" value="${escapeHtml(pet.blood_type || '')}"></div>
           <div class="field"><label>Observaciones</label><textarea name="medical_observations" rows="3">${escapeHtml(pet.medical_observations || '')}</textarea></div>
@@ -677,7 +684,7 @@ async function savePet(id, isEdit) {
       vaccines_list: petData.vaccines_list,
       deworming_history: petData.deworming_history,
       medical_conditions: petData.medical_conditions,
-      allergies: petData.allergies_ext,
+       allergies: get('allergies'),
       surgeries: petData.surgeries,
       medications: petData.medications,
       sterilized: petData.sterilized,
