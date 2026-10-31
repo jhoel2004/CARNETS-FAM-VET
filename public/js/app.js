@@ -4,7 +4,7 @@ import { api } from './api.js';
 import { pawSvg, iconGrid, iconPaw, iconCard, iconSearch, iconClock, iconGear, iconLogout, iconMenu, iconPlus, iconX } from './icons.js';
 import { escapeHtml, toast, statusBadge, speciesLabel, placeholderPhoto } from './utils.js';
 import { initLogin, renderLogin } from './pages/login.js';
-import { initDashboard, viewDashboard, drawCharts } from './pages/dashboard.js';
+import { initDashboard, viewDashboard, drawCharts, bindDashboardEvents } from './pages/dashboard.js';
 import { initPets, viewMascotas, bindPetsEvents, openPetModal } from './pages/pets.js';
 import { initCard, viewCarnet, renderCardPreview, bindCarnetEvents } from './pages/card-generator.js';
 import { initHistory, viewHistorial } from './pages/history.js';
@@ -255,6 +255,7 @@ export async function renderView() {
 
 function bindViewEvents() {
   bindPetsEvents();
+  bindDashboardEvents();
   bindConfigEvents();
   bindCarnetEvents();
   document.querySelectorAll('#page-body [data-nav]').forEach(el => el.addEventListener('click', () => { state.view = el.dataset.nav; renderApp(); }));

@@ -111,6 +111,20 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// Datos consolidados para el panel administrativo. Evita una consulta médica por mascota.
+router.get('/analytics', authenticateToken, requireAdmin, async (_req, res) => {
+  try {
+    const [medicalDetails, healthRecords] = await Promise.all([
+      db.query('SELECT pet_id, sterilized, microchip, blood_type, vaccines_detail, deworming_detail, conditions_detail, surgeries_detail, medications_detail FROM pet_medical_details'),
+      db.query('SELECT pet_id, type, title, record_date, applied, next_due, vet, product, weight FROM pet_health_records')
+    ]);
+    res.json({ medicalDetails, healthRecords });
+  } catch (e) {
+    console.error('GET /api/pets/analytics error:', e);
+    res.status(500).json({ error: 'No se pudieron cargar las analíticas' });
+  }
+});
+
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const pet = await db.get('SELECT * FROM pets WHERE id = $1', [req.params.id]);

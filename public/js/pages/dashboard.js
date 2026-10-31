@@ -3,6 +3,7 @@ import { iconPaw, iconCheckCircle, iconAlert, iconCard, iconPlus, iconDog, iconC
 
 let state = null;
 let charts = {};
+let dashFilters = { period: 'all', species: '', status: '', city: '' };
 
 export function initDashboard(s) {
   state = s;
@@ -25,10 +26,71 @@ function initials(name) {
   return (name || '?').split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase();
 }
 
+function parseList(value) {
+  try { const list = JSON.parse(value || '[]'); return Array.isArray(list) ? list : []; } catch { return []; }
+}
+
+function filteredPets() {
+  const now = new Date();
+  const start = new Date(now);
+  if (dashFilters.period === '30') start.setDate(now.getDate() - 30);
+  if (dashFilters.period === '90') start.setDate(now.getDate() - 90);
+  if (dashFilters.period === 'year') start.setFullYear(now.getFullYear() - 1);
+  return state.getPets().filter(p => {
+    const registered = new Date((p.registration_date || '1900-01-01') + 'T12:00');
+    return (!dashFilters.species || p.species === dashFilters.species)
+      && (!dashFilters.status || p.status === dashFilters.status)
+      && (!dashFilters.city || p.owner_city === dashFilters.city)
+      && (dashFilters.period === 'all' || registered >= start);
+  });
+}
+
+function dashboardAnalysis(pets) {
+  const ids = new Set(pets.map(p => p.id));
+  const details = (state.getAnalytics().medicalDetails || []).filter(d => ids.has(d.pet_id));
+  const records = (state.getAnalytics().healthRecords || []).filter(r => ids.has(r.pet_id));
+  const detailByPet = new Map(details.map(d => [d.pet_id, d]));
+  const cities = new Map(); const conditions = new Map();
+  const weights = { '< 5 kg': 0, '5–15 kg': 0, '15–30 kg': 0, '30+ kg': 0, 'Sin dato': 0 };
+  const quality = { Foto: 0, Raza: 0, Peso: 0, Teléfono: 0, Dirección: 0, Microchip: 0 };
+  pets.forEach(p => {
+    const city = (p.owner_city || 'Sin ciudad').trim() || 'Sin ciudad'; cities.set(city, (cities.get(city) || 0) + 1);
+    const weight = Number(p.weight);
+    if (!Number.isFinite(weight) || !p.weight) weights['Sin dato']++;
+    else if (weight < 5) weights['< 5 kg']++; else if (weight < 15) weights['5–15 kg']++; else if (weight < 30) weights['15–30 kg']++; else weights['30+ kg']++;
+    if (p.photo) quality.Foto++; if (p.breed) quality.Raza++; if (p.weight) quality.Peso++; if (p.owner_phone) quality.Teléfono++; if (p.owner_address) quality.Dirección++;
+    const detail = detailByPet.get(p.id); if (detail?.microchip) quality.Microchip++;
+    parseList(detail?.conditions_detail).forEach(condition => {
+      const name = String(condition?.name || '').trim(); if (name) conditions.set(name, (conditions.get(name) || 0) + 1);
+    });
+  });
+  const actionGroups = { Registros: 0, Salud: 0, Documentos: 0, Ediciones: 0, Otros: 0 };
+  state.getHistory().forEach(item => {
+    const action = (item.action || '').toLowerCase();
+    if (/creaci|registro/.test(action)) actionGroups.Registros++;
+    else if (/vacuna|salud|médic|medic/.test(action)) actionGroups.Salud++;
+    else if (/descarg|impresi/.test(action)) actionGroups.Documentos++;
+    else if (/edici|actualiz/.test(action)) actionGroups.Ediciones++;
+    else actionGroups.Otros++;
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = records.filter(r => !r.applied && (r.next_due || r.record_date) && (r.next_due || r.record_date) < today);
+  return {
+    cities: [...cities.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6),
+    conditions: [...conditions.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6),
+    weights, quality, actionGroups, overdue,
+    sterilized: details.filter(d => !!d.sterilized).length,
+    microchipped: details.filter(d => !!d.microchip).length,
+    bloodTyped: details.filter(d => !!d.blood_type).length,
+  };
+}
+
 export function viewDashboard() {
-  const pets = state.getPets();
+  const allPets = state.getPets();
+  const pets = filteredPets();
   const st = calcDashboardStats(pets, state.getHistory());
   const hs = calcHealthStats(pets, state.getAllHealthRecordsMap());
+  const analysis = dashboardAnalysis(pets);
   const pct = (v) => pctOf(v, st.total);
 
   const sorted = [...pets].sort((a, b) => new Date(b.registration_date) - new Date(a.registration_date));
@@ -40,8 +102,17 @@ export function viewDashboard() {
   const sexTotal = st.males + st.females + st.sexND;
   const unster = Math.max(0, st.total - st.sterilized);
 
+  const cities = [...new Set(allPets.map(p => p.owner_city).filter(Boolean))].sort();
   return `
   <div class="page-head"><div><h1>Panel principal</h1><p>Resumen de registros, carnets y salud · FAM J VET Bolivia</p></div></div>
+  <div class="dashboard-filters panel">
+    <div><b>Analítica interactiva</b><span>${pets.length} de ${allPets.length} mascotas en la selección</span></div>
+    <select class="chip" data-dashboard-filter="period"><option value="all">Todo el historial</option><option value="30" ${dashFilters.period === '30' ? 'selected' : ''}>Últimos 30 días</option><option value="90" ${dashFilters.period === '90' ? 'selected' : ''}>Últimos 90 días</option><option value="year" ${dashFilters.period === 'year' ? 'selected' : ''}>Último año</option></select>
+    <select class="chip" data-dashboard-filter="species"><option value="">Todas las especies</option><option value="perro" ${dashFilters.species === 'perro' ? 'selected' : ''}>Perros</option><option value="gato" ${dashFilters.species === 'gato' ? 'selected' : ''}>Gatos</option><option value="otro" ${dashFilters.species === 'otro' ? 'selected' : ''}>Otros</option></select>
+    <select class="chip" data-dashboard-filter="status"><option value="">Todos los estados</option><option value="Activo" ${dashFilters.status === 'Activo' ? 'selected' : ''}>Activas</option><option value="Inactivo" ${dashFilters.status === 'Inactivo' ? 'selected' : ''}>Inactivas</option><option value="Perdido" ${dashFilters.status === 'Perdido' ? 'selected' : ''}>Perdidas</option></select>
+    <select class="chip" data-dashboard-filter="city"><option value="">Todas las ciudades</option>${cities.map(city => `<option value="${escapeHtml(city)}" ${dashFilters.city === city ? 'selected' : ''}>${escapeHtml(city)}</option>`).join('')}</select>
+    <button class="btn btn-ghost btn-sm" id="btn-dashboard-reset">Restablecer</button>
+  </div>
 
   <!-- KPIs generales -->
   <div class="kpi-grid" style="margin-bottom:16px;">
@@ -64,6 +135,9 @@ export function viewDashboard() {
   </div>
 
   <div class="dash12">
+    <div class="panel span-4"><div class="dash-sec-title"><span>Estados de registro</span></div><div class="chart-box short"><canvas id="chart-status"></canvas></div></div>
+    <div class="panel span-4"><div class="dash-sec-title"><span>Rangos de peso</span></div><div class="chart-box short"><canvas id="chart-weight"></canvas></div></div>
+    <div class="panel span-4"><div class="dash-sec-title"><span>Calidad de fichas</span></div><div class="chart-box short"><canvas id="chart-quality"></canvas></div><div class="mini-note">Campos completos sobre ${st.total} mascotas.</div></div>
     <!-- Gráfico: registros de mascotas por mes -->
     <div class="panel span-8">
       <div class="dash-sec-title"><span>Registros de mascotas</span></div>
@@ -193,6 +267,11 @@ export function viewDashboard() {
       </div>` : `<p class="faint">Sin información de razas todavía.</p>`}
     </div>
 
+    <div class="panel span-6"><div class="dash-sec-title"><span>Ciudades con más registros</span></div><div class="chart-box short"><canvas id="chart-cities"></canvas></div></div>
+    <div class="panel span-6"><div class="dash-sec-title"><span>Enfermedades crónicas registradas</span></div><div class="chart-box short"><canvas id="chart-conditions"></canvas></div>${analysis.conditions.length ? '' : '<p class="mini-note">Aún no hay enfermedades crónicas registradas.</p>'}</div>
+    <div class="panel span-6"><div class="dash-sec-title"><span>Actividad del sistema</span></div><div class="chart-box short"><canvas id="chart-activity"></canvas></div></div>
+    <div class="panel span-6"><div class="dash-sec-title"><span>Cobertura médica extendida</span></div><div class="coverage-grid"><div><b>${analysis.sterilized}</b><span>Esterilizadas</span></div><div><b>${analysis.microchipped}</b><span>Con microchip</span></div><div><b>${analysis.bloodTyped}</b><span>Con tipo sanguíneo</span></div><div class="danger"><b>${analysis.overdue.length}</b><span>Dosis vencidas</span></div></div></div>
+
     <!-- Propietarios -->
     <div class="panel span-6">
       <div class="dash-sec-title"><span>Propietarios</span></div>
@@ -216,9 +295,10 @@ export function drawCharts() {
   Object.values(charts).forEach(c => { try { c && c.destroy(); } catch (_) {} });
   charts = {};
   if (typeof Chart === 'undefined') return;
-  const pets = state.getPets();
+  const pets = filteredPets();
   const st = calcDashboardStats(pets, state.getHistory());
   const hs = calcHealthStats(pets, state.getAllHealthRecordsMap());
+  const analysis = dashboardAnalysis(pets);
   Chart.defaults.font.family = 'Inter, sans-serif';
   Chart.defaults.animation.duration = 200;
 
@@ -291,4 +371,42 @@ export function drawCharts() {
       options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: !!pets.length } } }
     });
   }
+
+  const barOptions = (horizontal = false) => ({
+    maintainAspectRatio: false, indexAxis: horizontal ? 'y' : 'x',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#EDF1EF' } },
+      y: { beginAtZero: true, ticks: { precision: 0 }, grid: { display: horizontal ? false : true, color: '#EDF1EF' } }
+    }
+  });
+  const renderBar = (id, labels, values, color, horizontal = false) => {
+    const canvas = document.getElementById(id); if (!canvas) return;
+    charts[id] = new Chart(canvas, { type: 'bar', data: { labels, datasets: [{ data: values, backgroundColor: color, borderRadius: 6, maxBarThickness: 32 }] }, options: barOptions(horizontal) });
+  };
+  renderBar('chart-status', ['Activas', 'Inactivas', 'Perdidas'], [st.active, st.inactive, st.lost], ['#16B79A', '#9aa7a0', '#E85A5A']);
+  renderBar('chart-weight', Object.keys(analysis.weights), Object.values(analysis.weights), '#2F6FB5');
+  renderBar('chart-quality', Object.keys(analysis.quality), Object.values(analysis.quality), '#16B79A');
+  renderBar('chart-cities', analysis.cities.map(x => x[0]), analysis.cities.map(x => x[1]), '#C89A3D', true);
+  renderBar('chart-activity', Object.keys(analysis.actionGroups), Object.values(analysis.actionGroups), '#2E8B4F');
+  const conditionsCanvas = document.getElementById('chart-conditions');
+  if (conditionsCanvas) {
+    const hasConditions = analysis.conditions.length > 0;
+    charts.conditions = new Chart(conditionsCanvas, {
+      type: 'doughnut',
+      data: { labels: hasConditions ? analysis.conditions.map(x => x[0]) : ['Sin registros'], datasets: [{ data: hasConditions ? analysis.conditions.map(x => x[1]) : [1], backgroundColor: hasConditions ? ['#C8312B', '#F2B705', '#2E8B4F', '#2F6FB5', '#7B61FF', '#E85A5A'] : ['#E3E9E7'], borderWidth: 2, borderColor: '#fff' }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
+    });
+  }
+}
+
+export function bindDashboardEvents() {
+  document.querySelectorAll('[data-dashboard-filter]').forEach(element => element.addEventListener('change', event => {
+    dashFilters[event.target.dataset.dashboardFilter] = event.target.value;
+    import('../app.js').then(module => module.renderView());
+  }));
+  document.getElementById('btn-dashboard-reset')?.addEventListener('click', () => {
+    dashFilters = { period: 'all', species: '', status: '', city: '' };
+    import('../app.js').then(module => module.renderView());
+  });
 }

@@ -38,6 +38,7 @@ export const api = {
   getPublicPet: (id) => request('GET', '/pets/public/' + id),
   getPublicPetByCarnet: (carnet) => request('GET', '/pets/public/carnet/' + encodeURIComponent(carnet)),
   getPublicPetHealth: (id) => request('GET', '/pets/public/' + id + '/health'),
+  getDashboardAnalytics: () => request('GET', '/pets/analytics'),
 
   // Health records
   getHealthRecords: (petId) => request('GET', '/pets/' + petId + '/health-records'),
