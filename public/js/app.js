@@ -50,6 +50,7 @@ export function renderApp() {
   const app = document.getElementById('app');
   app.innerHTML = `
   <div class="shell">
+    <div class="sidebar-hover-zone" id="sidebar-hover-zone" aria-hidden="true"></div>
     <div class="drawer-veil ${state.sidebarOpen ? 'show' : ''}" id="drawer-veil"></div>
     ${sidebarHtml()}
     <div class="main">
@@ -170,17 +171,37 @@ document.addEventListener('keydown', (e) => {
 });
 
 let escBound = false;
+let drawerOpenedByHover = false;
+let hoverCloseTimer = null;
 
-function setDrawer(open) {
+function clearHoverCloseTimer() {
+  if (hoverCloseTimer) {
+    clearTimeout(hoverCloseTimer);
+    hoverCloseTimer = null;
+  }
+}
+
+function setDrawer(open, { temporary = false } = {}) {
+  clearHoverCloseTimer();
   state.sidebarOpen = open;
+  drawerOpenedByHover = open && temporary;
   document.getElementById('sidebar')?.classList.toggle('open', open);
-  document.getElementById('drawer-veil')?.classList.toggle('show', open);
+  // Al abrir por proximidad no oscurecemos ni bloqueamos el contenido.
+  document.getElementById('drawer-veil')?.classList.toggle('show', open && !temporary);
   const burger = document.getElementById('btn-burger');
   if (burger) {
     burger.classList.toggle('open', open);
     burger.innerHTML = open ? iconX : iconMenu;
     burger.title = open ? 'Cerrar panel de opciones' : 'Abrir panel de opciones';
   }
+}
+
+function scheduleHoverClose() {
+  clearHoverCloseTimer();
+  if (!drawerOpenedByHover) return;
+  hoverCloseTimer = setTimeout(() => {
+    if (drawerOpenedByHover) setDrawer(false);
+  }, 220);
 }
 
 function bindShellEvents() {
@@ -190,6 +211,15 @@ function bindShellEvents() {
     burger.addEventListener('click', () => setDrawer(!state.sidebarOpen));
   }
   document.getElementById('drawer-veil')?.addEventListener('click', () => setDrawer(false));
+  const canHoverSidebar = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (canHoverSidebar) {
+    const hoverZone = document.getElementById('sidebar-hover-zone');
+    const sidebar = document.getElementById('sidebar');
+    hoverZone?.addEventListener('mouseenter', () => setDrawer(true, { temporary: true }));
+    hoverZone?.addEventListener('mouseleave', scheduleHoverClose);
+    sidebar?.addEventListener('mouseenter', clearHoverCloseTimer);
+    sidebar?.addEventListener('mouseleave', scheduleHoverClose);
+  }
   if (!escBound) {
     escBound = true;
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.sidebarOpen) setDrawer(false); });

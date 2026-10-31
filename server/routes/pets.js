@@ -24,15 +24,16 @@ async function getHealthRecordsForPet(petId) {
     [petId]
   );
   const details = await db.get(
-    'SELECT vaccines_detail, deworming_detail FROM pet_medical_details WHERE pet_id = $1',
+    'SELECT vaccines_detail, deworming_detail, conditions_detail FROM pet_medical_details WHERE pet_id = $1',
     [petId]
   );
 
-  const addLegacyRecords = (items, type, prefix) => {
+  const addLegacyRecords = (items, type, prefix, titlePrefix = '') => {
     items.forEach((item, index) => {
-      const title = String(item && item.name || '').trim();
+      const name = String(item && item.name || '').trim();
+      const title = `${titlePrefix}${name}`;
       const recordDate = String(item && item.date || '');
-      if (!title) return;
+      if (!name) return;
       const duplicate = rows.some(row => row.type === type && row.title === title && String(row.record_date || '') === recordDate);
       if (!duplicate) {
         rows.push({
@@ -58,6 +59,7 @@ async function getHealthRecordsForPet(petId) {
   if (details) {
     addLegacyRecords(parseDetailList(details.vaccines_detail), 'vacuna', 'medical-vaccine');
     addLegacyRecords(parseDetailList(details.deworming_detail), 'desparasitacion', 'medical-deworming');
+    addLegacyRecords(parseDetailList(details.conditions_detail), 'historial', 'medical-condition', 'Enfermedad crónica: ');
   }
   return rows.sort((a, b) => String(b.record_date || '').localeCompare(String(a.record_date || '')));
 }
@@ -377,14 +379,14 @@ router.delete('/health-records/:id', authenticateToken, requireAdminOrOperator, 
   }
 });
 
-// Resumen público de salud (vacunas y desparasitación) para la página pública del QR
+// Historial público de salud para la página pública del QR.
 router.get('/public/:id/health', async (req, res) => {
   try {
     const pet = await db.get('SELECT id, carnet_number FROM pets WHERE id = $1', [req.params.id]);
     if (!pet) return res.status(404).json({ error: 'No encontrada' });
     const rows = await getHealthRecordsForPet(req.params.id);
     const publicRecords = rows
-      .filter(row => row.type === 'vacuna' || row.type === 'desparasitacion')
+      .filter(row => ['vacuna', 'desparasitacion', 'historial'].includes(row.type))
       .map(({ id, type, title, record_date, notes, applied, next_due, vet, product, weight, batch, scheduled_date, source }) =>
         ({ id, type, title, record_date, notes, applied, next_due, vet, product, weight, batch, scheduled_date, source })
       );

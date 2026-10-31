@@ -96,6 +96,7 @@ a{color:inherit;}
 .shell{min-height:100vh;}
 .sidebar{background:var(--sidebar); color:var(--text); padding:18px 12px; display:flex; flex-direction:column; position:fixed; top:0; left:-320px; width:300px; max-width:85vw; height:100vh; z-index:200; border-right:1px solid var(--border); border-radius:0 12px 12px 0; box-shadow:var(--shadow-lg); transition:left .22s ease;}
 .sidebar.open{left:0;}
+.sidebar-hover-zone{position:fixed; inset:0 auto 0 0; width:14px; z-index:180;}
 .drawer-veil{position:fixed; inset:0; background:rgba(20,38,63,.45); opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:190;}
 .drawer-veil.show{opacity:1; pointer-events:auto;}
 #btn-burger{transition:transform .22s ease, background .15s ease;}
@@ -118,6 +119,8 @@ a{color:inherit;}
 .avatar{width:32px;height:32px;border-radius:50%;background:var(--green-dim); border:1px solid var(--green); display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--green-2);font-size:12px;flex:0 0 auto;}
 .user-chip .u-name{font-size:13px;font-weight:600;color:var(--text);}
 .user-chip .u-role{font-size:11px;color:var(--text-2);text-transform:capitalize;}
+
+@media (hover:none), (pointer:coarse){.sidebar-hover-zone{display:none;}}
 
 /* ---------- TOPBAR ---------- */
 .main{display:flex; flex-direction:column; min-height:100vh; min-width:0; background:var(--content,#F6F8F7);}

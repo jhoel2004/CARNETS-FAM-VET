@@ -364,7 +364,11 @@ export async function openPetModal(id) {
   // que las vacunas ya guardadas parezcan haber desaparecido.
   if (isEdit) {
     try {
-      Object.assign(pet, await api.getMedicalDetails(id));
+      const medicalDetails = await api.getMedicalDetails(id);
+      // "id" en esta respuesta es el identificador del detalle médico (md...),
+      // no el de la mascota. Nunca debe reemplazar el id usado al guardar.
+      const { id: _medicalDetailId, pet_id: _petId, ...details } = medicalDetails;
+      Object.assign(pet, details);
     } catch (_) { /* La ficha básica puede seguir editándose si faltan detalles. */ }
   }
   photoTemp = pet.photo || '';
