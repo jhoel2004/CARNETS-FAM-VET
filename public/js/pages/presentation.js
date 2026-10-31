@@ -160,12 +160,11 @@ export async function viewPresentation(petId) {
       <p class="list">${escapeHtml(s.healthServices || 'Control sanitario · Vacunación · Desparasitación · Historial clínico')}</p>
 
       <div class="stage">
-        <button class="frame" id="frame" aria-label="Cambiar foto de la mascota">
+        <div class="frame" id="frame" aria-label="Foto de la mascota">
           ${photoTemp
-            ? `<img src="${escapeHtmlAttr(photoTemp)}" alt="Foto de ${escapeHtml(pet.name)}">`
+            ? `<img src="${escapeHtmlAttr(photoTemp)}" alt="Foto de ${escapeHtml(pet.name)}" style="width:100%;height:100%;object-fit:cover;">`
             : placeholderPhotoSvg()}
-          <span class="hint">Tocar para cambiar foto</span>
-        </button>
+        </div>
         <div class="motto">
           ${escapeHtml(s.healthMotto || 'Porque su bienestar es nuestra prioridad')}
           <button class="heart" id="heart" aria-label="Dar cariño">🐾</button>
@@ -173,25 +172,25 @@ export async function viewPresentation(petId) {
       </div>
 
       <div class="form">
-        <div class="row"><b>NOMBRE:</b><span class="v" id="nm" contenteditable="true" spellcheck="false">${escapeHtml(pet.name || '—')}</span></div>
+        <div class="row"><b>NOMBRE:</b><span class="v" id="nm" spellcheck="false">${escapeHtml(pet.name || '—')}</span></div>
         <div class="row">
-          <b>ESPECIE:</b><span class="v" contenteditable="true">${escapeHtml(speciesLabel(pet.species) || '—')}</span>
-          <b>RAZA:</b><span class="v" contenteditable="true">${escapeHtml(pet.breed || '—')}</span>
+          <b>ESPECIE:</b><span class="v">${escapeHtml(speciesLabel(pet.species) || '—')}</span>
+          <b>RAZA:</b><span class="v">${escapeHtml(pet.breed || '—')}</span>
         </div>
         <div class="row">
-          <b>NACIMIENTO:</b><span class="v" contenteditable="true">${escapeHtml(pet.birth_date || '—')}</span>
+          <b>NACIMIENTO:</b><span class="v">${escapeHtml(pet.birth_date || '—')}</span>
           <span class="sex">
             <b>SEXO:</b>
             <button class="chk" data-s="m" aria-label="Macho">${pet.sex === 'Macho' ? '✓' : ''}</button><b>Macho</b>
             <button class="chk" data-s="h" aria-label="Hembra">${pet.sex === 'Hembra' ? '✓' : ''}</button><b>Hembra</b>
           </span>
         </div>
-        <div class="row"><b>COLOR / SEÑAS:</b><span class="v" contenteditable="true">${escapeHtml(pet.distinctive_marks || pet.color || '—')}</span></div>
+        <div class="row"><b>COLOR / SEÑAS:</b><span class="v">${escapeHtml(pet.distinctive_marks || pet.color || '—')}</span></div>
         <div class="row">
-          <b>PROPIETARIO:</b><span class="v" contenteditable="true">${escapeHtml(pet.owner_name || '—')}</span>
-          <b>N.º REG.:</b><span class="v" contenteditable="true">${escapeHtml(String(pet.carnet_number || '—'))}</span>
+          <b>PROPIETARIO:</b><span class="v">${escapeHtml(pet.owner_name || '—')}</span>
+          <b>N.º REG.:</b><span class="v">${escapeHtml(String(pet.carnet_number || '—'))}</span>
         </div>
-        <div class="row"><b>TELÉFONO:</b><span class="v" contenteditable="true">${escapeHtml(pet.owner_phone || '—')}</span></div>
+        <div class="row"><b>TELÉFONO:</b><span class="v">${escapeHtml(pet.owner_phone || '—')}</span></div>
         ${addrLine ? `<div class="addr">${escapeHtml(addrLine)}</div>` : ''}
       </div>
 
@@ -390,31 +389,6 @@ export function bindPresentationEvents() {
     };
   }
 
-  // Cambiar foto
-  const frame = document.getElementById('frame');
-  const fi    = document.createElement('input');
-  fi.type     = 'file';
-  fi.accept   = 'image/*';
-  if (frame) frame.onclick = () => fi.click();
-  fi.onchange = () => {
-    const f = fi.files[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
-      photoTemp = r.result;
-      const fr = document.getElementById('frame');
-      if (fr) {
-        const existing = fr.querySelector('svg, img');
-        if (existing) {
-          const img = new Image();
-          img.src = r.result;
-          img.alt = 'Foto de la mascota';
-          existing.replaceWith(img);
-        }
-      }
-    };
-    r.readAsDataURL(f);
-  };
 
   // Checkboxes de sexo
   document.querySelectorAll('.chk').forEach(b => {
