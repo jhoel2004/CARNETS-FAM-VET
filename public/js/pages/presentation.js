@@ -220,7 +220,7 @@ export async function viewPresentation(petId) {
         <i id="ind"></i>
         <button role="tab" aria-selected="true"  data-t="vac">Vacunas</button>
         <button role="tab" aria-selected="false" data-t="des">Desparasitación</button>
-        <button role="tab" aria-selected="false" data-t="his">Historial</button>
+        <button role="tab" aria-selected="false" data-t="his">Enfermedades</button>
       </div>
 
       <div class="next" id="next">${nextHtml}</div>

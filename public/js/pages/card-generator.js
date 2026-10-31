@@ -1,310 +1,189 @@
 import { api } from '../api.js';
 import { iconDownload, iconPrinter } from '../icons.js';
 import { escapeHtml, speciesLabel, placeholderPhoto, publicUrl, toast } from '../utils.js';
-import { initHealthCard, viewHealthCard, bindHealthCardEvents } from './health-card.js';
 
 let state = null;
+let medicalDetails = {};
 
-const TEMPLATES = [
-  { id: 'bolivia', name: 'Bolivia' }, { id: 'azul', name: 'Azul' }, { id: 'verde', name: 'Verde' },
-  { id: 'minimal', name: 'Minimalista' }, { id: 'moderna', name: 'Moderna' }, { id: 'vet', name: 'Veterinaria' }
-];
-
-const DOC_TYPES = [
-  { id: 'credential', name: 'Credencial de identificación' },
-  { id: 'health', name: 'Carnet sanitario' },
-];
-
-export function initCard(s) {
-  state = s;
-  initHealthCard();
-}
+export function initCard(s) { state = s; }
 
 export function viewCarnet() {
   const pets = state.getPets();
-  const sel = state.cardPetId || (pets[0] && pets[0].id) || '';
-  state.cardPetId = sel;
-  state.cardDocType = state.cardDocType || 'credential';
-  state.cardTemplate = state.cardTemplate || state.getSettings().defaultTemplate || 'bolivia';
-
-  const pet = pets.find(p => p.id === sel) || null;
-
+  const selectedId = state.cardPetId || pets[0]?.id || '';
+  state.cardPetId = selectedId;
   return `
-  <div class="page-head"><div><h1>Generador de documentos</h1><p>Credencial de identificación y carnet sanitario.</p></div></div>
-  <div class="carnet-stage">
-    <div class="carnet-preview-col">
-      <div class="card-faces">
-        <div class="face-label">${state.cardDocType === 'health' ? 'Portada — Carnet sanitario' : 'Anverso — Credencial'}</div>
-        <div id="card-render-front"></div>
-        ${state.cardDocType === 'health' ? `
-          <div class="face-label">Reverso — Registros de salud</div>
-          <div id="card-render-back"></div>` : ''}
-      </div>
-    </div>
-    <div class="carnet-options-col">
-      <div class="panel" style="margin-bottom:16px;">
-        <h3>Mascota</h3>
-        <select id="carnet-pet-select" class="chip" style="width:100%; cursor:pointer;">
-          ${pets.length ? pets.map(p => `<option value="${p.id}" ${p.id === sel ? 'selected' : ''}>${escapeHtml(p.name)} — ${p.carnet_number}</option>`).join('') : '<option>No hay mascotas registradas</option>'}
-        </select>
-      </div>
-      <div class="panel" style="margin-bottom:16px;">
-        <h3>Tipo de documento</h3>
-        <div class="tpl-grid" style="grid-template-columns:1fr;">
-          ${DOC_TYPES.map(t => `
-            <div>
-              <div class="tpl-swatch tpl-${t.id} ${state.cardDocType === t.id ? 'selected' : ''}" data-doctype="${t.id}">
-                <div style="padding:14px 10px; font-size:13px; font-weight:600; color:var(--text);">${t.name}</div>
-              </div>
-              <div class="tpl-name">${t.id === 'health' ? 'Diseño libro · estilo carnet de Max' : '6 plantillas · QR · MRZ'}</div>
-            </div>`).join('')}
+    <div class="page-head"><div><h1>Credencial de identificación</h1><p>Documento de identidad físico de la mascota.</p></div></div>
+    <div class="carnet-stage fam-id-stage">
+      <div class="carnet-preview-col">
+        <div class="card-faces">
+          <div class="face-label">Anverso</div><div id="card-render-front"></div>
+          <div class="face-label">Reverso</div><div id="card-render-back"></div>
         </div>
       </div>
-      ${state.cardDocType === 'health' ? `<div id="hc-card-container"></div>` : viewCredential(pet)}
-    </div>
-  </div>
-  <div id="print-area" class="hidden"></div>`;
-}
-
-function viewCredential(pet) {
-  if (!pet) return `<div class="panel"><h3>Plantilla</h3><p>Selecciona una mascota primero.</p></div>`;
-  return `
-  <div class="panel">
-    <h3>Plantilla</h3>
-    <div class="tpl-grid">
-      ${TEMPLATES.map(t => `
-        <div>
-          <div class="tpl-swatch tpl-${t.id} ${state.cardTemplate === t.id ? 'selected' : ''}" data-tpl="${t.id}"><div class="tri-top"><span></span><span></span><span></span></div></div>
-          <div class="tpl-name">${t.name}</div>
-        </div>`).join('')}
-    </div>
-    <div class="flex gap-2" style="margin-top:6px; flex-direction:column;">
-      <button class="btn btn-primary" id="btn-download-png">${iconDownload} Descargar PNG</button>
-      <button class="btn btn-outline" id="btn-download-pdf">${iconDownload} Descargar PDF</button>
-      <button class="btn btn-outline" id="btn-print-card">${iconPrinter} Imprimir</button>
-    </div>
-  </div>`;
+      <div class="carnet-options-col">
+        <div class="panel"><h3>Mascota</h3>
+          <select id="carnet-pet-select" class="chip" style="width:100%;cursor:pointer;">
+            ${pets.length ? pets.map(p => `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.name)} — ${escapeHtml(p.carnet_number)}</option>`).join('') : '<option>No hay mascotas registradas</option>'}
+          </select>
+        </div>
+        <div class="panel"><h3>Firma del propietario</h3>
+          <p class="faint" style="margin:0 0 10px;font-size:12px;">Dibuja con mouse o con el dedo.</p>
+          <canvas id="signature-pad" class="signature-pad" width="560" height="180" aria-label="Área para dibujar la firma"></canvas>
+          <div class="flex gap-2" style="margin-top:10px;"><button class="btn btn-outline btn-sm" id="btn-clear-signature">Limpiar</button><button class="btn btn-primary btn-sm" id="btn-save-signature">Guardar firma</button></div>
+        </div>
+        <div class="panel"><div class="flex gap-2" style="flex-direction:column;">
+          <button class="btn btn-primary" id="btn-download-png">${iconDownload} Descargar PNG</button>
+          <button class="btn btn-outline" id="btn-download-pdf">${iconDownload} Descargar PDF</button>
+          <button class="btn btn-outline" id="btn-print-card">${iconPrinter} Imprimir</button>
+        </div></div>
+      </div>
+    </div><div id="print-area" class="hidden"></div>`;
 }
 
 function currentPet() {
-  return state.getPets().find(p => p.id === state.cardPetId);
+  const pet = state.getPets().find(p => p.id === state.cardPetId);
+  return pet ? { ...pet, ...medicalDetails, id: pet.id } : null;
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  const parts = String(value).slice(0, 10).split('-');
+  return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : String(value);
 }
 
 function expiryDate(pet) {
-  const d = pet.registration_date ? new Date(pet.registration_date) : new Date();
+  const d = new Date((pet.registration_date || new Date().toISOString().slice(0, 10)) + 'T12:00');
   d.setFullYear(d.getFullYear() + 5);
-  return d.toISOString().slice(0, 10);
+  return formatDate(d.toISOString().slice(0, 10));
 }
 
 function mrzLines(pet) {
-  const clean = s => (s || '').toString().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, '<');
-  const l1 = ('ID BOL' + clean(pet.carnet_number) + '<<<<<<<<<<<<<<<<<<<<').slice(0, 30);
-  const l2 = (clean(pet.species) + '<<' + clean(pet.breed) + '<<<<<<<<<<<<<<<<<<<').slice(0, 30);
-  const l3 = (clean(pet.name) + '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<').slice(0, 30);
-  const l4 = (clean(pet.owner_name).replace(/\s+/g, '<') + '<<<<<<<<<<<<<<<<<<<<<<').slice(0, 30);
-  return [l1, l2, l3, l4];
+  const clean = value => String(value || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]+/g, '<');
+  const pad = (value, size) => clean(value).padEnd(size, '<').slice(0, size);
+  const birth = String(pet.birth_date || '').replaceAll('-', '').slice(2) || '000000';
+  return `${pad(`PETBO${pet.carnet_number}`, 19)}<<${pad(pet.carnet_number, 9)}\n${birth}<${pet.sex === 'Hembra' ? 'F' : 'M'}${pad('BOL', 3)}<<<<<<<<<<<<<<<<\n${pad(`${pet.name}<<${pet.breed}`, 30)}`;
 }
 
-function pawWatermarkSvg() {
-  return `<svg class="watermark-seal" viewBox="0 0 100 100"><circle cx="50" cy="35" r="9"/><circle cx="30" cy="48" r="9"/><circle cx="70" cy="48" r="9"/><path d="M50 55c-15 0-24 10-24 22s11 18 24 18 24-6 24-18-9-22-24-22z"/></svg>`;
+function logoSvg() { return `FAM<svg viewBox="0 0 40 52" aria-hidden="true"><path d="M7 4V27a13 13 0 0 0 26 0V4"/><path class="t" d="M33 27c0 14-8 20-20 21"/></svg>VET`; }
+function pawSvg() { return `<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="16" rx="5.2" ry="4.4"/><circle cx="5.5" cy="10.5" r="2.2"/><circle cx="9.5" cy="6" r="2.2"/><circle cx="14.5" cy="6" r="2.2"/><circle cx="18.5" cy="10.5" r="2.2"/></svg>`; }
+function fingerprintSvg() { return `<svg viewBox="0 0 100 124" aria-hidden="true"><g fill="none" stroke="#1f3566" stroke-width="1.5" opacity=".85"><ellipse cx="50" cy="84" rx="31" ry="28"/><ellipse cx="50" cy="84" rx="27" ry="24"/><ellipse cx="50" cy="84" rx="23" ry="20"/><ellipse cx="50" cy="84" rx="19" ry="16"/><ellipse cx="16" cy="54" rx="10" ry="15" transform="rotate(-28 16 54)"/><ellipse cx="37" cy="28" rx="10" ry="15" transform="rotate(-8 37 28)"/><ellipse cx="63" cy="28" rx="10" ry="15" transform="rotate(8 63 28)"/><ellipse cx="84" cy="54" rx="10" ry="15" transform="rotate(28 84 54)"/></g></svg>`; }
+
+function signatureHtml(signature) {
+  if (String(signature || '').startsWith('data:image')) return `<img src="${signature}" alt="Firma del propietario">`;
+  return `<span>${escapeHtml(signature || '—')}</span>`;
 }
 
-function pawStampSvg() {
-  return `<svg class="id-paw-stamp" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <g fill="#141414">
-      <ellipse cx="30" cy="30" rx="10" ry="13" transform="rotate(-18 30 30)"/>
-      <ellipse cx="54" cy="18" rx="10" ry="13"/>
-      <ellipse cx="78" cy="30" rx="10" ry="13" transform="rotate(18 78 30)"/>
-      <path d="M54 42c-20 0-33 15-33 32 0 13 12 20 33 20s33-7 33-20c0-17-13-32-33-32z"/>
-    </g>
-  </svg>`;
-}
-
-function cardFrontHtml(pet, tpl) {
-  if (!pet) return `<div class="id-card tpl-${tpl}"><div class="empty-state" style="padding:20px;"><div><b>Sin mascota</b><p style="font-size:12px;">Registra una mascota primero.</p></div></div></div>`;
-  const lost = pet.status === 'Perdido';
-  const settings = state.getSettings();
-  return `
-  <div class="id-card tpl-${tpl}" id="the-id-card-front">
-    <div class="guilloche"></div>
-    ${pawWatermarkSvg()}
-    <div class="side-strip"><span>${pet.carnet_number}</span></div>
-    <div class="tri-top"><span></span><span></span><span></span></div>
-    <div class="id-front-head">
-      <div class="seal-emblem">🐾</div>
-      <div class="country-titles">
-        <div class="l1">${escapeHtml(settings.systemName)}</div>
-        <div class="l2">${escapeHtml(settings.systemSub)}</div>
-      </div>
-      <div class="doc-title"><b>CARNET DE<br>IDENTIFICACIÓN</b><small>Mascota registrada</small></div>
+function frontHtml(pet) {
+  if (!pet) return '<div class="fam-id-card"><div class="empty-state"><b>Selecciona una mascota</b></div></div>';
+  return `<div class="fam-id-card fam-id-front" id="the-id-card-front">
+    <div class="fam-id-guil"></div><div class="fam-id-burst"></div><div class="fam-id-vcode">${escapeHtml(pet.carnet_number || pet.id)}</div>
+    <div class="fam-id-head"><div><div class="fam-id-flag"><i></i><i></i><i></i></div><div class="fam-id-logo">${logoSvg()}</div><div class="fam-id-sub">REGISTRO VETERINARIO DE MASCOTAS · BOLIVIA</div></div><div class="fam-id-title">CARNET DE<br>IDENTIDAD<small>DE MASCOTA</small></div></div>
+    <div class="fam-id-photo"><img src="${pet.photo || placeholderPhoto()}" alt="Foto de ${escapeHtml(pet.name)}"></div>
+    <div class="fam-id-number">Nº ${escapeHtml(pet.carnet_number || '—')}</div>
+    <div class="fam-id-fields fam-id-front-fields">
+      ${field('Especie', speciesLabel(pet.species))}${field('Sexo', pet.sex)}${field('Peso', pet.weight ? `${pet.weight} kg` : '—')}
+      ${field('Nombre', pet.name, 'wide name')}${field('Raza', pet.breed, 'wide name')}${field('Fecha de nacimiento', formatDate(pet.birth_date), 'wide')}
+      ${field('Fecha de emisión', formatDate(pet.registration_date), 'double')}${field('Fecha de expiración', expiryDate(pet))}
     </div>
-    <div class="id-serial-row"><span>SERIE: ${pet.id.slice(-6).toUpperCase()}</span><span>SECCIÓN: ${(pet.species || '').slice(0, 3).toUpperCase()}</span></div>
-    <div class="id-front-body">
-      <img class="id-photo" src="${pet.photo || placeholderPhoto()}">
-      <div class="id-data">
-        <div class="df-row"><label>Nombre</label><div class="val name">${escapeHtml(pet.name)}</div></div>
-        <div class="df-row"><label>Especie / Raza</label><div class="val">${speciesLabel(pet.species)} · ${escapeHtml(pet.breed || '—')}</div></div>
-        <div class="df-grid">
-          <div class="df-row"><label>Sexo</label><div class="val">${pet.sex}</div></div>
-          <div class="df-row"><label>Color</label><div class="val">${escapeHtml(pet.color || '—')}</div></div>
-          <div class="df-row"><label>Fecha de nacimiento</label><div class="val">${pet.birth_date || '—'}</div></div>
-          <div class="df-row"><label>Fecha de emisión</label><div class="val">${pet.registration_date}</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="id-front-foot">
-      <div class="id-carnet-no">N° ${pet.carnet_number}<small>Fecha de expiración: ${expiryDate(pet)}</small></div>
-      <div class="id-sig"><div class="sig-script">${escapeHtml(pet.signature || '—')}</div>Firma del propietario</div>
-      <div class="id-flag-mini"><span></span><span></span><span></span></div>
-    </div>
-    ${lost ? `<div class="id-lost-stamp">PERDIDO</div>` : ''}
+    <div class="fam-id-signature">${signatureHtml(pet.signature)}<label>FIRMA DEL PROPIETARIO</label></div>
   </div>`;
 }
 
-function cardBackHtml(pet, tpl) {
-  if (!pet) return `<div class="id-card tpl-${tpl}"></div>`;
-  const lost = pet.status === 'Perdido';
-  const mrz = mrzLines(pet);
-  const birthPlace = pet.owner_city || 'No registrado';
-  return `
-  <div class="id-card tpl-${tpl}" id="the-id-card-back">
-    <div class="guilloche"></div>
-    ${pawWatermarkSvg()}
-    <div class="side-strip"><span>${pet.carnet_number}</span></div>
-    <div class="tri-top"><span></span><span></span><span></span></div>
-    <div class="id-back">
-      <div class="id-back-top">
-        <div class="id-qr-box" id="card-qr"></div>
-        <div class="id-back-fields">
-          <div class="full"><label>Lugar de nacimiento</label><div class="val">${escapeHtml(birthPlace)}</div></div>
-          <div class="full"><label>Propietario</label><div class="val">${escapeHtml(pet.owner_name)}</div></div>
-          <div><label>CI</label><div class="val">${escapeHtml(pet.owner_ci || '—')}</div></div>
-          <div><label>Teléfono</label><div class="val">${escapeHtml(pet.owner_phone || '—')}</div></div>
-          <div class="full"><label>Domicilio</label><div class="val">${escapeHtml(pet.owner_address || '—')}, ${escapeHtml(pet.owner_city || '—')}</div></div>
-          <div><label>Profesión</label><div class="val">Mascota de compañía</div></div>
-          <div><label>Categoría</label><div class="val">${escapeHtml(pet.category || 'General')}</div></div>
-          <div><label>Estado civil</label><div class="val">Soltero(a)</div></div>
-          <div><label>Hijos</label><div class="val">${escapeHtml(pet.offspring || 'Ninguno')}</div></div>
-          <div class="full"><label>Estado</label><div class="val"><span class="id-status-strip ${pet.status}">${pet.status}</span></div></div>
-        </div>
-        <div class="id-paw-block">
-          ${pawStampSvg()}
-          <label>Impronta de patita</label>
-        </div>
-      </div>
-      <div class="id-mrz-spacer"></div>
-      <div class="id-mrz">${mrz.map(l => `<div>${l}</div>`).join('')}</div>
+function field(label, value, classes = '') { return `<div class="fam-id-field ${classes}"><label>${label}</label><span>${escapeHtml(value || '—')}</span></div>`; }
+
+function backHtml(pet) {
+  if (!pet) return '<div class="fam-id-card"></div>';
+  const vaccination = pet.medical_vaccinated === 'Sí' || pet.vaccines_list ? 'Al día' : 'Sin registro';
+  return `<div class="fam-id-card fam-id-back" id="the-id-card-back">
+    <div class="fam-id-guil"></div><div class="fam-id-qr" id="card-qr"></div>
+    <div class="fam-id-vet">FAMUVET<label>REGISTRO VETERINARIO</label></div>
+    <div class="fam-id-fields fam-id-back-fields">
+      ${field('Ciudad de registro', pet.owner_city || 'Bolivia', 'wide')}${field('Domicilio', [pet.owner_address, pet.owner_city].filter(Boolean).join(', '), 'wide')}
+      ${field('Propietario', pet.owner_name, 'wide name')}${field('Teléfono', pet.owner_phone)}${field('Esterilizado', pet.sterilized ? 'Sí' : 'No')}
+      ${field('Tipo de sangre', pet.blood_type)}${field('Vacunación', vaccination)}
     </div>
-    ${lost ? `<div class="id-lost-stamp">PERDIDO</div>` : ''}
+    <div class="fam-id-fingerprint">${fingerprintSvg()}<label>IMPRONTA DE PATITA</label></div>
+    <div class="fam-id-band">${pawSvg()}<pre>${escapeHtml(mrzLines(pet))}</pre></div>
   </div>`;
 }
 
 export async function renderCardPreview() {
-  const pet = currentPet();
-  if (state.cardDocType === 'health' && pet) {
-    await state.loadHealthRecords(pet.id);
+  const basePet = state.getPets().find(p => p.id === state.cardPetId);
+  if (basePet) {
+    try {
+      const details = await api.getMedicalDetails(basePet.id);
+      const { id: _detailsId, pet_id: _detailsPetId, ...safeDetails } = details;
+      medicalDetails = safeDetails;
+    } catch (_) { medicalDetails = {}; }
   }
-
+  const pet = currentPet();
   const front = document.getElementById('card-render-front');
   const back = document.getElementById('card-render-back');
-
-  if (state.cardDocType === 'health') {
-    if (front) front.innerHTML = '';
-    if (back) back.innerHTML = '';
-    const container = document.getElementById('hc-card-container');
-    if (container && pet) {
-      container.innerHTML = viewHealthCard(pet);
-      import('./health-card.js').then((m) => m.bindHealthCardEvents());
-    }
-    return;
-  }
-
   if (!front || !back) return;
-  if (!pet) {
-    front.innerHTML = cardFrontHtml(null, state.cardTemplate);
-    back.innerHTML = cardBackHtml(null, state.cardTemplate);
-    return;
-  }
-  front.innerHTML = cardFrontHtml(pet, state.cardTemplate);
-  back.innerHTML = cardBackHtml(pet, state.cardTemplate);
+  front.innerHTML = frontHtml(pet);
+  back.innerHTML = backHtml(pet);
   const qrHolder = document.getElementById('card-qr');
-  if (qrHolder && pet) { new QRCode(qrHolder, { text: publicUrl(pet.id), width: 120, height: 120 }); }
+  if (qrHolder && pet) new QRCode(qrHolder, { text: publicUrl(pet.id), width: 160, height: 160 });
+  initSignaturePad(pet);
 }
 
 export function bindCarnetEvents() {
-  const sel = document.getElementById('carnet-pet-select');
-  if (sel) sel.addEventListener('change', () => { state.cardPetId = sel.value; renderCardPreview(); });
+  document.getElementById('carnet-pet-select')?.addEventListener('change', event => {
+    state.cardPetId = event.target.value;
+    medicalDetails = {};
+    renderCardPreview();
+  });
+  document.getElementById('btn-download-png')?.addEventListener('click', () => downloadCard('png'));
+  document.getElementById('btn-download-pdf')?.addEventListener('click', () => downloadCard('pdf'));
+  document.getElementById('btn-print-card')?.addEventListener('click', printCard);
+}
 
-  document.querySelectorAll('[data-doctype]').forEach(el => el.addEventListener('click', () => {
-    state.cardDocType = el.dataset.doctype;
-    import('../app.js').then(m => { m.renderView(); renderCardPreview(); });
-  }));
-
-  document.querySelectorAll('[data-tpl]').forEach(el => el.addEventListener('click', () => {
-    state.cardTemplate = el.dataset.tpl;
-    import('../app.js').then(m => { m.renderView(); renderCardPreview(); });
-  }));
-
-  const dlPng = document.getElementById('btn-download-png');
-  if (dlPng) dlPng.addEventListener('click', () => downloadCard('png'));
-  const dlPdf = document.getElementById('btn-download-pdf');
-  if (dlPdf) dlPdf.addEventListener('click', () => downloadCard('pdf'));
-  const pr = document.getElementById('btn-print-card');
-  if (pr) pr.addEventListener('click', printCard);
+function initSignaturePad(pet) {
+  const canvas = document.getElementById('signature-pad');
+  if (!canvas || !pet) return;
+  const context = canvas.getContext('2d');
+  context.lineWidth = 4; context.lineCap = 'round'; context.lineJoin = 'round'; context.strokeStyle = '#1f3566';
+  const paintSaved = () => {
+    if (!String(pet.signature || '').startsWith('data:image')) return;
+    const image = new Image(); image.onload = () => context.drawImage(image, 0, 0, canvas.width, canvas.height); image.src = pet.signature;
+  };
+  paintSaved();
+  let drawing = false; let previous = null;
+  const point = event => { const rect = canvas.getBoundingClientRect(); const source = event.touches?.[0] || event; return { x: (source.clientX - rect.left) * canvas.width / rect.width, y: (source.clientY - rect.top) * canvas.height / rect.height }; };
+  const start = event => { drawing = true; previous = point(event); event.preventDefault(); };
+  const draw = event => { if (!drawing) return; const next = point(event); context.beginPath(); context.moveTo(previous.x, previous.y); context.lineTo(next.x, next.y); context.stroke(); previous = next; event.preventDefault(); };
+  const stop = () => { drawing = false; previous = null; };
+  canvas.addEventListener('pointerdown', start); canvas.addEventListener('pointermove', draw); canvas.addEventListener('pointerup', stop); canvas.addEventListener('pointerleave', stop); canvas.addEventListener('pointercancel', stop);
+  document.getElementById('btn-clear-signature')?.addEventListener('click', () => context.clearRect(0, 0, canvas.width, canvas.height));
+  document.getElementById('btn-save-signature')?.addEventListener('click', async () => {
+    try {
+      const signature = canvas.toDataURL('image/png');
+      await api.updatePet(pet.id, { ...pet, signature });
+      await state.loadPets();
+      toast('Firma guardada');
+      renderCardPreview();
+    } catch (error) { toast(error.message, 'error'); }
+  });
 }
 
 async function downloadCard(type) {
-  if (state.cardDocType === 'health') {
-    import('./health-card.js').then((m) => m.downloadCard(type));
-    return;
-  }
-  const front = document.getElementById('the-id-card-front');
-  const back = document.getElementById('the-id-card-back');
-  if (!front || !back) { toast('Selecciona una mascota primero', 'error'); return; }
   const pet = currentPet();
-  const [canvasF, canvasB] = await Promise.all([
-    html2canvas(front, { scale: 3, backgroundColor: null }),
-    html2canvas(back, { scale: 3, backgroundColor: null })
-  ]);
+  const front = document.getElementById('the-id-card-front'); const back = document.getElementById('the-id-card-back');
+  if (!pet || !front || !back) return toast('Selecciona una mascota primero', 'error');
+  const [frontCanvas, backCanvas] = await Promise.all([html2canvas(front, { scale: 3 }), html2canvas(back, { scale: 3 })]);
   if (type === 'png') {
-    const gap = 40;
-    const combo = document.createElement('canvas');
-    combo.width = canvasF.width;
-    combo.height = canvasF.height * 2 + gap;
-    const ctx = combo.getContext('2d');
-    ctx.fillStyle = '#f3f1ec';
-    ctx.fillRect(0, 0, combo.width, combo.height);
-    ctx.drawImage(canvasF, 0, 0);
-    ctx.drawImage(canvasB, 0, canvasF.height + gap);
-    const a = document.createElement('a');
-    a.href = combo.toDataURL('image/png');
-    a.download = `carnet-${pet.carnet_number}.png`;
-    a.click();
+    const canvas = document.createElement('canvas'); canvas.width = frontCanvas.width; canvas.height = frontCanvas.height * 2 + 40;
+    const context = canvas.getContext('2d'); context.fillStyle = '#e8eef7'; context.fillRect(0, 0, canvas.width, canvas.height); context.drawImage(frontCanvas, 0, 0); context.drawImage(backCanvas, 0, frontCanvas.height + 40);
+    const link = document.createElement('a'); link.href = canvas.toDataURL('image/png'); link.download = `credencial-${pet.carnet_number}.png`; link.click();
   } else {
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [85.6, 54] });
-    pdf.addImage(canvasF.toDataURL('image/png'), 'PNG', 0, 0, 85.6, 54);
-    pdf.addPage([85.6, 54], 'landscape');
-    pdf.addImage(canvasB.toDataURL('image/png'), 'PNG', 0, 0, 85.6, 54);
-    pdf.save(`carnet-${pet.carnet_number}.pdf`);
+    const { jsPDF } = window.jspdf; const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [85.6, 54] });
+    pdf.addImage(frontCanvas.toDataURL('image/png'), 'PNG', 0, 0, 85.6, 54); pdf.addPage([85.6, 54], 'landscape'); pdf.addImage(backCanvas.toDataURL('image/png'), 'PNG', 0, 0, 85.6, 54); pdf.save(`credencial-${pet.carnet_number}.pdf`);
   }
-  api.logHistory('Descarga de carnet', `${pet.name} (${type.toUpperCase()}, anverso y reverso)`);
-  toast('Carnet descargado (anverso y reverso)');
+  api.logHistory('Descarga de credencial', `${pet.name} (${type.toUpperCase()})`); toast('Credencial descargada');
 }
 
 function printCard() {
-  if (state.cardDocType === 'health') {
-    import('./health-card.js').then((m) => m.printCard());
-    return;
-  }
-  const pet = currentPet();
-  if (!pet) { toast('Selecciona una mascota', 'error'); return; }
-  const front = document.getElementById('card-render-front').innerHTML;
-  const back = document.getElementById('card-render-back').innerHTML;
-  document.getElementById('print-area').innerHTML = `
-    <div style="display:flex; flex-direction:column; gap:24px; align-items:center; padding:24px;">
-      <div>${front}</div><div>${back}</div>
-    </div>`;
-  window.print();
-  api.logHistory('Impresión de carnet', `${pet.name} (${pet.carnet_number}, anverso y reverso)`);
+  const pet = currentPet(); if (!pet) return toast('Selecciona una mascota', 'error');
+  document.getElementById('print-area').innerHTML = `<div class="fam-id-print"><div>${document.getElementById('card-render-front').innerHTML}</div><div>${document.getElementById('card-render-back').innerHTML}</div></div>`;
+  window.print(); api.logHistory('Impresión de credencial', `${pet.name} (${pet.carnet_number})`);
 }
