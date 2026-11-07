@@ -688,3 +688,220 @@ tbody tr:hover td{background:rgba(255,255,255,.03);}
 .activity-main{flex:1; min-width:0;}
 .activity-main div:first-child{font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .activity-main div:last-child{font-size:11px; color:var(--text-2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
+/* ==========================================
+   SIDEBAR MEJORADO — EXPANSIÓN INDIVIDUAL
+   ========================================== */
+
+@media (min-width: 1024px) {
+
+  /* Sidebar compacto */
+  .shell.is-collapsed .sidebar {
+    width: 76px;
+    padding: 12px 6px;
+    overflow-x: visible;
+    overflow-y: auto;
+    transition: width .25s ease;
+  }
+
+  .shell.is-collapsed .main {
+    margin-left: 76px;
+  }
+
+  /* Ocultar textos de marca */
+  .shell.is-collapsed .sidebar .brand-mark {
+    justify-content: center;
+    padding: 12px 0 20px;
+  }
+
+  .shell.is-collapsed .sidebar .logo-text,
+  .shell.is-collapsed .sidebar .fam-name,
+  .shell.is-collapsed .sidebar .fam-tag,
+  .shell.is-collapsed .sidebar .brand-mark .name {
+    display: none;
+  }
+
+  /* Ocultar títulos de grupos */
+  .shell.is-collapsed .nav-group-label {
+    display: none;
+  }
+
+  /* Elementos del menú */
+  .shell.is-collapsed .nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 62px;
+    height: 46px;
+    min-height: 46px;
+    margin: 3px 0;
+    padding: 0 22px;
+    gap: 13px;
+    border-radius: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    z-index: 1;
+
+    transition:
+      width .32s cubic-bezier(.2,.8,.2,1),
+      background .2s ease,
+      box-shadow .25s ease,
+      border-radius .25s ease;
+  }
+
+  /* Iconos */
+  .shell.is-collapsed .nav-item svg {
+    width: 19px;
+    height: 19px;
+    min-width: 19px;
+    flex-shrink: 0;
+    transition: transform .25s ease, color .2s ease;
+  }
+
+  /* Texto oculto */
+  .shell.is-collapsed .nav-item span {
+    display: block;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transform: translateX(-8px);
+    transition:
+      max-width .3s ease,
+      opacity .2s ease,
+      transform .3s ease;
+  }
+
+  /* Solo se expande el elemento seleccionado */
+  .shell.is-collapsed .nav-item:hover,
+  .shell.is-collapsed .nav-item:focus-visible {
+    width: 230px;
+    overflow: visible;
+    z-index: 400;
+    background: var(--surface);
+    border-color: var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.13);
+  }
+
+  /* Mostrar texto */
+  .shell.is-collapsed .nav-item:hover span,
+  .shell.is-collapsed .nav-item:focus-visible span {
+    max-width: 170px;
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Animación del icono */
+  .shell.is-collapsed .nav-item:hover svg,
+  .shell.is-collapsed .nav-item:focus-visible svg {
+    transform: scale(1.12);
+    color: var(--brand);
+  }
+
+  /* Elemento activo */
+  .shell.is-collapsed .nav-item.active {
+    background: var(--brand-soft);
+    border-color: rgba(20,125,100,.2);
+  }
+
+  /* Usuario */
+  .shell.is-collapsed .user-chip {
+    justify-content: center;
+    padding: 8px 0;
+  }
+
+  .shell.is-collapsed .user-chip .chip-txt {
+    display: none;
+  }
+
+  /* Evitar que el menú cambie de posición */
+  .shell.is-collapsed .nav-item:hover {
+    left: 0;
+    top: auto;
+    position: relative;
+  }
+}
+
+/* ==========================================
+   SIDEBAR EN MÓVILES Y TABLETS
+   ========================================== */
+
+@media (max-width: 1023.9px) {
+
+  .sidebar {
+    width: min(300px, 85vw);
+    left: -320px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 300;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .main {
+    margin-left: 0 !important;
+  }
+
+  .shell.is-collapsed .sidebar {
+    width: min(300px, 85vw);
+    padding: 16px 12px;
+    overflow-x: hidden;
+  }
+
+  .shell.is-collapsed .brand-mark {
+    justify-content: flex-start;
+  }
+
+  .shell.is-collapsed .brand-mark .logo-text,
+  .shell.is-collapsed .brand-mark .fam-name,
+  .shell.is-collapsed .brand-mark .fam-tag,
+  .shell.is-collapsed .brand-mark .name,
+  .shell.is-collapsed .nav-group-label,
+  .shell.is-collapsed .nav-item span,
+  .shell.is-collapsed .user-chip .chip-txt {
+    display: block;
+  }
+
+  .shell.is-collapsed .nav-item {
+    width: 100%;
+    height: auto;
+    min-height: 44px;
+    justify-content: flex-start;
+    padding: 9px 12px;
+    overflow: visible;
+  }
+
+  .shell.is-collapsed .nav-item span {
+    max-width: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .shell.is-collapsed .nav-item:hover {
+    width: 100%;
+    position: relative;
+    left: auto;
+    top: auto;
+  }
+
+  .shell.is-collapsed .user-chip {
+    justify-content: flex-start;
+  }
+
+  .sidebar .side-toggle {
+    display: none;
+  }
+}
+
+/* Accesibilidad: reducir animaciones */
+@media (prefers-reduced-motion: reduce) {
+  .shell.is-collapsed .nav-item,
+  .shell.is-collapsed .nav-item span,
+  .shell.is-collapsed .nav-item svg {
+    transition: none !important;
+  }
+}
