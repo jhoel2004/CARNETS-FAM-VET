@@ -658,6 +658,23 @@ export async function openPetModal(id, opts = {}) {
       if (order.indexOf(step) < order.indexOf(tab)) s.classList.add('done');
     });
     updatePetButtons(tab);
+
+    // Al cambiar de pestaña, resetear campos del paso anterior (solo en modo creación)
+    if (!isEdit) {
+      const currentIdx = PET_STEPS.indexOf(tab);
+      // Limpiar campos de pasos anteriores
+      if (currentIdx >= 1) {
+        // Resetear campos del paso "animal" al ir a "prop" o "med"
+        const animalFields = target.form ? target.form.querySelectorAll('[name="name"], [name="carnet_number"], [name="species"], [name="breed"], [name="has_chip"], [name="chip"], [name="breed"], [name="age_mode"], [name="birth_date"], [name="age_years"], [name="age_months"], [name="sex"], [name="color"], [name="distinctive_marks"], [name="weight"], [name="category"], [name="status"], [name="signature"], [name="offspring"], [name="registration_date"]') : [];
+        animalFields.forEach(el => el.value = '');
+      }
+      if (currentIdx >= 2) {
+        // Resetear campos del paso "prop" al ir a "med"
+        const propFields = target.form ? target.form.querySelectorAll('[name="owner_name"], [name="owner_ci"], [name="owner_phone"], [name="owner_email"], [name="owner_department"], [name="owner_city"], [name="owner_address"]') : [];
+        propFields.forEach(el => el.value = '');
+      }
+    }
+    updatePetButtons(tab);
   };
 
   document.querySelectorAll('[data-ftab]').forEach(el => el.addEventListener('click', () => activatePetTab(el.dataset.ftab)));

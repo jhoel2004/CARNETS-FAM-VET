@@ -2,6 +2,9 @@
   /* ---- Identidad FAM J VET (verde esmeralda + neutros) ---- */
   --brand:#147D64; --brand-2:#159B78; --brand-3:#0E5C48;
   --brand-soft:#E8F5F0; --brand-dim:rgba(20,125,100,.10);
+  --sb:#f3f4f5; --line:#dfe2e5; --ink:#1c2430; --soft:#6b7480;
+
+  /* ---- Colores del sidebar (ID Bolivia estilo) ---- */
 
   /* ---- Fondos y superficies ---- */
   --bg:#F3F4F6; --content:#F3F4F6; --sidebar:#1B1F2A;
@@ -163,14 +166,14 @@ a{color:inherit; text-decoration:none;}
 .modal-foot .btn-primary{min-width:140px;}
 .shell{min-height:100vh;}
 .sidebar{
-  background:var(--surface); color:var(--text); padding:20px 12px 14px; display:flex; flex-direction:column;
-  position:fixed; top:0; left:0; width:220px; height:100vh; z-index:300;
-  border-right:1px solid var(--border); transition:left .22s ease, width .22s ease; overflow-y:auto; overflow-x:hidden;
+  background:var(--sb); color:var(--ink); padding:16px 0; display:flex; flex-direction:column;
+  position:fixed; top:0; left:0; width:76px; height:100vh; z-index:300;
+  border-right:1px solid var(--line); transition:left .22s ease, width .22s ease; overflow-y:auto; overflow-x:hidden;
 }
-.sidebar a, .sidebar button, .sidebar label, .sidebar span, .sidebar div, .sidebar p { color:var(--text); }
-.main{margin-left:220px; transition:margin-left .22s ease; z-index:1;}
-.shell.is-collapsed .sidebar{width:72px; padding-inline:8px; overflow-x:visible;}
-.shell.is-collapsed .main{margin-left:72px;}
+.sidebar a, .sidebar button, .sidebar label, .sidebar span, .sidebar div, .sidebar p { color:var(--ink); }
+.main{margin-left:76px; transition:margin-left .22s ease; z-index:1;}
+.shell.is-collapsed .sidebar{width:76px; padding-inline:0; overflow-x:visible;}
+.shell.is-collapsed .main{margin-left:76px;}
 .sidebar .brand-mark{padding:16px 12px 20px; border-bottom:1px solid var(--border); margin-bottom:16px; display:flex; align-items:center; gap:10px;}
 .sidebar .brand-mark .fam-logo{display:flex; align-items:center; gap:10px; width:100%;}
 .sidebar .brand-mark .logo-icon{width:34px;height:34px;flex:0 0 auto;}
@@ -257,8 +260,8 @@ a{color:inherit; text-decoration:none;}
   .sidebar{left:-260px; right:auto; border-radius:0 14px 14px 0; box-shadow:var(--shadow-lg);}
   .sidebar.open{left:0;}
   .main{margin-left:0;}
-  .shell.is-collapsed .sidebar{width:min(300px,85vw);}
-  .shell.is-collapsed .main{margin-left:0;}
+  .shell.is-collapsed .sidebar{width:76px;}
+  .shell.is-collapsed .main{margin-left:76px;}
   .shell.is-collapsed .brand-mark .name,
   .shell.is-collapsed .nav-group-label,
   .shell.is-collapsed .nav-item span,
@@ -292,7 +295,7 @@ a{color:inherit; text-decoration:none;}
   .sidebar.open{left:0;}
   .main{margin-left:0;}
   .shell.is-collapsed .sidebar{width:min(320px,85vw);}
-  .shell.is-collapsed .main{margin-left:0;}
+  .shell.is-collapsed .main{margin-left:76px;}
   .shell.is-collapsed .brand-mark .name,
   .shell.is-collapsed .nav-group-label,
   .shell.is-collapsed .nav-item span,
