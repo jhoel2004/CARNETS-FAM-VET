@@ -643,6 +643,8 @@ export async function openPetModal(id, opts = {}) {
     document.querySelectorAll('[data-ftab]').forEach(el => {
       el.classList.toggle('active', el.dataset.ftab === tab);
     });
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.classList.toggle('is-collapsed', tab !== 'animal');
     PET_STEPS.forEach(k => {
       const el = document.getElementById('ftab-' + k);
       if (el) el.classList.add('hidden');
