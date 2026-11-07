@@ -72,7 +72,6 @@ function skeleton() {
 function quickActionsHtml() {
   const actions = [
     ['new-pet', iconPlus, 'Registrar mascota', 'primary'],
-    ['new-owner', iconUsers, 'Registrar propietario', 'soft'],
     ['emit-card', iconCard, 'Emitir carnet', 'soft'],
     ['new-vaccine', iconSyringe, 'Registrar vacunación', 'soft'],
     ['report', iconFileText, 'Generar reporte', 'outline'],
@@ -585,7 +584,6 @@ export function bindDashboardEvents() {
   document.querySelectorAll('[data-quick]').forEach(el => el.addEventListener('click', () => {
     const act = el.dataset.quick;
     if (act === 'new-pet') openPetModal();
-    else if (act === 'new-owner') openPetModal(null, { tab: 'prop' });
     else if (act === 'emit-card') { state.view = 'carnet'; rerender(); }
     else if (act === 'new-vaccine') openPetPicker('Registrar vacunación', 'Selecciona la mascota para registrar su vacunación', () => openPetModal(null, { tab: 'med' }));
     else if (act === 'report') openReportModal();

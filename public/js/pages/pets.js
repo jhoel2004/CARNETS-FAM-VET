@@ -593,7 +593,7 @@ export async function openPetModal(id, opts = {}) {
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" data-close>Cancelar</button>
-      <button class="btn btn-primary" id="btn-save-pet">${isEdit ? 'Guardar cambios' : 'Registrar mascota'}</button>
+      <button class="btn btn-primary" id="btn-save-pet" disabled>${isEdit ? 'Guardar cambios' : 'Registrar mascota'}</button>
     </div>
   `);
 
@@ -972,6 +972,35 @@ async function savePet(id, isEdit) {
     import('../app.js').then(m => m.renderApp());
   } catch (e) { toast(e.message, 'error'); }
 }
+
+  // Validación en tiempo real para habilitar/deshabilitar botón Guardar
+  const requiredFields = [
+    document.getElementById('pet-form')?.querySelector('input[name="name"]'),
+    document.getElementById('pet-form')?.querySelector('input[name="owner_name"]'),
+    document.getElementById('pet-form')?.querySelector('input[name="owner_phone"]'),
+    document.getElementById('pet-form')?.querySelector('input[name="carnet_number"]')
+  ].filter(Boolean);
+
+  const validateForm = () => {
+    const isValid = requiredFields.every(input => input.value.trim() !== '');
+    const saveBtn = document.getElementById('btn-save-pet');
+    if (saveBtn) {
+      saveBtn.disabled = !isValid;
+      if (isValid) {
+        saveBtn.classList.remove('btn-disabled');
+      } else {
+        saveBtn.classList.add('btn-disabled');
+      }
+    }
+  };
+
+  requiredFields.forEach(input => {
+    input.addEventListener('input', validateForm);
+    input.addEventListener('change', validateForm);
+  });
+  
+  // Validación inicial
+  validateForm();
 
 function showPetQrModal(pet) {
   const url = publicUrl(pet.id);

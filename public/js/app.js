@@ -129,8 +129,13 @@ function sidebarHtml() {
   return `
   <div class="sidebar ${state.sidebarOpen ? 'open' : ''}" id="sidebar">
     <div class="brand-mark">
-      ${pawSvg()}
-      <div class="name">${escapeHtml(state.getSettings().systemName || 'FAM J VET')}<small>ID BOLIVIA</small></div>
+      <div class="fam-logo">
+        <div class="logo-icon">${pawSvg(24)}</div>
+        <div class="logo-text">
+          <div class="fam-name">FAM J VET</div>
+          <div class="fam-tag">Identificación animal</div>
+        </div>
+      </div>
     </div>
     ${NAV_GROUPS().map(g => `
       <div class="nav-group-label">${g.label}</div>
