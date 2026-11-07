@@ -107,20 +107,20 @@ const NAV_GROUPS = () => {
   const isAdmin = state.user.role === 'Administrador';
   return [
     { label: 'General', items: [
-      { id: 'dashboard', label: 'Panel principal', icon: iconHome },
+      { id: 'dashboard', label: 'Panel principal', icon: iconHome, section: 'section-general' },
     ]},
     { label: 'Gestión', items: [
-      { id: 'mascotas', label: 'Mascotas', icon: iconPaw },
-      { id: 'dashboard', label: 'Propietarios', icon: iconUsers, subtab: 'territorio' },
-      { id: 'carnet', label: 'Carnets', icon: iconCard },
-      { id: 'buscar', label: 'Registros', icon: iconSearch },
+      { id: 'mascotas', label: 'Mascotas', icon: iconPaw, section: 'section-gestion' },
+      { id: 'dashboard', label: 'Propietarios', icon: iconUsers, subtab: 'territorio', section: 'section-gestion' },
+      { id: 'carnet', label: 'Carnets', icon: iconCard, section: 'section-gestion' },
+      { id: 'buscar', label: 'Registros', icon: iconSearch, section: 'section-gestion' },
     ]},
     { label: 'Salud', items: [
-      { id: 'salud', label: 'Salud', icon: iconStethoscope, subtab: 'vacunacion' },
+      { id: 'salud', label: 'Salud', icon: iconStethoscope, subtab: 'vacunacion', section: 'section-salud' },
     ]},
     { label: 'Administración', items: [
-      { id: 'config', label: 'Usuarios', icon: iconUser, adminOnly: true },
-      { id: 'config', label: 'Configuración', icon: iconGear, adminOnly: true },
+      { id: 'config', label: 'Usuarios', icon: iconUser, adminOnly: true, section: 'section-admin' },
+      { id: 'config', label: 'Configuración', icon: iconGear, adminOnly: true, section: 'section-admin' },
     ]},
   ].map(g => ({ ...g, items: g.items.filter(i => !i.adminOnly || isAdmin) }))
 };
@@ -142,7 +142,7 @@ function sidebarHtml() {
     if (i.subtab && i.id === 'dashboard') active = active && getDashTab() === i.subtab;
     if (i.subtab && i.id === 'salud') active = active && getSaludSubtab() === i.subtab;
     const attr = i.id === 'reportes' ? `data-reporte="1"` : `data-nav="${i.id}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''}`;
-    return `<div class="nav-item ${active ? 'active' : ''}" ${attr} title="${escapeHtml(i.label)}">${i.icon}<span>${i.label}</span></div>`;
+    return `<div class="nav-item ${active ? 'active' : ''} ${i.section || ''}" ${attr} title="${escapeHtml(i.label)}">${i.icon}<span>${i.label}</span></div>`;
   }).join('')}
     `).join('')}
     <div class="sidebar-foot">
@@ -208,7 +208,6 @@ function profileMenuHtml() {
         <div style="font-size:11px; color:var(--text-2);">${escapeHtml(state.user.role)}</div>
       </div>
       ${isAdmin ? `<button class="menu-item" data-goto="config">${iconGear} Configuración y usuarios</button>` : ''}
-      <button class="menu-item" data-theme-toggle>${state.theme === 'dark' ? '☀️' : '🌙'} ${state.theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button>
       <button class="menu-item danger" data-action="logout">${iconLogout} Cerrar sesión</button>
     </div>
   </div>`;
@@ -377,8 +376,6 @@ function bindShellEvents() {
   // Menú de perfil / notificaciones
   document.getElementById('btn-profile')?.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu('menu-profile'); });
   document.getElementById('btn-bell')?.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu('menu-notif'); });
-  const tt = document.getElementById('theme-toggle');
-  if (tt) tt.addEventListener('change', () => { state.theme = tt.checked ? 'dark' : 'light'; state.applyTheme(); });
   const gs = document.getElementById('global-search');
   if (gs) gs.addEventListener('input', () => {
     state.search = gs.value;

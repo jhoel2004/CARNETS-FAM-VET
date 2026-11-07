@@ -123,34 +123,26 @@ function kpiCardsHtml(pets, st, hs, analysis, records) {
   const overdue = analysis.overdue || [];
   const overdueVacc = overdue.filter(r => r.type === 'vacuna').length;
   const overdueDesp = overdue.filter(r => r.type === 'desparasitacion').length;
-  const regTrend = data.monthlyTrend(pets, p => p.registration_date);
-  const vacTrend = data.monthlyTrend(records.filter(r => r.type === 'vacuna' && r.applied), r => r.record_date);
-  const despTrend = data.monthlyTrend(records.filter(r => r.type === 'desparasitacion' && r.applied), r => r.record_date);
   const withCard = pets.filter(p => p.carnet_number).length;
+  const totalVacDesp = hs.totalVacunas + hs.totalDesparasitaciones;
+  const appliedVacDesp = hs.totalVacunasAplicadas + hs.totalDesparasitacionesAplicadas;
+  const coveragePct = totalVacDesp > 0 ? Math.round((appliedVacDesp / totalVacDesp) * 100) : 0;
 
   const kpis = [
-    { lbl: 'Mascotas registradas', num: st.total, ico: iconPaw, cls: '', go: 'mascotas' },
-    { lbl: 'Mascotas activas', num: st.active, ico: iconCheckCircle, cls: '', go: 'mascotas' },
-    { lbl: 'Mascotas inactivas', num: st.inactive, ico: iconCheckCircle, cls: 'grey', go: 'mascotas' },
-    { lbl: 'Mascotas perdidas', num: st.lost, ico: iconAlert, cls: 'red', go: 'dashboard:alertas', foot: st.lost ? `<div class="kpi-foot down">Requieren atención</div>` : '' },
-    { lbl: 'Carnets emitidos', num: withCard, ico: iconCard, cls: 'blue', go: 'carnet', foot: st.printed ? `<div class="kpi-foot">${st.printed} impresión${st.printed !== 1 ? 'es' : ''} registrada${st.printed !== 1 ? 's' : ''}</div>` : '' },
-    { lbl: 'Registradas este mes', num: st.thisMonth, ico: iconPlus, cls: '', go: 'mascotas' },
-    { lbl: 'Vacunas aplicadas', num: hs.totalVacunasAplicadas, ico: iconSyringe, cls: '', go: 'salud', foot: trendFoot(vacTrend) || (hs.vacunasPendientes ? `<div class="kpi-foot warn">${hs.vacunasPendientes} pendiente${hs.vacunasPendientes !== 1 ? 's' : ''}</div>` : '') },
-    { lbl: 'Vacunas pendientes', num: hs.vacunasPendientes, ico: iconAlert, cls: 'gold', go: 'salud', foot: overdueVacc ? `<div class="kpi-foot down">${overdueVacc} vencida${overdueVacc !== 1 ? 's' : ''}</div>` : '' },
-    { lbl: 'Desparasitaciones aplicadas', num: hs.totalDesparasitacionesAplicadas, ico: iconPill, cls: '', go: 'salud', foot: trendFoot(despTrend) || (hs.desparasitacionesPendientes ? `<div class="kpi-foot warn">${hs.desparasitacionesPendientes} pendiente${hs.desparasitacionesPendientes !== 1 ? 's' : ''}</div>` : '') },
-    { lbl: 'Desparasitaciones pendientes', num: hs.desparasitacionesPendientes, ico: iconAlert, cls: 'gold', go: 'salud', foot: overdueDesp ? `<div class="kpi-foot down">${overdueDesp} vencida${overdueDesp !== 1 ? 's' : ''}</div>` : '' },
+    { lbl: 'Mascotas registradas', num: st.total, ico: iconPaw, cls: 'green', go: 'mascotas', border: 'green', foot: `<div class="kpi-foot">${st.thisMonth} este mes</div>` },
+    { lbl: 'Mascotas activas', num: st.active, ico: iconCheckCircle, cls: 'green', go: 'mascotas', border: 'green', foot: `<div class="kpi-foot">${pctOf(st.active, st.total)}% del padrón</div>` },
+    { lbl: 'Vacunas aplicadas', num: hs.totalVacunasAplicadas, ico: iconSyringe, cls: 'green', go: 'salud', border: 'green', foot: `<div class="kpi-foot">${hs.vacunasPendientes} pendiente${hs.vacunasPendientes !== 1 ? 's' : ''}</div>` },
+    { lbl: 'Dosis vencidas', num: analysis.overdue.length, ico: iconAlert, cls: 'red', go: 'dashboard:alertas', border: 'red', foot: `<div class="kpi-foot">Requieren atención</div>` },
+    { lbl: 'Desparasitaciones aplicadas', num: hs.totalDesparasitacionesAplicadas, ico: iconPill, cls: 'amber', go: 'salud', border: 'amber', foot: `<div class="kpi-foot">${hs.desparasitacionesPendientes} pendiente${hs.desparasitacionesPendientes !== 1 ? 's' : ''}</div>` },
+    { lbl: 'Cobertura sanitaria', num: coveragePct, ico: iconStethoscope, cls: 'blue', go: 'salud', border: 'blue', foot: `<div class="kpi-foot">${totalVacDesp} dosis registradas</div>` },
   ];
-  // pies con datos reales cuando no hay tendencia explícita
-  kpis[1].foot = `<div class="kpi-foot">${pctOf(st.active, st.total)}% del padrón</div>`;
-  kpis[2].foot = `<div class="kpi-foot">${pctOf(st.inactive, st.total)}% del padrón</div>`;
-  kpis[5].foot = trendFoot(regTrend);
 
   return `<div class="kpi-grid">
     ${kpis.map(k => `
-    <div class="kpi-card" data-kpi-go="${k.go}" role="button" tabindex="0">
+    <div class="kpi-card border-left ${k.border}" data-kpi-go="${k.go}" role="button" tabindex="0">
       <div class="kpi-top"><span class="kpi-ico ${k.cls}">${k.ico}</span><span class="kpi-lbl">${k.lbl}</span></div>
       <div class="kpi-num" data-count="${k.num}">${k.num}</div>
-      ${k.foot || '<div class="kpi-foot"></div>'}
+      ${k.foot}
     </div>`).join('')}
   </div>`;
 }
@@ -314,40 +306,98 @@ export function viewDashboard() {
   </div>` : ''}
 
   ${dashTab === 'salud' ? `
+  <!-- Fila de 6 tarjetas de resumen con borde izquierdo de color -->
+  <div class="kpi-grid" style="grid-template-columns:repeat(6,1fr); margin-bottom:20px;">
+    <div class="kpi-card border-left green" role="button" tabindex="0">
+      <div class="kpi-top"><span class="kpi-ico green">${iconPaw}</span><span class="kpi-lbl">Mascotas totales</span></div>
+      <div class="kpi-num">${st.total}</div>
+      <div class="kpi-foot">${st.thisMonth} este mes</div>
+    </div>
+    <div class="kpi-card border-left green" role="button" tabindex="0">
+      <div class="kpi-top"><span class="kpi-ico green">${iconCheckCircle}</span><span class="kpi-lbl">Mascotas activas</span></div>
+      <div class="kpi-num">${st.active}</div>
+      <div class="kpi-foot">${pctOf(st.active, st.total)}% del padrón</div>
+    </div>
+    <div class="kpi-card border-left green" role="button" tabindex="0">
+      <div class="kpi-top"><span class="kpi-ico green">${iconSyringe}</span><span class="kpi-lbl">Vacunas aplicadas</span></div>
+      <div class="kpi-num">${hs.totalVacunasAplicadas}</div>
+      <div class="kpi-foot">${hs.vacunasPendientes} pendiente${hs.vacunasPendientes !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="kpi-card border-left red" role="button" tabindex="0">
+      <div class="kpi-top"><span class="kpi-ico red">${iconAlert}</span><span class="kpi-lbl">Dosis vencidas</span></div>
+      <div class="kpi-num">${analysis.overdue.length}</div>
+      <div class="kpi-foot">Requieren atención</div>
+    </div>
+    <div class="kpi-card border-left amber" role="button" tabindex="0">
+      <div class="kpi-top"><span class="kpi-ico amber">${iconPill}</span><span class="kpi-lbl">Desparasitaciones aplicadas</span></div>
+      <div class="kpi-num">${hs.totalDesparasitacionesAplicadas}</div>
+      <div class="kpi-foot">${hs.desparasitacionesPendientes} pendiente${hs.desparasitacionesPendientes !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="kpi-card border-left blue" role="button" tabindex="0">
+      <div class="kpi-top"><span class="kpi-ico blue">${iconStethoscope}</span><span class="kpi-lbl">Cobertura sanitaria</span></div>
+      <div class="kpi-num">${coveragePct}%</div>
+      <div class="kpi-foot">${totalVacDesp} dosis registradas</div>
+    </div>
+  </div>
+
   <div class="dash12">
+    <!-- Gauge de cobertura de vacunación -->
     <div class="panel span-4">
-      <div class="dash-sec-title"><span>Vacunación y desparasitación</span></div>
-      ${hs.totalVacunas + hs.totalDesparasitaciones ? `
-      <div class="chart-box short"><canvas id="chart-health"></canvas></div>
-      ${donutLegend([
-    { label: 'Aplicadas', color: 'var(--brand)', n: hs.totalVacunasAplicadas + hs.totalDesparasitacionesAplicadas, pct: pctOf(hs.totalVacunasAplicadas + hs.totalDesparasitacionesAplicadas, hs.totalVacunas + hs.totalDesparasitaciones) },
-    { label: 'Pendientes', color: 'var(--gold)', n: hs.vacunasPendientes + hs.desparasitacionesPendientes, pct: pctOf(hs.vacunasPendientes + hs.desparasitacionesPendientes, hs.totalVacunas + hs.totalDesparasitaciones) },
-    { label: 'Vencidas', color: 'var(--red)', n: analysis.overdue.length, pct: pctOf(analysis.overdue.length, hs.totalVacunas + hs.totalDesparasitaciones) },
-  ])}` : emptyChart(iconSyringe, 'Sin registros de vacunas ni desparasitaciones.')}
+      <div class="dash-sec-title"><span>Cobertura de vacunación</span></div>
+      <div class="gauge-wrap">
+        <div class="gauge-box"><canvas id="gauge-vaccination" width="132" height="132"></canvas></div>
+        <div class="gauge-center"><b>${coveragePct}%</b><span>Al día</span></div>
+      </div>
+      <div class="mini-note">Porcentaje de mascotas con vacunas al día</div>
     </div>
-    <div class="panel span-8">
-      <div class="dash-sec-title"><span>Evolución mensual</span></div>
-      ${records.some(r => r.type === 'vacuna' || r.type === 'desparasitacion') ? `<div class="chart-box"><canvas id="chart-health-months"></canvas></div><div class="mini-note">Por fecha de aplicación/registro; vencidas = pendientes con fecha pasada</div>` : emptyChart(iconStethoscope, 'Sin dosis registradas todavía')}
+
+    <!-- Barras agrupadas: Programado vs Aplicado -->
+    <div class="panel span-4">
+      <div class="dash-sec-title"><span>Programado vs Aplicado (últimos 6 meses)</span></div>
+      <div class="chart-box"><canvas id="chart-grouped-bar"></canvas></div>
+      <div class="mini-note">Comparación mensual de dosis programadas vs aplicadas</div>
     </div>
+
+    <!-- Línea de tiempo de dosis -->
+    <div class="panel span-4">
+      <div class="dash-sec-title"><span>Línea de tiempo de dosis</span></div>
+      <div class="chart-box short"><canvas id="chart-timeline"></canvas></div>
+      <div class="mini-note">Historial de vacunas y desparasitaciones</div>
+    </div>
+
+    <!-- Matriz de riesgo -->
+    <div class="panel span-4">
+      <div class="dash-sec-title"><span>Matriz de riesgo</span></div>
+      <div class="chart-box short"><canvas id="chart-risk-matrix"></canvas></div>
+      <div class="mini-note">Urgencia vs cantidad de mascotas</div>
+    </div>
+
+    <!-- Próximas citas -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Próximas citas</span><button class="btn btn-ghost btn-sm" data-kpi-go="salud">Gestionar salud</button></div>
       ${hs.proximasCitas.length ? hs.proximasCitas.slice(0, 6).map(c => `
         <div class="activity-row">
-          <span class="dot" style="background:${c.type === 'vacuna' ? 'var(--brand)' : 'var(--gold)'}; margin-top:6px;"></span>
+          <span class="dot" style="background:${c.type === 'vacuna' ? 'var(--brand)' : 'var(--amber)'}; margin-top:6px;"></span>
           <div class="activity-main">
             <div>${escapeHtml(c.title)}</div>
             <div>${escapeHtml(c.petName)} · ${c.type === 'vacuna' ? 'Vacuna' : 'Desparasitación'} · ${escapeHtml(c.date)}</div>
           </div>
         </div>`).join('') : `<p class="faint" style="text-align:center; padding:20px 0;">Sin citas programadas.</p>`}
     </div>
+
+    <!-- Vacunas más registradas -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Vacunas más registradas</span></div>
       ${analysis.vaccineRank.length ? `<div class="chart-box short"><canvas id="chart-vaccines"></canvas></div>` : emptyChart(iconSyringe, 'Aún no hay vacunas registradas')}
     </div>
+
+    <!-- Enfermedades crónicas -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Enfermedades crónicas</span></div>
       ${analysis.conditions.length ? `<div class="chart-box short"><canvas id="chart-conditions"></canvas></div>` : emptyChart(iconHeartbeat, 'Aún no hay enfermedades crónicas registradas')}
     </div>
+
+    <!-- Cobertura médica extendida -->
     <div class="panel span-6">
       <div class="dash-sec-title"><span>Cobertura médica extendida</span></div>
       <div class="coverage-grid">
@@ -357,6 +407,8 @@ export function viewDashboard() {
         <div class="danger"><b>${analysis.overdue.length}</b><span>Dosis vencidas</span></div>
       </div>
     </div>
+
+    <!-- Sin información médica -->
     <div class="panel span-6">
       <div class="dash-sec-title"><span>Sin información médica</span></div>
       ${noHealth.length ? `<div class="alert-list">${noHealth.slice(0, 6).map(p => `<div class="alert-item media" data-alert-open="${p.id}"><span class="a-dot"></span><div class="a-main"><div class="a-title">${escapeHtml(p.name)}</div><div class="a-desc">Registrar primera vacuna o desparasitación</div></div><span class="a-go">${iconChevronRight}</span></div>`).join('')}</div>` : `<div class="alert-none">${iconCheckCircle} Todas las mascotas de la selección tienen historial médico.</div>`}

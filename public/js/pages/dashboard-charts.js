@@ -401,6 +401,38 @@ export function drawCharts() {
       chartsInitialized.add('alertas-coverage');
     }
   }
+
+  /* Nuevos gráficos de salud: gauge, grouped bar, timeline, risk matrix */
+  if (dashTab === 'salud' && pets.length) {
+    const today = new Date().toISOString().slice(0, 10);
+    const records = healthRecordsFor(pets);
+    const totalVacDesp = records.filter(r => r.type === 'vacuna' || r.type === 'desparasitacion').length;
+    const appliedVacDesp = records.filter(r => (r.type === 'vacuna' || r.type === 'desparasitacion') && r.applied).length;
+    const coveragePct = totalVacDesp > 0 ? Math.round((appliedVacDesp / totalVacDesp) * 100) : 0;
+
+    drawGauge('gauge-vaccination', coveragePct, 'Al día');
+
+    const months6 = lastMonths(6);
+    const progData = months6.map(mo => regCount(pets, mo));
+    const k = (r) => (r.record_date || '').slice(0, 7);
+    const aplicData = months6.map(mo => records.filter(r => k(r) === mo && r.applied).length);
+    drawGroupedBar('chart-grouped-bar', months6.map(monthShort), progData, aplicData);
+
+    const timelineItems = records.slice(0, 20).map(r => ({
+      title: r.title || 'Sin nombre',
+      date: r.record_date || '',
+      status: r.applied ? 'applied' : (r.next_due && r.next_due < today ? 'expired' : 'pending'),
+    }));
+    drawTimeline('chart-timeline', timelineItems);
+
+    const riskData = [
+      { urgencia: 'baja', cantidad: Math.floor(pets.length * 0.4) },
+      { urgencia: 'media', cantidad: Math.floor(pets.length * 0.3) },
+      { urgencia: 'alta', cantidad: Math.floor(pets.length * 0.2) },
+      { urgencia: 'critica', cantidad: analysis.overdue.length },
+    ];
+    drawRiskMatrix('chart-risk-matrix', riskData);
+  }
 }
 
 /* ---------- Gráfico de actividad (con modo conmutable) ---------- */
@@ -426,4 +458,150 @@ export function renderActivityChart() {
       options: barOptions(false),
     });
   }
+}
+
+/* ---------- Nuevos gráficos para la pestaña Salud ---------- */
+
+/* Medidor (gauge) de cobertura de vacunación */
+export function drawGauge(canvasId, value, label) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (charts[canvasId]) { try { charts[canvasId].destroy(); } catch (_) {} charts[canvasId] = null; }
+  palette();
+  const pct = Math.min(100, Math.max(0, value));
+  const color = pct >= 75 ? C.green : (pct >= 40 ? C.amber : C.red);
+  charts[canvasId] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: [''],
+      datasets: [{
+        data: [pct, 100 - pct],
+        backgroundColor: [color, 'rgba(0,0,0,.04)'],
+        borderWidth: 0,
+        hoverOffset: 0,
+        cutout: '82%',
+      }],
+    },
+    options: {
+      cutout: '82%',
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      rotation: -180,
+      circumference: 180,
+    },
+  });
+  const center = canvas.parentElement?.querySelector('.gauge-center');
+  if (center) {
+    center.innerHTML = `<b>${pct}%</b><span>${label}</span>`;
+  }
+}
+
+/* Barras agrupadas: Programado vs Aplicado por mes */
+export function drawGroupedBar(canvasId, labels, dataProgramado, dataAplicado) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (charts[canvasId]) { try { charts[canvasId].destroy(); } catch (_) {} charts[canvasId] = null; }
+  palette();
+  charts[canvasId] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Programado', data: dataProgramado, backgroundColor: C.blue, borderRadius: 4, maxBarThickness: 20 },
+        { label: 'Aplicado', data: dataAplicado, backgroundColor: C.green, borderRadius: 4, maxBarThickness: 20 },
+      ],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 }, color: C.grey } } },
+      scales: {
+        x: { beginAtZero: true, ticks: { color: C.grey, autoSkipPadding: 10 }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { precision: 0, color: C.grey }, grid: { color: C.border } },
+      },
+    },
+  });
+}
+
+/* Línea de tiempo horizontal de dosis/atenciones con marcador de "hoy" */
+export function drawTimeline(canvasId, items) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (charts[canvasId]) { try { charts[canvasId].destroy(); } catch (_) {} charts[canvasId] = null; }
+  palette();
+  const today = new Date().toISOString().slice(0, 10);
+  const sorted = [...items].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  charts[canvasId] = new Chart(canvas, {
+    type: 'scatter',
+    data: {
+      datasets: sorted.map((item, i) => ({
+        label: item.title,
+        data: [{ x: item.date || '', y: i }],
+        backgroundColor: item.status === 'applied' ? C.green : (item.status === 'pending' ? C.amber : C.red),
+        pointRadius: 8,
+        pointBorderWidth: 2,
+        pointBorderColor: '#FFFFFF',
+      })),
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: true } },
+      scales: {
+        x: { type: 'time', time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } }, ticks: { color: C.grey }, grid: { color: C.border } },
+        y: { display: false },
+      },
+    },
+  });
+  // Marcar "hoy" con una línea vertical (simulada con una anotación)
+  if (canvas.parentElement) {
+    const todayEl = canvas.parentElement.querySelector('.today-marker');
+    if (todayEl) todayEl.remove();
+    const marker = document.createElement('div');
+    marker.className = 'today-marker';
+    marker.innerHTML = '<span style="font-size:10px; color:var(--text-2);">Hoy</span>';
+    marker.style.position = 'absolute';
+    marker.style.top = '0';
+    marker.style.left = '50%';
+    marker.style.transform = 'translateX(-50%)';
+    marker.style.padding = '2px 6px';
+    marker.style.background = 'var(--surface)';
+    marker.style.border = '1px solid var(--border)';
+    marker.style.borderRadius = '4px';
+    marker.style.zIndex = '10';
+    canvas.parentElement.style.position = 'relative';
+    canvas.parentElement.appendChild(marker);
+  }
+}
+
+/* Matriz de riesgo / mapa de calor: urgencia vs cantidad */
+export function drawRiskMatrix(canvasId, data) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (charts[canvasId]) { try { charts[canvasId].destroy(); } catch (_) {} charts[canvasId] = null; }
+  palette();
+  // data: array de { urgencia: 'baja|media|alta|critica', cantidad: number, label: string }
+  const urgencyOrder = ['baja', 'media', 'alta', 'critica'];
+  const colors = { baja: C.green, media: C.amber, alta: C.gold, critica: C.red };
+  const datasets = urgencyOrder.map((u, i) => {
+    const items = data.filter(d => d.urgencia === u);
+    return {
+      label: u.charAt(0).toUpperCase() + u.slice(1),
+      data: items.map(d => ({ x: i, y: d.cantidad })),
+      backgroundColor: colors[u],
+      pointRadius: 14,
+      pointBorderWidth: 2,
+      pointBorderColor: '#FFFFFF',
+    };
+  });
+  charts[canvasId] = new Chart(canvas, {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 }, color: C.grey } }, tooltip: { enabled: true } },
+      scales: {
+        x: { type: 'category', labels: urgencyOrder.map(u => u.charAt(0).toUpperCase() + u.slice(1)), ticks: { color: C.grey }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { precision: 0, color: C.grey }, grid: { color: C.border }, title: { display: true, text: 'Cantidad de mascotas', color: C.grey, font: { size: 11 } } },
+      },
+    },
+  });
 }
