@@ -90,10 +90,23 @@ router.get('/public/:id', async (req, res) => {
   }
 });
 
-// ============================================
-// RUTAS AUTENTICADAS
-// ============================================
-
+// Buscar propietarios existentes por CI o teléfono (para autocompletar)
+router.get('/owners/search', authenticateToken, async (req, res) => {
+  try {
+    const ci = (req.query.ci || '').trim();
+    const phone = (req.query.phone || '').trim();
+    if (!ci && !phone) return res.json([]);
+    let sql = 'SELECT DISTINCT owner_name, owner_ci, owner_phone, owner_email, owner_city, owner_address FROM pets WHERE 1=1';
+    const params = [];
+    if (ci) { sql += ' AND owner_ci = $' + (params.length + 1); params.push(ci); }
+    if (phone) { sql += ' AND owner_phone = $' + (params.length + 1); params.push(phone); }
+    const rows = await db.query(sql, params);
+    res.json(rows);
+  } catch (e) {
+    console.error('GET /api/pets/owners/search error:', e);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 router.get('/', authenticateToken, async (req, res) => {
   try {
     let sql = 'SELECT * FROM pets';

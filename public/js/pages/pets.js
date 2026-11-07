@@ -1,7 +1,19 @@
 import { api } from '../api.js';
 import { iconEye, iconEdit, iconCard, iconTrash, iconX, iconUpload, iconDownload, iconFileDown } from '../icons.js';
-import { escapeHtml, speciesLabel, statusBadge, placeholderPhoto, detailField, publicUrl, uid, toast } from '../utils.js';
+import { escapeHtml, speciesLabel, statusBadge, placeholderPhoto, detailField, publicUrl, uid, toast, calcAge } from '../utils.js';
 import { openModal, closeModal } from '../components/modal.js';
+import { BOLIVIA_LOCATIONS, DEPARTMENTS, getCities } from '../bolivia-locations.js';
+import { renderSearchableSelect, initSearchableSelect } from '../components/searchable-select.js';
+
+const BREEDS_BY_SPECIES = {
+  perro: ['Mestizo', 'Labrador', 'Pastor Alemán', 'Golden Retriever', 'Bulldog', 'Poodle', 'Chihuahua', 'Beagle', 'Rottweiler', 'Husky Siberiano', 'Dálmata', 'Boxer', 'Shih Tzu', 'Yorkshire Terrier', 'Pug', 'Schnauzer', 'Cocker Spaniel', 'Border Collie', 'Pitbull', 'Doberman', 'San Bernardo', 'Gran Danés', 'Akita', 'Shar Pei', 'Bichón Frisé', 'Maltés', 'Pomerania', 'Corgi', 'Dachshund', 'Otro'],
+  gato: ['Mestizo', 'Siamés', 'Persa', 'Maine Coon', 'Bengalí', 'Ragdoll', 'British Shorthair', 'Sphynx', 'Scottish Fold', 'Angora', 'Exótico', 'Abisinio', 'Birmano', 'Otro'],
+  otro: ['Conejo', 'Hámster', 'Cobayo', 'Loro', 'Canario', 'Tortuga', 'Iguana', 'Pez', 'Hurón', 'Otro']
+};
+
+const COMMON_COLORS = ['Negro', 'Blanco', 'Marrón', 'Dorado', 'Gris', 'Beige', 'Atigrado', 'Manchado', 'Tricolor', 'Otro'];
+
+const CATEGORIES = ['General', 'Mascota de compañía', 'Mascota de servicio', 'Mascota de trabajo', 'Mascota de exhibición'];
 
 let state = null;
 
@@ -147,7 +159,12 @@ async function importJson(e) {
   reader.readAsText(file);
 }
 
-async function openDetailModal(id) {
+/* Acceso directo a la ficha en una pestaña concreta (dashboard/alertas) */
+export function openPetDetail(id, tab) {
+  return openDetailModal(id, tab);
+}
+
+async function openDetailModal(id, tab) {
   const p = state.getPets().find(x => x.id === id);
   if (!p) return;
   openModal('modal-lg', `
@@ -182,6 +199,7 @@ async function openDetailModal(id) {
         ${detailField('Vacunado', p.medical_vaccinated)}${detailField('Vacunas', p.medical_vaccines)}
         ${detailField('Veterinaria', p.medical_vet)}${detailField('Enfermedades', p.medical_diseases || 'Ninguna')}
         ${detailField('Alergias', p.medical_allergies || 'Ninguna')}${detailField('Observaciones', p.medical_observations || '—')}
+        ${healthRecordsBlock(p.id)}
       </div>
       <div id="dtab-q" class="hidden" style="text-align:center; padding:20px 0;">
         <div id="detail-qr" style="display:inline-block; padding:10px; background:#fff; border-radius:10px;"></div>
@@ -221,6 +239,11 @@ async function openDetailModal(id) {
       }
     }
   }));
+  // Abrir la ficha directamente en una pestaña (alertas y accesos rápidos)
+  if (tab) {
+    const btn = document.querySelector(`[data-dtab="${tab}"]`);
+    if (btn) btn.click();
+  }
   document.querySelector('[data-editfrom]').addEventListener('click', () => { closeModal(); openPetModal(p.id); });
   document.querySelector('[data-toggle-lost]').addEventListener('click', async () => {
     const newStatus = p.status === 'Perdido' ? 'Activo' : 'Perdido';
@@ -235,13 +258,30 @@ async function openDetailModal(id) {
   });
 }
 
+/* Resumen de registros de salud (pet_health_records) dentro de la ficha */
+function healthRecordsBlock(petId) {
+  const recs = state.getHealthRecords(petId) || [];
+  if (!recs.length) {
+    return `<div class="dv-field full"><label>Historial de salud</label><span class="dv-val">Sin vacunas ni desparasitaciones registradas</span></div>`;
+  }
+  const rows = recs.map(r => {
+    const kind = r.type === 'vacuna' ? 'Vacuna' : r.type === 'desparasitacion' ? 'Desparasitación' : 'Nota clínica';
+    const state_ = r.applied ? 'Aplicada' : ((r.next_due && r.next_due < new Date().toISOString().slice(0, 10)) ? 'Vencida' : 'Pendiente');
+    const dates = [r.record_date && `registro ${r.record_date}`, r.next_due && r.next_due !== r.record_date && (r.applied ? 'próxima ' : 'vence ') + r.next_due].filter(Boolean).join(' · ');
+    return `<div style="grid-column:1/-1; display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid var(--border); padding:6px 0; font-size:12.5px;">
+      <span><b>${escapeHtml(r.title || '—')}</b> <span class="faint">· ${kind}</span><div class="faint" style="font-size:11px;">${escapeHtml(dates || '')}</div></span>
+      <span style="font-weight:600; color:var(--text-2); white-space:nowrap;">${state_}</span>
+    </div>`;
+  }).join('');
+  return `<div class="dv-field full"><label>Historial de salud (${recs.length})</label>${rows}</div>`;
+}
+
 function formatAge(p) {
   const parts = [];
   if (p.age_years) parts.push(`${p.age_years} año${p.age_years !== '1' ? 's' : ''}`);
   if (p.age_months) parts.push(`${p.age_months} mes${p.age_months !== '1' ? 'es' : ''}`);
   if (parts.length) return parts.join(' ');
-  if (p.birth_date) return calcAgeF(p.birth_date);
-  return '—';
+  if (p.birth_date) return calcAgeF(p.birth_date);  return '—';
 }
 
 function calcAgeF(dob) {
@@ -359,7 +399,16 @@ function addDynamicItem(listId, html) {
 
 let photoTemp = '';
 
-export async function openPetModal(id) {
+function colorToHex(color) {
+  const map = {
+    'Negro': '#1a1a1a', 'Blanco': '#f5f5f5', 'Marrón': '#8B4513', 'Dorado': '#DAA520',
+    'Gris': '#808080', 'Beige': '#F5F5DC', 'Atigrado': '#8B6914', 'Manchado': '#696969',
+    'Tricolor': '#8B4513', 'Otro': '#cccccc'
+  };
+  return map[color] || '#cccccc';
+}
+
+export async function openPetModal(id, opts = {}) {
   const isEdit = !!id;
   const pet = isEdit ? { ...state.getPets().find(p => p.id === id) } : blankPet();
   // Los detalles médicos viven en una tabla separada. Cargarlos al editar evita
@@ -378,6 +427,14 @@ export async function openPetModal(id) {
   openModal('modal-lg', `
     <div class="modal-head"><h3>${isEdit ? 'Editar mascota' : 'Registrar nueva mascota'}</h3><button class="btn-icon" data-close>${iconX}</button></div>
     <div class="modal-body">
+      <!-- Indicador de progreso -->
+      <div class="form-steps" id="form-steps">
+        <div class="form-step active" data-step="animal"><span class="step-num">1</span> Animal</div>
+        <div class="form-step-sep"></div>
+        <div class="form-step" data-step="prop"><span class="step-num">2</span> Propietario</div>
+        <div class="form-step-sep"></div>
+        <div class="form-step" data-step="med"><span class="step-num">3</span> Médico</div>
+      </div>
       <div class="tabs">
         <div class="tab-btn active" data-ftab="animal">Datos del animal</div>
         <div class="tab-btn" data-ftab="prop">Propietario</div>
@@ -388,8 +445,15 @@ export async function openPetModal(id) {
           <div class="field full"><label>Nombre de la mascota *</label><input required name="name" value="${escapeHtml(pet.name)}"></div>
           <div class="field"><label>N° de carnet / CI *</label><input required name="carnet_number" value="${escapeHtml(pet.carnet_number || '')}" placeholder="Ej: PLI-BO-2026-00001"></div>
           <div class="field"><label>Registro secuencial (BOL-CAR)</label><input name="ci_number" value="${escapeHtml(pet.ci_number || '')}" placeholder="Automático si se deja vacío"></div>
-          <div class="field"><label>Especie</label><select name="species"><option value="perro" ${pet.species === 'perro' ? 'selected' : ''}>Perro</option><option value="gato" ${pet.species === 'gato' ? 'selected' : ''}>Gato</option><option value="otro" ${pet.species === 'otro' ? 'selected' : ''}>Otro</option></select></div>
-          <div class="field"><label>¿Tiene microchip?</label>
+          <div class="field"><label>Especie</label>
+            <div class="toggle-btn-group" id="species-group">
+              <button type="button" class="toggle-btn ${pet.species === 'perro' ? 'active' : ''}" data-species="perro">🐕 Perro</button>
+              <button type="button" class="toggle-btn ${pet.species === 'gato' ? 'active' : ''}" data-species="gato">🐈 Gato</button>
+              <button type="button" class="toggle-btn ${pet.species === 'otro' ? 'active' : ''}" data-species="otro">🐾 Otro</button>
+            </div>
+            <input type="hidden" name="species" id="species-hidden" value="${escapeHtml(pet.species || 'perro')}">
+          </div>
+          ${renderSearchableSelect({ id: 'breed', name: 'breed', label: 'Raza', options: BREEDS_BY_SPECIES[pet.species || 'perro'] || [], value: pet.breed || '', placeholder: 'Buscar raza...' })}
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
               <input type="checkbox" name="has_chip" id="has-chip-check" ${pet.has_chip || pet.microchip ? 'checked' : ''} style="width:16px; height:16px;">
               Sí, tiene microchip implantado
@@ -405,7 +469,8 @@ export async function openPetModal(id) {
             </select>
           </div>
           <div id="age-birth-date-group" class="field" style="${pet.age_mode === 'years_months' ? 'display:none;' : ''}">
-            <label>Fecha de nacimiento</label><input type="date" name="birth_date" value="${pet.birth_date || ''}">
+            <label>Fecha de nacimiento</label><input type="date" name="birth_date" id="birth-date-input" value="${pet.birth_date || ''}">
+            <div id="age-calc-result" style="font-size:11.5px; color:var(--text-2); margin-top:4px;">${pet.birth_date ? calcAge(pet.birth_date) : 'Selecciona la fecha para calcular la edad'}</div>
           </div>
           <div id="age-years-months-group" class="field" style="${pet.age_mode === 'years_months' ? '' : 'display:none;'}">
             <div class="flex gap-2">
@@ -413,8 +478,20 @@ export async function openPetModal(id) {
               <div class="field" style="flex:1;"><label>Meses</label><input type="number" min="0" max="11" name="age_months" value="${escapeHtml(pet.age_months || '')}" placeholder="Ej: 6"></div>
             </div>
           </div>
-          <div class="field"><label>Sexo</label><select name="sex"><option ${pet.sex === 'Macho' ? 'selected' : ''}>Macho</option><option ${pet.sex === 'Hembra' ? 'selected' : ''}>Hembra</option></select></div>
-          <div class="field"><label>Color / señas distintivas</label><input name="distinctive_marks" value="${escapeHtml(pet.distinctive_marks || pet.color || '')}"></div>
+          <div class="field"><label>Sexo</label>
+            <div class="toggle-btn-group" id="sex-group">
+              <button type="button" class="toggle-btn ${pet.sex === 'Macho' ? 'active' : ''}" data-sex="Macho">♂ Macho</button>
+              <button type="button" class="toggle-btn ${pet.sex === 'Hembra' ? 'active' : ''}" data-sex="Hembra">♀ Hembra</button>
+            </div>
+            <input type="hidden" name="sex" id="sex-hidden" value="${escapeHtml(pet.sex || 'Macho')}">
+          </div>
+          <div class="field"><label>Color</label>
+            <div class="color-chips" id="color-chips">
+              ${COMMON_COLORS.map(c => `<div class="color-chip ${pet.distinctive_marks === c || pet.color === c ? 'active' : ''}" data-color="${escapeHtml(c)}" style="background:${colorToHex(c)};" title="${escapeHtml(c)}"></div>`).join('')}
+            </div>
+            <input type="hidden" name="color" id="color-hidden" value="${escapeHtml(pet.color || pet.distinctive_marks || '')}">
+            <input type="text" name="distinctive_marks" id="distinctive-marks-input" value="${escapeHtml(pet.distinctive_marks || pet.color || '')}" placeholder="Color o señas distintivas" style="margin-top:6px; width:100%; height:36px; padding:0 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface-2); font-size:13px;">
+          </div>
           <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" name="weight" value="${pet.weight || ''}"></div>
           <div class="field"><label>Categoría</label><input name="category" value="${escapeHtml(pet.category || '')}"></div>
           <div class="field"><label>Estado</label><select name="status"><option ${pet.status === 'Activo' ? 'selected' : ''}>Activo</option><option ${pet.status === 'Inactivo' ? 'selected' : ''}>Inactivo</option><option ${pet.status === 'Perdido' ? 'selected' : ''}>Perdido</option></select></div>
@@ -436,12 +513,29 @@ export async function openPetModal(id) {
           </div>
         </div>
         <div id="ftab-prop" class="form-grid hidden">
-          <div class="field full"><label>Nombre completo *</label><input required name="owner_name" value="${escapeHtml(pet.owner_name || '')}"></div>
-          <div class="field"><label>CI</label><input name="owner_ci" value="${escapeHtml(pet.owner_ci || '')}"></div>
-          <div class="field"><label>Teléfono *</label><input required name="owner_phone" value="${escapeHtml(pet.owner_phone || '')}"></div>
-          <div class="field"><label>Correo electrónico</label><input type="email" name="owner_email" value="${escapeHtml(pet.owner_email || '')}"></div>
-          <div class="field"><label>Ciudad</label><input name="owner_city" value="${escapeHtml(pet.owner_city || '')}"></div>
-          <div class="field full"><label>Dirección</label><input name="owner_address" value="${escapeHtml(pet.owner_address || '')}"></div>
+          <!-- Búsqueda de propietario existente -->
+          <div class="field full">
+            <div class="owner-search-box">
+              <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--text-2); margin-bottom:6px;">Buscar propietario existente</label>
+              <div class="search-row">
+                <input type="text" id="owner-search-ci" placeholder="CI del propietario" style="height:36px; padding:0 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); font-size:13px;">
+                <input type="text" id="owner-search-phone" placeholder="Teléfono" style="height:36px; padding:0 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); font-size:13px;">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-search-owner">Buscar</button>
+              </div>
+              <div id="owner-search-result" style="display:none;"></div>
+            </div>
+          </div>
+          <div class="field full"><label>Nombre completo *</label><input required name="owner_name" id="owner-name-input" value="${escapeHtml(pet.owner_name || '')}" placeholder="Nombre y apellidos"></div>
+          <div class="field"><label>CI</label><input name="owner_ci" id="owner-ci-input" value="${escapeHtml(pet.owner_ci || '')}" placeholder="Cédula de identidad"></div>
+          <div class="field"><label>Teléfono *</label><input required name="owner_phone" id="owner-phone-input" value="${escapeHtml(pet.owner_phone || '')}" placeholder="Ej: 70012345"></div>
+          <div class="field"><label>Correo electrónico</label><input type="email" name="owner_email" id="owner-email-input" value="${escapeHtml(pet.owner_email || '')}" placeholder="correo@ejemplo.com"></div>
+          <div class="field"><label>Departamento</label>
+            ${renderSearchableSelect({ id: 'dept', name: 'owner_department', label: '', options: DEPARTMENTS, value: '', placeholder: 'Buscar departamento...' })}
+          </div>
+          <div class="field"><label>Ciudad / Municipio</label>
+            ${renderSearchableSelect({ id: 'city', name: 'owner_city', label: '', options: [], value: pet.owner_city || '', placeholder: 'Primero selecciona departamento...' })}
+          </div>
+          <div class="field full"><label>Dirección</label><input name="owner_address" id="owner-address-input" value="${escapeHtml(pet.owner_address || '')}" placeholder="Calle, número, zona"></div>
         </div>
         <div id="ftab-med" class="form-grid hidden">
           <div class="field"><label>Vacunado</label><select name="medical_vaccinated" id="vaccinated-select"><option ${pet.medical_vaccinated === 'Sí' ? 'selected' : ''}>Sí</option><option ${pet.medical_vaccinated === 'No' ? 'selected' : ''}>No</option></select></div>
@@ -511,7 +605,138 @@ export async function openPetModal(id) {
     el.classList.add('active');
     ['animal', 'prop', 'med'].forEach(k => document.getElementById('ftab-' + k).classList.add('hidden'));
     document.getElementById('ftab-' + el.dataset.ftab).classList.remove('hidden');
+    // Actualizar indicador de progreso
+    document.querySelectorAll('.form-step').forEach(s => {
+      s.classList.remove('active', 'done');
+      const step = s.dataset.step;
+      if (step === el.dataset.ftab) s.classList.add('active');
+      const order = ['animal', 'prop', 'med'];
+      if (order.indexOf(step) < order.indexOf(el.dataset.ftab)) s.classList.add('done');
+    });
   }));
+  // Abrir directamente en una pestaña (acciones rápidas del dashboard)
+  if (opts.tab) {
+    const btn = document.querySelector(`[data-ftab="${opts.tab}"]`);
+    if (btn) btn.click();
+  }
+
+  // Toggle especie
+  document.querySelectorAll('#species-group .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#species-group .toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('species-hidden').value = btn.dataset.species;
+      // Actualizar razas según especie
+      const newBreeds = BREEDS_BY_SPECIES[btn.dataset.species] || [];
+      initSearchableSelect('breed', newBreeds.map(b => ({ v: b, l: b })), null);
+      const breedInput = document.getElementById('ss-input-breed');
+      if (breedInput) breedInput.value = '';
+      document.getElementById('ss-hidden-breed').value = '';
+    });
+  });
+
+  // Inicializar searchable selects
+  const species = pet.species || 'perro';
+  initSearchableSelect('breed', (BREEDS_BY_SPECIES[species] || []).map(b => ({ v: b, l: b })), null);
+
+  // Departamento → Ciudad
+  initSearchableSelect('dept', DEPARTMENTS.map(d => ({ v: d, l: d })), (dept) => {
+    const cities = getCities(dept);
+    initSearchableSelect('city', cities.map(c => ({ v: c, l: c })), null);
+    const cityInput = document.getElementById('ss-input-city');
+    if (cityInput) { cityInput.value = ''; cityInput.placeholder = `Buscar en ${dept}...`; }
+    document.getElementById('ss-hidden-city').value = '';
+  });
+
+  // Inicializar ciudad con datos existentes
+  if (pet.owner_city) {
+    // Buscar el departamento que contiene esta ciudad
+    for (const [dept, cities] of Object.entries(BOLIVIA_LOCATIONS)) {
+      if (cities.includes(pet.owner_city)) {
+        document.getElementById('ss-input-dept').value = dept;
+        document.getElementById('ss-hidden-dept').value = dept;
+        initSearchableSelect('city', cities.map(c => ({ v: c, l: c })), null);
+        document.getElementById('ss-input-city').value = pet.owner_city;
+        document.getElementById('ss-hidden-city').value = pet.owner_city;
+        break;
+      }
+    }
+  }
+
+  // Toggle sexo
+  document.querySelectorAll('#sex-group .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#sex-group .toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('sex-hidden').value = btn.dataset.sex;
+    });
+  });
+
+  // Color chips
+  document.querySelectorAll('#color-chips .color-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#color-chips .color-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const color = chip.dataset.color;
+      document.getElementById('color-hidden').value = color;
+      document.getElementById('distinctive-marks-input').value = color === 'Otro' ? '' : color;
+      if (color === 'Otro') document.getElementById('distinctive-marks-input').focus();
+    });
+  });
+
+  // Cálculo automático de edad desde fecha de nacimiento
+  const birthDateInput = document.getElementById('birth-date-input');
+  if (birthDateInput) {
+    birthDateInput.addEventListener('change', () => {
+      const result = document.getElementById('age-calc-result');
+      if (birthDateInput.value) {
+        result.textContent = calcAge(birthDateInput.value);
+      } else {
+        result.textContent = 'Selecciona la fecha para calcular la edad';
+      }
+    });
+  }
+
+  // Búsqueda de propietario existente
+  const btnSearchOwner = document.getElementById('btn-search-owner');
+  if (btnSearchOwner) {
+    btnSearchOwner.addEventListener('click', async () => {
+      const ci = document.getElementById('owner-search-ci').value.trim();
+      const phone = document.getElementById('owner-search-phone').value.trim();
+      if (!ci && !phone) { toast('Ingresa un CI o teléfono para buscar', 'error'); return; }
+      try {
+        const results = await api.searchOwners(ci, phone);
+        const resultDiv = document.getElementById('owner-search-result');
+        if (results && results.length > 0) {
+          const owner = results[0];
+          resultDiv.style.display = 'block';
+          resultDiv.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+              <div>
+                <b>${escapeHtml(owner.owner_name)}</b><br>
+                <span style="font-size:11px;">CI: ${escapeHtml(owner.owner_ci || '—')} · Tel: ${escapeHtml(owner.owner_phone || '—')} · ${escapeHtml(owner.owner_city || '')}</span>
+              </div>
+              <button type="button" id="btn-apply-owner">Usar estos datos</button>
+            </div>`;
+          document.getElementById('btn-apply-owner').addEventListener('click', () => {
+            document.getElementById('owner-name-input').value = owner.owner_name || '';
+            document.getElementById('owner-ci-input').value = owner.owner_ci || '';
+            document.getElementById('owner-phone-input').value = owner.owner_phone || '';
+            document.getElementById('owner-email-input').value = owner.owner_email || '';
+            document.getElementById('owner-address-input').value = owner.owner_address || '';
+            if (owner.owner_city) {
+              document.getElementById('ss-input-city').value = owner.owner_city;
+              document.getElementById('ss-hidden-city').value = owner.owner_city;
+            }
+            toast('Datos del propietario cargados');
+          });
+        } else {
+          resultDiv.style.display = 'block';
+          resultDiv.innerHTML = '<span style="color:var(--text-2);">No se encontró ningún propietario con esos datos. Puedes registrar uno nuevo.</span>';
+        }
+      } catch (e) { toast(e.message, 'error'); }
+    });
+  }
 
   // Toggle modo de edad
   const ageModeSelect = document.getElementById('age-mode-select');
@@ -668,15 +893,15 @@ async function savePet(id, isEdit) {
   const petData = {
     id,
     carnet_number: get('carnet_number'),
-    name: get('name'), species: get('species'), breed: get('breed'), sex: get('sex'),
+    name: get('name'), species: document.getElementById('species-hidden')?.value || get('species'), breed: document.getElementById('ss-hidden-breed')?.value || get('breed'), sex: document.getElementById('sex-hidden')?.value || get('sex'),
     birth_date: get('age_mode') === 'birth_date' ? get('birth_date') : '',
-    color: get('color') || get('distinctive_marks'), weight: get('weight'),
+    color: document.getElementById('color-hidden')?.value || get('distinctive_marks'), weight: get('weight'),
     category: get('category') || 'General', status: get('status'),
     distinctive_marks: get('distinctive_marks'),
     fingerprint: get('fingerprint'), offspring: get('offspring'), registration_date: get('registration_date'),
     photo: photoTemp,
     owner_name: get('owner_name'), owner_ci: get('owner_ci'), owner_address: get('owner_address'),
-    owner_city: get('owner_city'), owner_phone: get('owner_phone'), owner_email: get('owner_email'),
+    owner_city: document.getElementById('ss-hidden-city')?.value || get('owner_city'), owner_phone: get('owner_phone'), owner_email: get('owner_email'),
     medical_vaccinated: get('medical_vaccinated'), medical_vet: get('medical_vet'),
     medical_observations: get('medical_observations'),
     medical_diseases: get('medical_conditions'), medical_allergies: get('allergies'),

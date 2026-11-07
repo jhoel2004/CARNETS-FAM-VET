@@ -39,6 +39,7 @@ export const api = {
   getPublicPetByCarnet: (carnet) => request('GET', '/pets/public/carnet/' + encodeURIComponent(carnet)),
   getPublicPetHealth: (id) => request('GET', '/pets/public/' + id + '/health'),
   getDashboardAnalytics: () => request('GET', '/pets/analytics'),
+  searchOwners: (ci, phone) => request('GET', '/pets/owners/search?' + new URLSearchParams({ ci: ci || '', phone: phone || '' }).toString()),
 
   // Health records
   getHealthRecords: (petId) => request('GET', '/pets/' + petId + '/health-records'),
