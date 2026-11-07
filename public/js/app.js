@@ -40,8 +40,6 @@ export function renderApp() {
   const collapsed = localStorage.getItem('pli-sidebar-collapsed') === '1';
   app.innerHTML = `
   <div class="shell ${collapsed && window.innerWidth >= 1024 ? 'is-collapsed' : ''}">
-    <div class="sidebar-hover-zone" id="sidebar-hover-zone" aria-hidden="true"></div>
-    <div class="drawer-veil ${state.sidebarOpen ? 'show' : ''}" id="drawer-veil"></div>
     ${sidebarHtml()}
     <div class="main">
       ${topbarHtml()}
@@ -221,7 +219,6 @@ function topbarHtml() {
   const crumb = titles[state.view] || 'Inicio';
   return `
   <div class="topbar">
-    <button class="btn-icon" id="btn-burger" title="Menú">${iconMenu}</button>
     <div class="crumbs">
       <span class="crumb-link" data-nav="dashboard">Inicio</span>
       ${state.view !== 'dashboard' ? `${iconChevronRight}<b>${crumb}</b>` : `${iconChevronRight}<b>Panel principal</b>`}
@@ -247,40 +244,6 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-let escBound = false;
-let drawerOpenedByHover = false;
-let hoverCloseTimer = null;
-
-function clearHoverCloseTimer() {
-  if (hoverCloseTimer) {
-    clearTimeout(hoverCloseTimer);
-    hoverCloseTimer = null;
-  }
-}
-
-function setDrawer(open, { temporary = false } = {}) {
-  clearHoverCloseTimer();
-  state.sidebarOpen = open;
-  drawerOpenedByHover = open && temporary;
-  document.getElementById('sidebar')?.classList.toggle('open', open);
-  document.getElementById('drawer-veil')?.classList.toggle('show', open && !temporary);
-  const burger = document.getElementById('btn-burger');
-  if (burger) {
-    burger.innerHTML = open ? iconX : iconMenu;
-    burger.title = open ? 'Cerrar menú' : 'Abrir menú';
-  }
-}
-
-function scheduleHoverClose() {
-  clearHoverCloseTimer();
-  if (!drawerOpenedByHover) return;
-  hoverCloseTimer = setTimeout(() => {
-    if (drawerOpenedByHover) setDrawer(false);
-  }, 220);
-}
-
-function isDesktop() { return window.innerWidth >= 1024; }
-
 function closeMenus(exceptId) {
   ['menu-notif', 'menu-profile'].forEach(id => {
     if (id !== exceptId) document.getElementById(id)?.classList.remove('show');
@@ -298,45 +261,15 @@ function toggleMenu(menuId) {
 }
 
 function bindShellEvents() {
-  const burger = document.getElementById('btn-burger');
-  if (burger) {
-    burger.addEventListener('click', () => {
-      if (isDesktop()) {
-        // Escritorio: contraer / expandir el riel
-        document.querySelector('.shell')?.classList.toggle('is-collapsed');
-        const collapsed = document.querySelector('.shell')?.classList.contains('is-collapsed');
-        try { localStorage.setItem('pli-sidebar-collapsed', collapsed ? '1' : '0'); } catch (_e) { }
-      } else {
-        setDrawer(!state.sidebarOpen);
-      }
-    });
-  }
   const sideToggle = document.getElementById('sidebar-toggle');
   if (sideToggle) sideToggle.addEventListener('click', () => {
     document.querySelector('.shell')?.classList.toggle('is-collapsed');
     const collapsed = document.querySelector('.shell')?.classList.contains('is-collapsed');
     try { localStorage.setItem('pli-sidebar-collapsed', collapsed ? '1' : '0'); } catch (_e) { }
   });
-  document.getElementById('drawer-veil')?.addEventListener('click', () => setDrawer(false));
-  const canHoverSidebar = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  if (canHoverSidebar && !isDesktop()) {
-    const hoverZone = document.getElementById('sidebar-hover-zone');
-    const sidebar = document.getElementById('sidebar');
-    hoverZone?.addEventListener('mouseenter', () => setDrawer(true, { temporary: true }));
-    hoverZone?.addEventListener('mouseleave', scheduleHoverClose);
-    sidebar?.addEventListener('mouseenter', clearHoverCloseTimer);
-    sidebar?.addEventListener('mouseleave', scheduleHoverClose);
-  }
-  if (!escBound) {
-    escBound = true;
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && state.sidebarOpen) setDrawer(false);
-      if (e.key === 'Escape') closeMenus(null);
-    });
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.menu-anchor')) closeMenus(null);
-    });
-  }
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.menu-anchor')) closeMenus(null);
+  });
   // Navegación (incluye crumb Inicio y elementos internos)
   document.body.addEventListener('click', (e) => {
     const nav = e.target.closest('[data-nav]');
@@ -395,12 +328,9 @@ function navTo(view, subtab) {
   } else {
     // Solo cambió subtab dentro del mismo view: no reconstruir el shell entero
     renderView();
-    // Cerrar drawer en móvil
+    // Cerrar sidebar en móvil
     document.getElementById('sidebar')?.classList.remove('open');
-    document.getElementById('drawer-veil')?.classList.remove('show');
     state.sidebarOpen = false;
-    const burger = document.getElementById('btn-burger');
-    if (burger) { burger.innerHTML = iconMenu; burger.title = 'Abrir menú'; }
   }
 }
 

@@ -167,10 +167,6 @@ a{color:inherit; text-decoration:none;}
 .main{margin-left:220px; transition:margin-left .22s ease;}
 .shell.is-collapsed .sidebar{width:72px; padding-inline:8px;}
 .shell.is-collapsed .main{margin-left:72px;}
-.sidebar-hover-zone{position:fixed; inset:0 auto 0 0; width:14px; z-index:180;}
-.drawer-veil{position:fixed; inset:0; background:rgba(27,31,42,.5); opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:190;}
-.drawer-veil.show{opacity:1; pointer-events:auto;}
-#btn-burger{transition:transform .22s ease, background .15s ease;}
 .sidebar .brand-mark{padding:4px 8px 20px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:16px; display:flex; align-items:center; gap:10px;}
 .sidebar .brand-mark .paw{width:32px;height:32px; flex:0 0 auto;}
 .sidebar .brand-mark .name{font-size:16px; font-weight:700; letter-spacing:-.2px;}
@@ -214,10 +210,7 @@ a{color:inherit; text-decoration:none;}
 .nav-item.section-salud svg{color:#7C3AED;}
 .nav-item.section-admin svg{color:#D97706;}
 .nav-item.section-reportes svg{color:#14B8A6;}
-@media (hover:none), (pointer:coarse){.sidebar-hover-zone{display:none;}}
 @media (min-width:1024px){
-  .sidebar-hover-zone{display:none;}
-  .drawer-veil{display:none;}
   .sidebar.open{left:0;}
 }
 @media (max-width:1023.9px){
@@ -251,10 +244,7 @@ a{color:inherit; text-decoration:none;}
 .menu-item.danger, .menu-item.danger svg{color:var(--red);}
 .menu-scroll{max-height:340px; overflow-y:auto;}
 @keyframes popIn{from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:translateY(0);}}
-@media (hover:none), (pointer:coarse){.sidebar-hover-zone{display:none;}}
 @media (min-width:1024px){
-  .sidebar-hover-zone{display:none;}
-  .drawer-veil{display:none;}
   .sidebar.open{left:0;}
 }
 @media (max-width:1023.9px){
