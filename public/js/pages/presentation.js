@@ -145,7 +145,7 @@ export async function viewPresentation(petId) {
 
       <div class="logo">
         <span class="pets" aria-hidden="true">🐶🐱🐦</span>
-        <span class="brand">FAM<svg viewBox="0 0 40 52" aria-hidden="true"><path d="M7 4V27a13 13 0 0 0 26 0V4"/><path class="tl" d="M33 27c0 14-8 20-20 21"/></svg>VET</span>
+        <span class="brand">FAM<svg viewBox="0 0 40 52" aria-hidden="true"><path d="M30.5 3.5 V29.5 a9.5 9.5 0 0 1 -19 0 V25"/><path class="tl" d="M11 3.5 H30.5"/></svg>VET</span>
       </div>
 
       <svg class="beat" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true">
@@ -186,9 +186,12 @@ export async function viewPresentation(petId) {
           </span>
         </div>
         <div class="row"><b>COLOR / SEÑAS:</b><span class="v">${escapeHtml(pet.distinctive_marks || pet.color || '—')}</span></div>
-        <div class="row">
-          <b>PROPIETARIO:</b><span class="v">${escapeHtml(pet.owner_name || '—')}</span>
+        <div class="row"><b>PROPIETARIO:</b><span class="v">${escapeHtml(pet.owner_name || '—')}</span>
           <b>N.º REG.:</b><span class="v">${escapeHtml(String(pet.carnet_number || '—'))}</span>
+        </div>
+        <div class="row">
+          <b>REGISTRO:</b><span class="v">${escapeHtml(pet.ci_number || '—')}</span>
+          <b>MICROCHIP:</b><span class="v">${pet.has_chip ? '✓ ' + escapeHtml(pet.chip || 'Registrado') : '— Sin chip'}</span>
         </div>
         <div class="row"><b>TELÉFONO:</b><span class="v">${escapeHtml(pet.owner_phone || '—')}</span></div>
         ${addrLine ? `<div class="addr">${escapeHtml(addrLine)}</div>` : ''}

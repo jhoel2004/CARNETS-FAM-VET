@@ -1,9 +1,11 @@
-import { escapeHtml, statusBadge, placeholderPhoto, groupHistoryByDay, describeHistory, calcDashboardStats, calcHealthStats, pctOf, monthShort, petAgeYears } from '../utils.js';
+import { escapeHtml, statusBadge, placeholderPhoto, groupHistoryByDay, describeHistory, calcDashboardStats, calcHealthStats, pctOf, monthShort, petAgeYears, toast } from '../utils.js';
+import { api } from '../api.js';
 import { iconPaw, iconCheckCircle, iconAlert, iconCard, iconPlus, iconDog, iconCat, iconChart } from '../icons.js';
 
 let state = null;
 let charts = {};
 let dashFilters = { period: 'all', species: '', status: '', city: '' };
+let activityMode = 'action';
 
 export function initDashboard(s) {
   state = s;
@@ -75,10 +77,25 @@ function dashboardAnalysis(pets) {
   });
   const today = new Date().toISOString().slice(0, 10);
   const overdue = records.filter(r => !r.applied && (r.next_due || r.record_date) && (r.next_due || r.record_date) < today);
+  const vaccineRank = new Map();
+  records.forEach(r => {
+    if (r.type !== 'vacuna') return;
+    const title = String(r.title || '').trim();
+    if (title) vaccineRank.set(title, (vaccineRank.get(title) || 0) + 1);
+  });
+  const byDay = new Map();
+  state.getHistory().forEach(item => {
+    const m = String(item.date || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return;
+    const key = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    byDay.set(key, (byDay.get(key) || 0) + 1);
+  });
   return {
     cities: [...cities.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6),
     conditions: [...conditions.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6),
     weights, quality, actionGroups, overdue,
+    vaccineRank: [...vaccineRank.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6),
+    dailyActivity: [...byDay.entries()].sort().slice(-14),
     sterilized: details.filter(d => !!d.sterilized).length,
     microchipped: details.filter(d => !!d.microchip).length,
     bloodTyped: details.filter(d => !!d.blood_type).length,
@@ -111,6 +128,10 @@ export function viewDashboard() {
     <select class="chip" data-dashboard-filter="species"><option value="">Todas las especies</option><option value="perro" ${dashFilters.species === 'perro' ? 'selected' : ''}>Perros</option><option value="gato" ${dashFilters.species === 'gato' ? 'selected' : ''}>Gatos</option><option value="otro" ${dashFilters.species === 'otro' ? 'selected' : ''}>Otros</option></select>
     <select class="chip" data-dashboard-filter="status"><option value="">Todos los estados</option><option value="Activo" ${dashFilters.status === 'Activo' ? 'selected' : ''}>Activas</option><option value="Inactivo" ${dashFilters.status === 'Inactivo' ? 'selected' : ''}>Inactivas</option><option value="Perdido" ${dashFilters.status === 'Perdido' ? 'selected' : ''}>Perdidas</option></select>
     <select class="chip" data-dashboard-filter="city"><option value="">Todas las ciudades</option>${cities.map(city => `<option value="${escapeHtml(city)}" ${dashFilters.city === city ? 'selected' : ''}>${escapeHtml(city)}</option>`).join('')}</select>
+    <button class="btn btn-outline btn-sm" data-dash-status="Activo">Activas</button>
+    <button class="btn btn-outline btn-sm" data-dash-status="Perdido">Perdidas</button>
+    <button class="btn btn-outline btn-sm" id="btn-dashboard-export">Exportar CSV</button>
+    <button class="btn btn-primary btn-sm" id="btn-dashboard-refresh">Actualizar datos</button>
     <button class="btn btn-ghost btn-sm" id="btn-dashboard-reset">Restablecer</button>
   </div>
 
@@ -269,7 +290,13 @@ export function viewDashboard() {
 
     <div class="panel span-6"><div class="dash-sec-title"><span>Ciudades con más registros</span></div><div class="chart-box short"><canvas id="chart-cities"></canvas></div></div>
     <div class="panel span-6"><div class="dash-sec-title"><span>Enfermedades crónicas registradas</span></div><div class="chart-box short"><canvas id="chart-conditions"></canvas></div>${analysis.conditions.length ? '' : '<p class="mini-note">Aún no hay enfermedades crónicas registradas.</p>'}</div>
-    <div class="panel span-6"><div class="dash-sec-title"><span>Actividad del sistema</span></div><div class="chart-box short"><canvas id="chart-activity"></canvas></div></div>
+    <div class="panel span-6"><div class="dash-sec-title"><span>Actividad del sistema</span></div>
+      <div class="chart-toggle"><button class="chip ${activityMode === 'action' ? 'active' : ''}" data-actmode="action">Por acción</button><button class="chip ${activityMode === 'day' ? 'active' : ''}" data-actmode="day">Por día</button></div>
+      <div class="chart-box short"><canvas id="chart-activity"></canvas></div>
+    </div>
+    <div class="panel span-6"><div class="dash-sec-title"><span>Sexo del padrón</span></div><div class="chart-box short"><canvas id="chart-sex"></canvas></div></div>
+    <div class="panel span-6"><div class="dash-sec-title"><span>Vacunas más registradas</span></div><div class="chart-box short"><canvas id="chart-vaccines"></canvas></div>${analysis.vaccineRank.length ? '' : '<p class="mini-note">Aún no hay vacunas registradas.</p>'}</div>
+    <div class="panel span-6"><div class="dash-sec-title"><span>Perfil de cobertura de datos</span></div><div class="chart-box short"><canvas id="chart-coverage"></canvas></div><div class="mini-note">Porcentaje de mascotas con cada dato completo.</div></div>
     <div class="panel span-6"><div class="dash-sec-title"><span>Cobertura médica extendida</span></div><div class="coverage-grid"><div><b>${analysis.sterilized}</b><span>Esterilizadas</span></div><div><b>${analysis.microchipped}</b><span>Con microchip</span></div><div><b>${analysis.bloodTyped}</b><span>Con tipo sanguíneo</span></div><div class="danger"><b>${analysis.overdue.length}</b><span>Dosis vencidas</span></div></div></div>
 
     <!-- Propietarios -->
@@ -388,7 +415,32 @@ export function drawCharts() {
   renderBar('chart-weight', Object.keys(analysis.weights), Object.values(analysis.weights), '#2F6FB5');
   renderBar('chart-quality', Object.keys(analysis.quality), Object.values(analysis.quality), '#16B79A');
   renderBar('chart-cities', analysis.cities.map(x => x[0]), analysis.cities.map(x => x[1]), '#C89A3D', true);
-  renderBar('chart-activity', Object.keys(analysis.actionGroups), Object.values(analysis.actionGroups), '#2E8B4F');
+  renderBar('chart-vaccines', analysis.vaccineRank.map(x => x[0]), analysis.vaccineRank.map(x => x[1]), '#2F6FB5', true);
+  renderActivityChart();
+
+  // Sexo del padrón
+  const sexCanvas = document.getElementById('chart-sex');
+  if (sexCanvas) {
+    const hasSex = st.males + st.females + st.sexND > 0;
+    charts.sex = new Chart(sexCanvas, {
+      type: 'doughnut',
+      data: { labels: ['Machos', 'Hembras', 'Sin registrar'], datasets: [{ data: hasSex ? [st.males, st.females, st.sexND] : [1], backgroundColor: hasSex ? ['#16B79A', '#C89A3D', '#9aa7a0'] : ['#E3E9E7'], borderColor: '#fff', borderWidth: 3, hoverOffset: 2 }] },
+      options: { cutout: '66%', plugins: { legend: { display: true, position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
+    });
+  }
+
+  // Perfil de cobertura (radar, % de mascotas con cada dato)
+  const covCanvas = document.getElementById('chart-coverage');
+  if (covCanvas) {
+    const total = Math.max(1, st.total);
+    const coverage = Object.values(analysis.quality).map(v => Math.round((v / total) * 100));
+    charts.coverage = new Chart(covCanvas, {
+      type: 'radar',
+      data: { labels: Object.keys(analysis.quality), datasets: [{ data: coverage, backgroundColor: 'rgba(22,183,154,.18)', borderColor: '#16B79A', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#16B79A' }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { r: { beginAtZero: true, max: 100, ticks: { display: false, stepSize: 25 }, grid: { color: '#EDF1EF' }, pointLabels: { font: { size: 10 } } } } }
+    });
+  }
+
   const conditionsCanvas = document.getElementById('chart-conditions');
   if (conditionsCanvas) {
     const hasConditions = analysis.conditions.length > 0;
@@ -409,4 +461,66 @@ export function bindDashboardEvents() {
     dashFilters = { period: 'all', species: '', status: '', city: '' };
     import('../app.js').then(module => module.renderView());
   });
+  document.querySelectorAll('[data-dash-status]').forEach(el => el.addEventListener('click', () => {
+    dashFilters.status = el.dataset.dashStatus === dashFilters.status ? '' : el.dataset.dashStatus;
+    import('../app.js').then(module => module.renderView());
+  }));
+  document.querySelectorAll('[data-actmode]').forEach(el => el.addEventListener('click', () => {
+    activityMode = el.dataset.actmode;
+    document.querySelectorAll('[data-actmode]').forEach(x => x.classList.toggle('active', x === el));
+    renderActivityChart();
+  }));
+  document.getElementById('btn-dashboard-refresh')?.addEventListener('click', async () => {
+    toast('Actualizando datos…');
+    try {
+      await Promise.all([state.loadPets(), state.loadHistory(), state.loadAnalytics()]);
+      import('../app.js').then(module => module.renderView());
+      toast('Datos actualizados');
+    } catch (error) { toast(error.message, 'error'); }
+  });
+  document.getElementById('btn-dashboard-export')?.addEventListener('click', exportDashboardCsv);
+}
+
+/* ---------- Gráfico de actividad con modo conmutable ---------- */
+export function renderActivityChart() {
+  const canvas = document.getElementById('chart-activity');
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (charts.activity) { try { charts.activity.destroy(); } catch (_) { } charts.activity = null; }
+  const analysis = dashboardAnalysis(filteredPets());
+  if (activityMode === 'day') {
+    const points = analysis.dailyActivity;
+    charts.activity = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: points.map(x => `${Number(x[0].slice(8))}/${Number(x[0].slice(5, 7))}`),
+        datasets: [{ label: 'Acciones por día', data: points.map(x => x[1]), borderColor: '#C89A3D', backgroundColor: 'rgba(200,154,61,.12)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3 }]
+      },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#EDF1EF' } }, x: { grid: { display: false } } } }
+    });
+  } else {
+    charts.activity = new Chart(canvas, {
+      type: 'bar',
+      data: { labels: Object.keys(analysis.actionGroups), datasets: [{ data: Object.values(analysis.actionGroups), backgroundColor: '#2E8B4F', borderRadius: 6, maxBarThickness: 32 }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#EDF1EF' } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#EDF1EF' } } } }
+    });
+  }
+}
+
+/* ---------- Exportación CSV de la selección ---------- */
+function exportDashboardCsv() {
+  const pets = filteredPets();
+  if (!pets.length) return toast('No hay mascotas en la selección actual', 'error');
+  const head = ['Nombre', 'N° Carnet', 'Registro BOL-CAR', 'Especie', 'Raza', 'Sexo', 'Estado', 'Propietario', 'Teléfono', 'Ciudad', 'Microchip'];
+  const rows = pets.map(p => [
+    p.name, p.carnet_number, p.ci_number || '', speciesShort(p.species), p.breed || '', p.sex || '', p.status || '',
+    p.owner_name || '', p.owner_phone || '', p.owner_city || '', p.has_chip ? `Sí: ${p.chip || ''}` : 'No'
+  ]);
+  const csv = [head, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `fam-jvet-dashboard-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  api.logHistory('Exportación CSV del panel', `${pets.length} mascotas`);
+  toast('CSV exportado');
 }

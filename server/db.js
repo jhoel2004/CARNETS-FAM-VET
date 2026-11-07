@@ -121,6 +121,10 @@ async function createSqliteTables() {
     age_mode TEXT DEFAULT 'birth_date',
     vaccines_list TEXT DEFAULT '',
     distinctive_marks TEXT DEFAULT '',
+    ci_number TEXT DEFAULT '',
+    chip TEXT DEFAULT '',
+    has_chip INTEGER DEFAULT 0,
+    paw_photo TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
@@ -186,6 +190,10 @@ async function createSqliteTables() {
   addCol('pets', "age_mode TEXT DEFAULT 'birth_date'");
   addCol('pets', "vaccines_list TEXT DEFAULT ''");
   addCol('pets', "distinctive_marks TEXT DEFAULT ''");
+  addCol('pets', "ci_number TEXT DEFAULT ''");
+  addCol('pets', "chip TEXT DEFAULT ''");
+  addCol('pets', "has_chip INTEGER DEFAULT 0");
+  addCol('pets', "paw_photo TEXT DEFAULT ''");
   addCol('pet_medical_details', "vaccines_detail TEXT DEFAULT '[]'");
   addCol('pet_medical_details', "deworming_detail TEXT DEFAULT '[]'");
   addCol('pet_medical_details', "conditions_detail TEXT DEFAULT '[]'");
@@ -293,6 +301,13 @@ async function ensurePgSchema(client) {
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS distinctive_marks TEXT DEFAULT '';
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS age_mode TEXT DEFAULT 'birth_date';
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS vaccines_list TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS signature TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS age_years TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS age_months TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS ci_number TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS chip TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS has_chip INTEGER DEFAULT 0;
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS paw_photo TEXT DEFAULT '';
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS vaccines_detail TEXT DEFAULT '[]';
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS deworming_detail TEXT DEFAULT '[]';
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS conditions_detail TEXT DEFAULT '[]';

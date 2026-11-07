@@ -263,7 +263,9 @@ function blankPet() {
     owner_name: '', owner_ci: '', owner_address: '', owner_city: '', owner_phone: '', owner_email: '',
     distinctive_marks: '',
     medical_vaccinated: 'No', medical_vaccines: '', medical_vet: '', medical_observations: '', medical_diseases: '', medical_allergies: '',
-    signature: '', age_years: '', age_months: '', age_mode: 'birth_date',
+    signature: '',
+    ci_number: '', chip: '', has_chip: 0,
+    age_years: '', age_months: '', age_mode: 'birth_date',
     vaccines_list: '', deworming_history: '', medical_conditions: '', allergies: '', surgeries: '', medications: '',
     sterilized: 0, microchip: '', blood_type: ''
   };
@@ -385,7 +387,15 @@ export async function openPetModal(id) {
         <div id="ftab-animal" class="form-grid">
           <div class="field full"><label>Nombre de la mascota *</label><input required name="name" value="${escapeHtml(pet.name)}"></div>
           <div class="field"><label>N° de carnet / CI *</label><input required name="carnet_number" value="${escapeHtml(pet.carnet_number || '')}" placeholder="Ej: PLI-BO-2026-00001"></div>
+          <div class="field"><label>Registro secuencial (BOL-CAR)</label><input name="ci_number" value="${escapeHtml(pet.ci_number || '')}" placeholder="Automático si se deja vacío"></div>
           <div class="field"><label>Especie</label><select name="species"><option value="perro" ${pet.species === 'perro' ? 'selected' : ''}>Perro</option><option value="gato" ${pet.species === 'gato' ? 'selected' : ''}>Gato</option><option value="otro" ${pet.species === 'otro' ? 'selected' : ''}>Otro</option></select></div>
+          <div class="field"><label>¿Tiene microchip?</label>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
+              <input type="checkbox" name="has_chip" id="has-chip-check" ${pet.has_chip || pet.microchip ? 'checked' : ''} style="width:16px; height:16px;">
+              Sí, tiene microchip implantado
+            </label>
+          </div>
+          <div class="field"><label>Número de chip</label><input name="chip" id="chip-num" value="${escapeHtml(pet.chip || pet.microchip || '')}" ${pet.has_chip || pet.microchip ? '' : 'disabled'} placeholder="Se activa al marcar la casilla"></div>
           <div class="field"><label>Raza</label><input name="breed" value="${escapeHtml(pet.breed || '')}"></div>
           <div class="field">
             <label>¿Cómo registrar la edad?</label>
@@ -484,7 +494,7 @@ export async function openPetModal(id) {
           <div class="field"><label>Veterinaria</label><input name="medical_vet" value="${escapeHtml(pet.medical_vet || '')}"></div>
           <div class="field"><label>Alergias</label><input name="allergies" value="${escapeHtml(pet.allergies || '')}"></div>
            <div class="field"><label>Esterilizado</label><select name="sterilized"><option value="0" ${!pet.sterilized ? 'selected' : ''}>No</option><option value="1" ${pet.sterilized ? 'selected' : ''}>Sí</option></select></div>
-          <div class="field"><label>Microchip</label><input name="microchip" value="${escapeHtml(pet.microchip || '')}"></div>
+          <div class="field full" style="font-size:12px; color:var(--text-2);">El microchip se registra en la pestaña <b>Datos del animal</b>, con su casilla y número.</div>
           <div class="field"><label>Tipo de sangre</label><input name="blood_type" value="${escapeHtml(pet.blood_type || '')}"></div>
           <div class="field"><label>Observaciones</label><textarea name="medical_observations" rows="3">${escapeHtml(pet.medical_observations || '')}</textarea></div>
         </div>
@@ -525,6 +535,16 @@ export async function openPetModal(id) {
     vaccinatedSelect.addEventListener('change', (e) => {
       const group = document.getElementById('vaccines-section');
       if (group) group.style.display = e.target.value === 'Sí' ? '' : 'none';
+    });
+  }
+
+  // Toggle número de chip según la casilla "¿Tiene microchip?"
+  const hasChipCheck = document.getElementById('has-chip-check');
+  if (hasChipCheck) {
+    const chipInput = document.getElementById('chip-num');
+    hasChipCheck.addEventListener('change', () => {
+      chipInput.disabled = !hasChipCheck.checked;
+      if (hasChipCheck.checked) chipInput.focus();
     });
   }
 
@@ -661,6 +681,9 @@ async function savePet(id, isEdit) {
     medical_observations: get('medical_observations'),
     medical_diseases: get('medical_conditions'), medical_allergies: get('allergies'),
     signature: get('signature'),
+    ci_number: get('ci_number'),
+    chip: fd.get('has_chip') ? get('chip') : '',
+    has_chip: fd.get('has_chip') ? 1 : 0,
     age_years: get('age_mode') === 'years_months' ? get('age_years') : '',
     age_months: get('age_mode') === 'years_months' ? get('age_months') : '',
     age_mode: get('age_mode'),
@@ -669,8 +692,11 @@ async function savePet(id, isEdit) {
     medical_conditions: conditions.map(c => c.name).filter(Boolean).join(', '),
     surgeries: surgeries.map(s => s.name).filter(Boolean).join(', '),
     medications: medications.map(m => m.name).filter(Boolean).join(', '),
-    sterilized: get('sterilized') === '1' ? 1 : 0, microchip: get('microchip'), blood_type: get('blood_type')
+    sterilized: get('sterilized') === '1' ? 1 : 0, microchip: fd.get('has_chip') ? get('chip') : '', blood_type: get('blood_type')
   };
+
+  // El microchip extendido (tabla pet_medical_details) se sincroniza con el chip de la ficha.
+  const microchipValue = petData.chip;
 
   try {
     let createdId = id;
@@ -692,7 +718,7 @@ async function savePet(id, isEdit) {
       surgeries: petData.surgeries,
       medications: petData.medications,
       sterilized: petData.sterilized,
-      microchip: petData.microchip,
+      microchip: microchipValue,
       blood_type: petData.blood_type,
       vaccines_detail: vaccines,
       deworming_detail: dewormings,

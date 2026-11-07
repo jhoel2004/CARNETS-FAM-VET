@@ -152,7 +152,7 @@
 .logo .brand svg path {
   fill: none;
   stroke: var(--blue);
-  stroke-width: 3.4;
+  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-dasharray: 140;
   stroke-dashoffset: 140;
