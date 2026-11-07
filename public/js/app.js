@@ -116,12 +116,7 @@ const NAV_GROUPS = () => {
       { id: 'buscar', label: 'Registros', icon: iconSearch },
     ]},
     { label: 'Salud', items: [
-      { id: 'salud', label: 'Vacunación', icon: iconSyringe, subtab: 'vacunacion' },
-      { id: 'salud', label: 'Desparasitación', icon: iconPill, subtab: 'desparasitacion' },
-      { id: 'salud', label: 'Enfermedades', icon: iconHeartbeat, subtab: 'enfermedades' },
-      { id: 'salud', label: 'Esterilización', icon: iconScissors, subtab: 'esterilizacion' },
-      { id: 'salud', label: 'Próximas atenciones', icon: iconCalendar, subtab: 'agenda' },
-      { id: 'salud', label: 'Historial clínico', icon: iconStethoscope, subtab: 'historial' },
+      { id: 'salud', label: 'Salud', icon: iconStethoscope, subtab: 'vacunacion' },
     ]},
     { label: 'Administración', items: [
       { id: 'config', label: 'Usuarios', icon: iconUser, adminOnly: true },
