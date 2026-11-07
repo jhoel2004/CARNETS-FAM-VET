@@ -132,7 +132,6 @@ function sidebarHtml() {
       ${pawSvg()}
       <div class="name">${escapeHtml(state.getSettings().systemName || 'FAM J VET')}<small>ID BOLIVIA</small></div>
     </div>
-    <button class="side-toggle" id="sidebar-toggle" title="Contraer / expandir">${iconChevronDown}</button>
     ${NAV_GROUPS().map(g => `
       <div class="nav-group-label">${g.label}</div>
       ${g.items.map(i => {
@@ -261,12 +260,6 @@ function toggleMenu(menuId) {
 }
 
 function bindShellEvents() {
-  const sideToggle = document.getElementById('sidebar-toggle');
-  if (sideToggle) sideToggle.addEventListener('click', () => {
-    document.querySelector('.shell')?.classList.toggle('is-collapsed');
-    const collapsed = document.querySelector('.shell')?.classList.contains('is-collapsed');
-    try { localStorage.setItem('pli-sidebar-collapsed', collapsed ? '1' : '0'); } catch (_e) { }
-  });
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.menu-anchor')) closeMenus(null);
   });
