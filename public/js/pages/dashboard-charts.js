@@ -2,7 +2,7 @@
    Dashboard: gráficos (Chart.js 4.4.1) con la paleta de identidad.
    Los colores se leen de variables CSS: cambiar --brand cambia todo.
    ============================================================ */
-import { filteredPets, dashboardAnalysis, healthRecordsFor } from './dashboard-data.js';
+import { filteredPets, dashboardAnalysisCached, healthRecordsFor, getDashTab } from './dashboard-data.js';
 import { lastMonths, monthShort, ageGroupLabel, petAgeYears } from '../utils.js';
 
 let state = null;
@@ -161,149 +161,246 @@ function bar(id, labels, data, colors, horizontal = false) {
   });
 }
 
+/* ---------- Lazy load de gráficos por pestaña ---------- */
+/* Solo se crean los gráficos de la pestaña activa.
+   chartsInitialized rastrea qué pestañas ya tienen sus gráficos dibujados. */
+let chartsInitialized = new Set();
+
+export function isChartInitialized(tab) { return chartsInitialized.has(tab); }
+export function markChartInitialized(tab) { chartsInitialized.add(tab); }
+export function clearChartsInitialized() { chartsInitialized = new Set(); }
+
 /* ---------- Destruir todo antes de redibujar ---------- */
 function destroyAll() {
   Object.values(charts).forEach(c => { try { c && c.destroy(); } catch (_) {} });
   charts = {};
 }
 
-/* ----------  Dibujo principal (solo paneles presentes en la pestaña) ---------- */
+/* ----------  Dibujo principal (solo gráficos de la pestaña activa) ---------- */
 export function drawCharts() {
   if (typeof Chart === 'undefined') return;
   destroyAll();
+  clearChartsInitialized();
   palette();
   const pets = filteredPets();
-  const analysis = dashboardAnalysis(pets);
+  const analysis = dashboardAnalysisCached(pets);
+  const dashTab = getDashTab();
 
-  /* A. Evolución de registros + comparación con el periodo anterior */
-  const ctxM = document.getElementById('chart-months');
-  if (ctxM) {
-    const months = lastMonths(Number(chartRange) || 12);
-    const data = months.map(mo => regCount(pets, mo));
-    const prev = months.map(mo => {
-      const shift = months.length;
-      const d = new Date(Number(mo.slice(0, 4)), Number(mo.slice(5, 7)) - 1 - shift, 1);
-      const pk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      return regCount(pets, pk);
-    });
-    const datasets = [{
-      label: 'Nuevas mascotas', data,
-      borderColor: C.green2, backgroundColor: C.greenDim,
-      fill: true, tension: .38, borderWidth: 2, pointRadius: 2.5, pointBackgroundColor: C.green2,
-    }];
-    if (prev.some(v => v > 0)) {
-      datasets.push({
-        label: 'Periodo anterior', data: prev, borderColor: C.greyFill, borderDash: [5, 4],
-        fill: false, tension: .38, borderWidth: 1.6, pointRadius: 0,
+  /* A. Evolución de registros (solo pestaña resumen) */
+  if (dashTab === 'resumen') {
+    const ctxM = document.getElementById('chart-months');
+    if (ctxM && !chartsInitialized.has('resumen-months')) {
+      const months = lastMonths(Number(chartRange) || 12);
+      const data = months.map(mo => regCount(pets, mo));
+      const prev = months.map(mo => {
+        const shift = months.length;
+        const d = new Date(Number(mo.slice(0, 4)), Number(mo.slice(5, 7)) - 1 - shift, 1);
+        const pk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        return regCount(pets, pk);
       });
+      const datasets = [{
+        label: 'Nuevas mascotas', data,
+        borderColor: C.green2, backgroundColor: C.greenDim,
+        fill: true, tension: .38, borderWidth: 2, pointRadius: 2.5, pointBackgroundColor: C.green2,
+      }];
+      if (prev.some(v => v > 0)) {
+        datasets.push({
+          label: 'Periodo anterior', data: prev, borderColor: C.greyFill, borderDash: [5, 4],
+          fill: false, tension: .38, borderWidth: 1.6, pointRadius: 0,
+        });
+      }
+      chartDefaults();
+      charts.months = new Chart(ctxM, {
+        type: 'line',
+        data: { labels: months.map(monthShort), datasets },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { display: datasets.length > 1, position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+          scales: lineOptions().scales,
+        },
+      });
+      chartsInitialized.add('resumen-months');
     }
-    chartDefaults();
-    charts.months = new Chart(ctxM, {
-      type: 'line',
-      data: { labels: months.map(monthShort), datasets },
-      options: {
-        maintainAspectRatio: false,
-        plugins: { legend: { display: datasets.length > 1, position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
-        scales: lineOptions().scales,
-      },
-    });
+
+    const ctxS = document.getElementById('chart-status');
+    if (ctxS && !chartsInitialized.has('resumen-status')) {
+      charts.status = new Chart(ctxS, {
+        type: 'doughnut',
+        data: {
+          labels: ['Activas', 'Inactivas', 'Perdidas'],
+          datasets: [{ data: statusCounts(pets), backgroundColor: [C.green, C.grey, C.red], borderColor: C.surface, borderWidth: 3, hoverOffset: 3 }],
+        },
+        options: donutOptions(),
+      });
+      chartsInitialized.add('resumen-status');
+    }
   }
 
-  /* B. Estados de registro */
-  const ctxS = document.getElementById('chart-status');
-  if (ctxS) donut('chart-status', ['Activas', 'Inactivas', 'Perdidas'], statusCounts(pets), [C.green, C.grey, C.red]);
+  /* B. Salud: solo pestaña salud */
+  if (dashTab === 'salud') {
+    const ctxH = document.getElementById('chart-health');
+    if (ctxH && !chartsInitialized.has('salud-health')) {
+      const t = healthTotals(pets);
+      charts.health = new Chart(ctxH, {
+        type: 'doughnut',
+        data: {
+          labels: ['Aplicadas', 'Pendientes', 'Vencidas'],
+          datasets: [{ data: [t.aplicadas, t.pendientes, t.vencidas], backgroundColor: [C.green, C.gold, C.red], borderColor: C.surface, borderWidth: 3, hoverOffset: 3 }],
+        },
+        options: donutOptions(),
+      });
+      chartsInitialized.add('salud-health');
+    }
 
-  /* C. Distribución por especie */
-  const counts = speciesCounts(pets);
-  const ctxSp = document.getElementById('chart-species');
-  if (ctxSp) donut('chart-species', ['Perros', 'Gatos', 'Otros'], [counts.perro, counts.gato, counts.otro], [C.green, C.gold, C.grey]);
+    const ctxHM = document.getElementById('chart-health-months');
+    if (ctxHM && !chartsInitialized.has('salud-health-months')) {
+      const keys = analysis.healthMonths.keys;
+      charts.healthMonths = new Chart(ctxHM, {
+        type: 'line',
+        data: {
+          labels: keys.map(monthShort),
+          datasets: [
+            { label: 'Aplicadas', data: keys.map(k => analysis.healthMonths.data[k].aplicadas), borderColor: C.green2, backgroundColor: C.greenDim, fill: true, tension: .38, borderWidth: 2, pointRadius: 2.5 },
+            { label: 'Pendientes', data: keys.map(k => analysis.healthMonths.data[k].pendientes), borderColor: C.gold, backgroundColor: C.goldDim, fill: false, tension: .38, borderWidth: 2, pointRadius: 2.5 },
+            { label: 'Vencidas', data: keys.map(k => analysis.healthMonths.data[k].vencidas), borderColor: C.red, backgroundColor: C.redDim, fill: false, tension: .38, borderWidth: 2, pointRadius: 2.5 },
+          ],
+        },
+        options: legendBottomOptions(),
+      });
+      chartsInitialized.add('salud-health-months');
+    }
 
-  /* D. Rangos de edad */
-  const ctxAge = document.getElementById('chart-age');
-  if (ctxAge) {
-    const b = ageBuckets(pets);
-    bar('chart-age', Object.keys(b), Object.values(b), C.green, false);
+    const ctxV = document.getElementById('chart-vaccines');
+    if (ctxV && !chartsInitialized.has('salud-vaccines')) {
+      charts.vaccines = new Chart(ctxV, {
+        type: 'bar',
+        data: { labels: analysis.vaccineRank.map(x => x[0]), datasets: [{ data: analysis.vaccineRank.map(x => x[1]), backgroundColor: C.blue, borderRadius: 6, maxBarThickness: 22 }] },
+        options: barOptions(true),
+      });
+      chartsInitialized.add('salud-vaccines');
+    }
+
+    const ctxCond = document.getElementById('chart-conditions');
+    if (ctxCond && analysis.conditions.length && !chartsInitialized.has('salud-conditions')) {
+      charts.conditions = new Chart(ctxCond, {
+        type: 'doughnut',
+        data: {
+          labels: analysis.conditions.map(x => x[0]),
+          datasets: [{ data: analysis.conditions.map(x => x[1]), backgroundColor: [C.red, C.gold, C.green, C.blue, C.grey], borderColor: C.surface, borderWidth: 3, hoverOffset: 3 }],
+        },
+        options: donutOptions(),
+      });
+      chartsInitialized.add('salud-conditions');
+    }
+
+    const ctxCov = document.getElementById('chart-coverage');
+    if (ctxCov && pets.length && !chartsInitialized.has('salud-coverage')) {
+      const total = Math.max(1, pets.length);
+      const labels = Object.keys(analysis.quality);
+      const values = Object.values(analysis.quality).map(v => Math.round((v / total) * 100));
+      chartDefaults();
+      charts.coverage = new Chart(ctxCov, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: '% de fichas', data: values, backgroundColor: C.green2, borderRadius: 6, maxBarThickness: 18 }] },
+        options: {
+          indexAxis: 'y',
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.parsed.x}% (${Object.values(analysis.quality)[c.dataIndex]} de ${pets.length})` } } },
+          scales: { x: { min: 0, max: 100, ticks: { callback: v => v + '%', color: C.grey }, grid: { color: C.border } }, y: { ticks: { color: C.grey }, grid: { display: false } } },
+        },
+      });
+      chartsInitialized.add('salud-coverage');
+    }
   }
 
-  /* E. Rangos de peso */
-  const ctxW = document.getElementById('chart-weight');
-  if (ctxW) bar('chart-weight', Object.keys(analysis.weights), Object.values(analysis.weights), C.blue, false);
+  /* C. Padrón: solo pestaña padron */
+  if (dashTab === 'padron') {
+    const ctxSp = document.getElementById('chart-species');
+    if (ctxSp && !chartsInitialized.has('padron-species')) {
+      const counts = speciesCounts(pets);
+      charts.species = new Chart(ctxSp, {
+        type: 'doughnut',
+        data: { labels: ['Perros', 'Gatos', 'Otros'], datasets: [{ data: [counts.perro, counts.gato, counts.otro], backgroundColor: [C.green, C.gold, C.grey], borderColor: C.surface, borderWidth: 3, hoverOffset: 3 }] },
+        options: donutOptions(),
+      });
+      chartsInitialized.add('padron-species');
+    }
 
-  /* F. Vacunación / desparasitación: aplicadas, pendientes, vencidas */
-  const ctxH = document.getElementById('chart-health');
-  if (ctxH) {
-    const t = healthTotals(pets);
-    charts.health = new Chart(ctxH, {
-      type: 'doughnut',
-      data: {
-        labels: ['Aplicadas', 'Pendientes', 'Vencidas'],
-        datasets: [{ data: [t.aplicadas, t.pendientes, t.vencidas], backgroundColor: [C.green, C.gold, C.red], borderColor: C.surface, borderWidth: 3, hoverOffset: 3 }],
-      },
-      options: donutOptions(),
-    });
+    const ctxAge = document.getElementById('chart-age');
+    if (ctxAge && !chartsInitialized.has('padron-age')) {
+      const b = ageBuckets(pets);
+      charts.age = new Chart(ctxAge, {
+        type: 'bar',
+        data: { labels: Object.keys(b), datasets: [{ data: Object.values(b), backgroundColor: C.green, borderRadius: 6, maxBarThickness: 34 }] },
+        options: barOptions(false),
+      });
+      chartsInitialized.add('padron-age');
+    }
+
+    const ctxW = document.getElementById('chart-weight');
+    if (ctxW && !chartsInitialized.has('padron-weight')) {
+      charts.weight = new Chart(ctxW, {
+        type: 'bar',
+        data: { labels: Object.keys(analysis.weights), datasets: [{ data: Object.values(analysis.weights), backgroundColor: C.blue, borderRadius: 6, maxBarThickness: 34 }] },
+        options: barOptions(false),
+      });
+      chartsInitialized.add('padron-weight');
+    }
+
+    const ctxSex = document.getElementById('chart-sex');
+    if (ctxSex && !chartsInitialized.has('padron-sex')) {
+      const males = pets.filter(p => p.sex === 'Macho').length;
+      const females = pets.filter(p => p.sex === 'Hembra').length;
+      const nd = pets.length - males - females;
+      charts.sex = new Chart(ctxSex, {
+        type: 'doughnut',
+        data: { labels: ['Machos', 'Hembras', 'Sin registrar'], datasets: [{ data: [males, females, nd], backgroundColor: [C.green, C.gold, C.grey], borderColor: C.surface, borderWidth: 3, hoverOffset: 3 }] },
+        options: donutOptions(),
+      });
+      chartsInitialized.add('padron-sex');
+    }
   }
 
-  /* F2. Evolución mensual de vacunación/desparasitación */
-  const ctxHM = document.getElementById('chart-health-months');
-  if (ctxHM) {
-    const keys = analysis.healthMonths.keys;
-    charts.healthMonths = new Chart(ctxHM, {
-      type: 'line',
-      data: {
-        labels: keys.map(monthShort),
-        datasets: [
-          { label: 'Aplicadas', data: keys.map(k => analysis.healthMonths.data[k].aplicadas), borderColor: C.green2, backgroundColor: C.greenDim, fill: true, tension: .38, borderWidth: 2, pointRadius: 2.5 },
-          { label: 'Pendientes', data: keys.map(k => analysis.healthMonths.data[k].pendientes), borderColor: C.gold, backgroundColor: C.goldDim, fill: false, tension: .38, borderWidth: 2, pointRadius: 2.5 },
-          { label: 'Vencidas', data: keys.map(k => analysis.healthMonths.data[k].vencidas), borderColor: C.red, backgroundColor: C.redDim, fill: false, tension: .38, borderWidth: 2, pointRadius: 2.5 },
-        ],
-      },
-      options: legendBottomOptions(),
-    });
+  /* D. Territorio: solo pestaña territorio */
+  if (dashTab === 'territorio') {
+    const ctxCi = document.getElementById('chart-cities');
+    if (ctxCi && !chartsInitialized.has('territorio-cities')) {
+      charts.cities = new Chart(ctxCi, {
+        type: 'bar',
+        data: { labels: analysis.cities.map(x => x[0]), datasets: [{ data: analysis.cities.map(x => x[1]), backgroundColor: C.gold, borderRadius: 6, maxBarThickness: 22 }] },
+        options: barOptions(true),
+      });
+      chartsInitialized.add('territorio-cities');
+    }
   }
 
-  /* Vacunas más registradas (Salud) */
-  const ctxV = document.getElementById('chart-vaccines');
-  if (ctxV) bar('chart-vaccines', analysis.vaccineRank.map(x => x[0]), analysis.vaccineRank.map(x => x[1]), C.blue, true);
-
-  /* Enfermedades crónicas (Salud) */
-  const ctxCond = document.getElementById('chart-conditions');
-  if (ctxCond && analysis.conditions.length) {
-    donut('chart-conditions', analysis.conditions.map(x => x[0]), analysis.conditions.map(x => x[1]), [C.red, C.gold, C.green, C.blue, C.grey]);
+  /* E. Actividad: solo pestaña actividad */
+  if (dashTab === 'actividad') {
+    renderActivityChart();
+    chartsInitialized.add('actividad');
   }
 
-  /* G. Distribución geográfica (Territorio) */
-  const ctxCi = document.getElementById('chart-cities');
-  if (ctxCi) bar('chart-cities', analysis.cities.map(x => x[0]), analysis.cities.map(x => x[1]), C.gold, true);
-
-  /* H. Cobertura de información (Alertas) */
-  const ctxCov = document.getElementById('chart-coverage');
-  if (ctxCov && pets.length) {
-    const total = Math.max(1, pets.length);
-    const labels = Object.keys(analysis.quality);
-    const values = Object.values(analysis.quality).map(v => Math.round((v / total) * 100));
-    chartDefaults();
-    charts.coverage = new Chart(ctxCov, {
-      type: 'bar',
-      data: { labels, datasets: [{ label: '% de fichas', data: values, backgroundColor: C.green2, borderRadius: 6, maxBarThickness: 18 }] },
-      options: {
-        indexAxis: 'y',
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.parsed.x}% (${Object.values(analysis.quality)[c.dataIndex]} de ${pets.length})` } } },
-        scales: { x: { min: 0, max: 100, ticks: { callback: v => v + '%', color: C.grey }, grid: { color: C.border } }, y: { ticks: { color: C.grey }, grid: { display: false } } },
-      },
-    });
+  /* F. Alertas: solo gráfico de cobertura (ya está en salud/alertas) */
+  if (dashTab === 'alertas') {
+    const ctxCov = document.getElementById('chart-coverage');
+    if (ctxCov && pets.length && !chartsInitialized.has('alertas-coverage')) {
+      const total = Math.max(1, pets.length);
+      const labels = Object.keys(analysis.quality);
+      const values = Object.values(analysis.quality).map(v => Math.round((v / total) * 100));
+      chartDefaults();
+      charts.coverage = new Chart(ctxCov, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: '% de fichas', data: values, backgroundColor: C.green2, borderRadius: 6, maxBarThickness: 18 }] },
+        options: {
+          indexAxis: 'y',
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.parsed.x}% (${Object.values(analysis.quality)[c.dataIndex]} de ${pets.length})` } } },
+          scales: { x: { min: 0, max: 100, ticks: { callback: v => v + '%', color: C.grey }, grid: { color: C.border } }, y: { ticks: { color: C.grey }, grid: { display: false } } },
+        },
+      });
+      chartsInitialized.add('alertas-coverage');
+    }
   }
-
-  /* Sexo del padrón (Padrón) */
-  const ctxSex = document.getElementById('chart-sex');
-  if (ctxSex) {
-    const males = pets.filter(p => p.sex === 'Macho').length;
-    const females = pets.filter(p => p.sex === 'Hembra').length;
-    const nd = pets.length - males - females;
-    donut('chart-sex', ['Machos', 'Hembras', 'Sin registrar'], [males, females, nd], [C.green, C.gold, C.grey]);
-  }
-
-  renderActivityChart();
 }
 
 /* ---------- Gráfico de actividad (con modo conmutable) ---------- */
@@ -312,7 +409,7 @@ export function renderActivityChart() {
   if (!canvas || typeof Chart === 'undefined') return;
   if (charts.activity) { try { charts.activity.destroy(); } catch (_) { } charts.activity = null; }
   palette();
-  const analysis = dashboardAnalysis(filteredPets());
+  const analysis = dashboardAnalysisCached(filteredPets());
   if (activityMode === 'day') {
     charts.activity = new Chart(canvas, {
       type: 'line',

@@ -200,7 +200,7 @@ function timelineHtml(limit = 40) {
 
 /* ---------- Centro de alertas ---------- */
 function alertCenterHtml(pets) {
-  const { alerts, counts } = data.buildAlerts(pets);
+  const { alerts, counts } = data.buildAlertsCached(pets);
   const sections = [
     ['critica', 'Crítica'],
     ['alta', 'Alta'],
@@ -239,7 +239,7 @@ function alertCenterHtml(pets) {
 
 /* ---------- Resumen: mini alertas ---------- */
 function alertMiniHtml(pets) {
-  const { counts, total } = data.buildAlerts(pets);
+  const { counts, total } = data.buildAlertsCached(pets);
   const rows = [
     ['critica', 'Críticas', counts.critica],
     ['alta', 'Alta prioridad', counts.alta],
@@ -265,7 +265,7 @@ export function viewDashboard() {
   const pets = data.filteredPets();
   const st = calcDashboardStats(pets, state.getHistory());
   const hs = calcHealthStats(pets, data.healthMap());
-  const analysis = data.dashboardAnalysis(pets);
+  const analysis = data.dashboardAnalysisCached(pets);
   const records = data.healthRecordsFor(pets);
   const dashTab = data.getDashTab();
   const dogs = st.dogs, cats = st.cats, others = st.others, total = st.total;

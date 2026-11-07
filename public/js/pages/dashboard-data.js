@@ -32,6 +32,38 @@ export function resetDraft() { draft = emptyFilters(); filters = emptyFilters();
 
 export function getHistory() { return state ? state.getHistory() : []; }
 
+/* ---------- Caché de análisis y alertas ---------- */
+/* Evita recalcular dashboardAnalysis y buildAlerts en cada render
+   cuando los datos de entrada no han cambiado. */
+let analysisCache = { petsKey: null, result: null };
+let alertsCache = { petsKey: null, result: null };
+
+function petsKey(pets) {
+  // Clave basada en cantidad de mascotas y última fecha de actualización
+  return pets.length + '|' + (pets.reduce((m, p) => Math.max(m, new Date(p.updated_at || p.registration_date || 0).getTime()), 0));
+}
+
+export function dashboardAnalysisCached(pets) {
+  const key = petsKey(pets);
+  if (analysisCache.petsKey === key && analysisCache.result) return analysisCache.result;
+  const result = dashboardAnalysis(pets);
+  analysisCache = { petsKey: key, result };
+  return result;
+}
+
+export function buildAlertsCached(pets) {
+  const key = petsKey(pets);
+  if (alertsCache.petsKey === key && alertsCache.result) return alertsCache.result;
+  const result = buildAlerts(pets);
+  alertsCache = { petsKey: key, result };
+  return result;
+}
+
+export function clearAnalysisCache() {
+  analysisCache = { petsKey: null, result: null };
+  alertsCache = { petsKey: null, result: null };
+}
+
 /* ---------- Selección filtrada de mascotas ---------- */
 export function filteredPets() {
   if (!state) return [];
