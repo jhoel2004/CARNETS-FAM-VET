@@ -116,19 +116,12 @@ const NAV_GROUPS = () => {
       { id: 'buscar', label: 'Registros', icon: iconSearch },
     ]},
     { label: 'Salud', items: [
-      { id: 'salud', label: 'Historial clínico', icon: iconStethoscope, subtab: 'historial' },
       { id: 'salud', label: 'Vacunación', icon: iconSyringe, subtab: 'vacunacion' },
       { id: 'salud', label: 'Desparasitación', icon: iconPill, subtab: 'desparasitacion' },
       { id: 'salud', label: 'Enfermedades', icon: iconHeartbeat, subtab: 'enfermedades' },
       { id: 'salud', label: 'Esterilización', icon: iconScissors, subtab: 'esterilizacion' },
-    ]},
-    { label: 'Agenda', items: [
       { id: 'salud', label: 'Próximas atenciones', icon: iconCalendar, subtab: 'agenda' },
-    ]},
-    { label: 'Análisis', items: [
-      { id: 'dashboard', label: 'Estadísticas', icon: iconChart, subtab: 'padron' },
-      { id: 'reportes', label: 'Reportes', icon: iconFileText },
-      { id: 'dashboard', label: 'Actividad', icon: iconActivity, subtab: 'actividad' },
+      { id: 'salud', label: 'Historial clínico', icon: iconStethoscope, subtab: 'historial' },
     ]},
     { label: 'Administración', items: [
       { id: 'config', label: 'Usuarios', icon: iconUser, adminOnly: true },
@@ -401,10 +394,22 @@ function bindShellEvents() {
 /* Navegación con subpestañas (dashboard / salud) */
 function navTo(view, subtab) {
   state.sidebarOpen = false;
+  const viewChanged = state.view !== view;
   if (view === 'dashboard' && subtab) setDashTab(subtab);
   if (view === 'salud' && subtab) setSaludSubtab(subtab);
   state.view = view;
-  renderApp();
+  if (viewChanged) {
+    renderApp();
+  } else {
+    // Solo cambió subtab dentro del mismo view: no reconstruir el shell entero
+    renderView();
+    // Cerrar drawer en móvil
+    document.getElementById('sidebar')?.classList.remove('open');
+    document.getElementById('drawer-veil')?.classList.remove('show');
+    state.sidebarOpen = false;
+    const burger = document.getElementById('btn-burger');
+    if (burger) { burger.innerHTML = iconMenu; burger.title = 'Abrir menú'; }
+  }
 }
 
 export async function renderView() {
