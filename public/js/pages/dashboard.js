@@ -6,6 +6,15 @@ let state = null;
 let charts = {};
 let dashFilters = { period: 'all', species: '', status: '', city: '' };
 let activityMode = 'action';
+let dashTab = 'resumen';
+const dashTabList = [
+  ['resumen', 'Resumen'],
+  ['salud', 'Salud'],
+  ['padron', 'Padrón'],
+  ['territorio', 'Territorio'],
+  ['actividad', 'Actividad'],
+  ['alertas', 'Alertas'],
+];
 
 export function initDashboard(s) {
   state = s;
@@ -135,6 +144,12 @@ export function viewDashboard() {
     <button class="btn btn-ghost btn-sm" id="btn-dashboard-reset">Restablecer</button>
   </div>
 
+  <!-- Pestañas del panel: menos contenido a la vista, navegable con botones -->
+  <div class="dash-tabs" role="tablist">
+    ${dashTabList.map(([key, label]) => `<button class="dash-tab ${dashTab === key ? 'active' : ''}" data-dashtab="${key}" role="tab" aria-selected="${dashTab === key}">${label}</button>`).join('')}
+  </div>
+
+  ${dashTab === 'resumen' ? `
   <!-- KPIs generales -->
   <div class="kpi-grid" style="margin-bottom:16px;">
     <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconPaw}</span></div><div class="kpi-num">${st.total}</div><div class="kpi-lbl">Mascotas registradas</div>${st.thisMonth ? `<div class="kpi-delta">+${st.thisMonth} este mes</div>` : ''}</div>
@@ -143,8 +158,9 @@ export function viewDashboard() {
     <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico red">${iconAlert}</span></div><div class="kpi-num">${st.lost}</div><div class="kpi-lbl">Mascotas perdidas</div>${st.lost ? `<div class="kpi-delta warn">Requieren atención</div>` : ''}</div>
     <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico gold">${iconCard}</span></div><div class="kpi-num">${st.total}</div><div class="kpi-lbl">Carnets emitidos</div></div>
     <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconPlus}</span></div><div class="kpi-num">${st.thisMonth}</div><div class="kpi-lbl">Registradas este mes</div></div>
-  </div>
+  </div>` : ''}
 
+  ${dashTab === 'salud' ? `
   <!-- KPIs de salud -->
   <div class="kpi-grid" style="margin-bottom:16px;">
     <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconCheckCircle}</span></div><div class="kpi-num">${hs.totalVacunasAplicadas}</div><div class="kpi-lbl">Vacunas aplicadas</div><div class="kpi-delta">${hs.vacunasPendientes} pendiente${hs.vacunasPendientes !== 1 ? 's' : ''}</div></div>
@@ -153,19 +169,21 @@ export function viewDashboard() {
     <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconPlus}</span></div><div class="kpi-num">${hs.totalDesparasitaciones}</div><div class="kpi-lbl">Total desparasitaciones</div><div class="kpi-delta">${hs.pctDesparasitaciones}% al día</div></div>
     <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconCard}</span></div><div class="kpi-num">${hs.totalHistorial}</div><div class="kpi-lbl">Registros clínicos</div></div>
     <div class="kpi-card"><div class="kpi-top"><span class="kpi-ico">${iconPaw}</span></div><div class="kpi-num">${hs.mascotasConSalud}</div><div class="kpi-lbl">Mascotas con historial</div></div>
-  </div>
+  </div>` : ''}
 
   <div class="dash12">
-    <div class="panel span-4"><div class="dash-sec-title"><span>Estados de registro</span></div><div class="chart-box short"><canvas id="chart-status"></canvas></div></div>
-    <div class="panel span-4"><div class="dash-sec-title"><span>Rangos de peso</span></div><div class="chart-box short"><canvas id="chart-weight"></canvas></div></div>
-    <div class="panel span-4"><div class="dash-sec-title"><span>Calidad de fichas</span></div><div class="chart-box short"><canvas id="chart-quality"></canvas></div><div class="mini-note">Campos completos sobre ${st.total} mascotas.</div></div>
+    ${dashTab === 'resumen' ? `<div class="panel span-4"><div class="dash-sec-title"><span>Estados de registro</span></div><div class="chart-box short"><canvas id="chart-status"></canvas></div></div>` : ''}
+    ${dashTab === 'padron' ? `<div class="panel span-4"><div class="dash-sec-title"><span>Rangos de peso</span></div><div class="chart-box short"><canvas id="chart-weight"></canvas></div></div>` : ''}
+    ${dashTab === 'alertas' ? `<div class="panel span-6"><div class="dash-sec-title"><span>Calidad de fichas</span></div><div class="chart-box short"><canvas id="chart-quality"></canvas></div><div class="mini-note">Campos completos sobre ${st.total} mascotas.</div></div>` : ''}
+    ${dashTab === 'resumen' ? `
     <!-- Gráfico: registros de mascotas por mes -->
     <div class="panel span-8">
       <div class="dash-sec-title"><span>Registros de mascotas</span></div>
       <div class="sec-sub" style="margin:-8px 0 10px;">Nuevas mascotas por mes · últimos 12 meses</div>
       <div class="chart-box"><canvas id="chart-months"></canvas></div>
-    </div>
+    </div>` : ''}
 
+    ${dashTab === 'salud' ? `
     <!-- Gráfico: estado de salud (vacunas/desparasitaciones) -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Estado de salud</span></div>
@@ -180,8 +198,9 @@ export function viewDashboard() {
         </div>
       </div>
       <div class="mini-note">Vacunas y desparasitaciones del sistema</div>
-    </div>
+    </div>` : ''}
 
+    ${dashTab === 'padron' ? `
     <!-- Distribución por especie -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Distribución por especie</span></div>
@@ -197,8 +216,9 @@ export function viewDashboard() {
         </div>
       </div>
       <div class="mini-note">Activas ${st.active} · Inactivas ${st.inactive} · Perdidas ${st.lost}</div>
-    </div>
+    </div>` : ''}
 
+    ${dashTab === 'resumen' ? `
     <!-- Mascotas recientes -->
     <div class="panel span-8 table-span">
       <div class="dash-sec-title"><span>Mascotas registradas recientemente</span><button class="btn btn-ghost btn-sm" data-nav="mascotas">Ver todas</button></div>
@@ -214,8 +234,9 @@ export function viewDashboard() {
             <td class="faint" style="font-size:12px; white-space:nowrap;">${escapeHtml(p.registration_date || '')}</td>
           </tr>`).join('')}
       </tbody></table></div>` : `<div class="empty-state" style="padding:28px 16px;"><div><b>Todavía no hay fichas</b><p>Registra la primera mascota para verla aquí.</p></div></div>`}
-    </div>
+    </div>` : ''}
 
+    ${dashTab === 'salud' ? `
     <!-- Próximas citas de salud -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Próximas citas</span><button class="btn btn-ghost btn-sm" data-nav="mascotas">Gestionar salud</button></div>
@@ -231,10 +252,11 @@ export function viewDashboard() {
           </div>
         `).join('')}
       </div>` : `<p class="faint" style="text-align:center; padding:20px 0;">Sin citas programadas.</p>`}
-    </div>
+    </div>` : ''}
 
+    ${dashTab === 'actividad' ? `
     <!-- Actividad reciente -->
-    <div class="panel span-4">
+    <div class="panel span-6">
       <div class="dash-sec-title"><span>Actividad reciente</span><button class="btn btn-ghost btn-sm" data-nav="historial">Historial</button></div>
       ${groups.length ? groups.map(g => `
         <div class="act-day">${escapeHtml(g.label)}</div>
@@ -244,8 +266,9 @@ export function viewDashboard() {
             <div class="act-body"><b>${escapeHtml(describeHistory(h))}</b><div class="act-obj">${escapeHtml(h.user || '')}</div></div>
           </div>`).join('')}
       `).join('') : `<p class="faint">Sin actividad registrada.</p>`}
-    </div>
+    </div>` : ''}
 
+    ${dashTab === 'padron' ? `
     <!-- Edad -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Edad de las mascotas</span></div>
@@ -255,8 +278,9 @@ export function viewDashboard() {
           <div class="hbar-track"><i style="width:${st.total ? Math.round((v / Math.max(st.total, 1)) * 100) : 0}%;"></i></div></div>`).join('')}
       </div>
       <div class="mini-note">Calculada desde años/meses registrados.</div>
-    </div>
+    </div>` : ''}
 
+    ${dashTab === 'padron' ? `
     <!-- Sexo y esterilización -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Sexo y esterilización</span></div>
@@ -267,38 +291,41 @@ export function viewDashboard() {
       <div class="sex-row"><span class="sex-dot" style="background:#16B79A;"></span>Esterilizados<b style="margin-left:auto;">${st.sterilized}</b></div>
       <div class="sex-row"><span class="sex-dot" style="background:#E3E9E7; border:1px solid #c6d0cc;"></span>Sin registrar<b style="margin-left:auto;">${unster}</b></div>
       <div class="mini-note">Según información de la ficha médica.</div>
-    </div>
+    </div>` : ''}
 
+    ${dashTab === 'alertas' ? `
     <!-- Atención -->
-    <div class="panel span-4">
+    <div class="panel span-6">
       <div class="dash-sec-title"><span>Atención</span></div>
       <div class="alert-row red"><div class="alert-num">${st.lost}</div><div><div class="a-lbl">Mascotas reportadas perdidas</div><div class="a-sub">Requieren seguimiento</div></div></div>
       <div class="alert-row gold"><div class="alert-num">${st.incomplete}</div><div><div class="a-lbl">Registros incompletos</div><div class="a-sub">Sin raza, foto o peso</div></div></div>
       <div class="alert-row"><div class="alert-num">${st.pendingCards}</div><div><div class="a-lbl">Carnets pendientes</div><div class="a-sub">Emitidos sin impresión registrada</div></div></div>
       <div class="alert-row"><div class="alert-num">${hs.vacunasPendientes + hs.desparasitacionesPendientes}</div><div><div class="a-lbl">Dosis pendientes</div><div class="a-sub">Vacunas o desparasitaciones sin aplicar</div></div></div>
-    </div>
+    </div>` : ''}
 
+    ${dashTab === 'padron' ? `
     <!-- Razas más registradas -->
-    <div class="panel span-6">
+    <div class="panel span-4">
       <div class="dash-sec-title"><span>Razas más registradas</span></div>
       ${st.topBreeds.length ? `<div class="hbar-list">
         ${st.topBreeds.map(b => `
           <div class="hbar-row"><span class="hb-lbl">${escapeHtml(b.name)}</span><b>${b.count}</b>
           <div class="hbar-track gold"><i style="width:${Math.round((b.count / breedMax) * 100)}%;"></i></div></div>`).join('')}
       </div>` : `<p class="faint">Sin información de razas todavía.</p>`}
-    </div>
+    </div>` : ''}
 
-    <div class="panel span-6"><div class="dash-sec-title"><span>Ciudades con más registros</span></div><div class="chart-box short"><canvas id="chart-cities"></canvas></div></div>
-    <div class="panel span-6"><div class="dash-sec-title"><span>Enfermedades crónicas registradas</span></div><div class="chart-box short"><canvas id="chart-conditions"></canvas></div>${analysis.conditions.length ? '' : '<p class="mini-note">Aún no hay enfermedades crónicas registradas.</p>'}</div>
-    <div class="panel span-6"><div class="dash-sec-title"><span>Actividad del sistema</span></div>
+    ${dashTab === 'territorio' ? `<div class="panel span-6"><div class="dash-sec-title"><span>Ciudades con más registros</span></div><div class="chart-box short"><canvas id="chart-cities"></canvas></div></div>` : ''}
+    ${dashTab === 'salud' ? `<div class="panel span-6"><div class="dash-sec-title"><span>Enfermedades crónicas registradas</span></div><div class="chart-box short"><canvas id="chart-conditions"></canvas></div>${analysis.conditions.length ? '' : '<p class="mini-note">Aún no hay enfermedades crónicas registradas.</p>'}</div>` : ''}
+    ${dashTab === 'actividad' ? `<div class="panel span-6"><div class="dash-sec-title"><span>Actividad del sistema</span></div>
       <div class="chart-toggle"><button class="chip ${activityMode === 'action' ? 'active' : ''}" data-actmode="action">Por acción</button><button class="chip ${activityMode === 'day' ? 'active' : ''}" data-actmode="day">Por día</button></div>
       <div class="chart-box short"><canvas id="chart-activity"></canvas></div>
-    </div>
-    <div class="panel span-6"><div class="dash-sec-title"><span>Sexo del padrón</span></div><div class="chart-box short"><canvas id="chart-sex"></canvas></div></div>
-    <div class="panel span-6"><div class="dash-sec-title"><span>Vacunas más registradas</span></div><div class="chart-box short"><canvas id="chart-vaccines"></canvas></div>${analysis.vaccineRank.length ? '' : '<p class="mini-note">Aún no hay vacunas registradas.</p>'}</div>
-    <div class="panel span-6"><div class="dash-sec-title"><span>Perfil de cobertura de datos</span></div><div class="chart-box short"><canvas id="chart-coverage"></canvas></div><div class="mini-note">Porcentaje de mascotas con cada dato completo.</div></div>
-    <div class="panel span-6"><div class="dash-sec-title"><span>Cobertura médica extendida</span></div><div class="coverage-grid"><div><b>${analysis.sterilized}</b><span>Esterilizadas</span></div><div><b>${analysis.microchipped}</b><span>Con microchip</span></div><div><b>${analysis.bloodTyped}</b><span>Con tipo sanguíneo</span></div><div class="danger"><b>${analysis.overdue.length}</b><span>Dosis vencidas</span></div></div></div>
+    </div>` : ''}
+    ${dashTab === 'padron' ? `<div class="panel span-4"><div class="dash-sec-title"><span>Sexo del padrón</span></div><div class="chart-box short"><canvas id="chart-sex"></canvas></div></div>` : ''}
+    ${dashTab === 'salud' ? `<div class="panel span-4"><div class="dash-sec-title"><span>Vacunas más registradas</span></div><div class="chart-box short"><canvas id="chart-vaccines"></canvas></div>${analysis.vaccineRank.length ? '' : '<p class="mini-note">Aún no hay vacunas registradas.</p>'}</div>` : ''}
+    ${dashTab === 'alertas' ? `<div class="panel span-6"><div class="dash-sec-title"><span>Perfil de cobertura de datos</span></div><div class="chart-box short"><canvas id="chart-coverage"></canvas></div><div class="mini-note">Porcentaje de mascotas con cada dato completo.</div></div>` : ''}
+    ${dashTab === 'salud' ? `<div class="panel span-6"><div class="dash-sec-title"><span>Cobertura médica extendida</span></div><div class="coverage-grid"><div><b>${analysis.sterilized}</b><span>Esterilizadas</span></div><div><b>${analysis.microchipped}</b><span>Con microchip</span></div><div><b>${analysis.bloodTyped}</b><span>Con tipo sanguíneo</span></div><div class="danger"><b>${analysis.overdue.length}</b><span>Dosis vencidas</span></div></div></div>` : ''}
 
+    ${dashTab === 'territorio' ? `
     <!-- Propietarios -->
     <div class="panel span-6">
       <div class="dash-sec-title"><span>Propietarios</span></div>
@@ -309,7 +336,7 @@ export function viewDashboard() {
       </div>
       ${st.topOwners.length ? st.topOwners.map(o => `
         <div class="owner-row"><span class="o-av">${escapeHtml(initials(o.name))}</span><span>${escapeHtml(o.name)}<div class="o-sub">${o.count} ${o.count === 1 ? 'mascota' : 'mascotas'}</div></span><b>${o.count}</b></div>`).join('') : `<p class="faint">Sin propietarios registrados.</p>`}
-    </div>
+    </div>` : ''}
   </div>`;
 }
 
@@ -463,6 +490,10 @@ export function bindDashboardEvents() {
   });
   document.querySelectorAll('[data-dash-status]').forEach(el => el.addEventListener('click', () => {
     dashFilters.status = el.dataset.dashStatus === dashFilters.status ? '' : el.dataset.dashStatus;
+    import('../app.js').then(module => module.renderView());
+  }));
+  document.querySelectorAll('[data-dashtab]').forEach(el => el.addEventListener('click', () => {
+    dashTab = el.dataset.dashtab;
     import('../app.js').then(module => module.renderView());
   }));
   document.querySelectorAll('[data-actmode]').forEach(el => el.addEventListener('click', () => {

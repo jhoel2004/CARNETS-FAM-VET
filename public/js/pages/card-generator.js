@@ -89,8 +89,13 @@ function signatureHtml(signature) {
   return `<span>${escapeHtml(signature || '—')}</span>`;
 }
 
-function chipValue(pet) {
-  return pet.has_chip ? `✓ ${pet.chip || 'Registro pendiente'}` : '— Sin chip';
+// Bloque de microchip en la parte libre derecha del carnet:
+// con chip → check arriba y número abajo; sin chip → texto alineado a la derecha.
+function chipBlock(pet) {
+  if (pet.has_chip) {
+    return `<div class="fam-id-chip ok"><label>MICROCHIP</label><span class="check">✓</span><b>${escapeHtml(pet.chip || 'Sin número')}</b></div>`;
+  }
+  return `<div class="fam-id-chip none"><label>MICROCHIP</label><span class="val">— Sin chip</span></div>`;
 }
 
 function frontHtml(pet) {
@@ -103,9 +108,9 @@ function frontHtml(pet) {
     <div class="fam-id-fields fam-id-front-fields">
       ${field('Especie', speciesLabel(pet.species))}${field('Sexo', pet.sex)}${field('Peso', pet.weight ? `${pet.weight} kg` : '—')}
       ${field('Nombre', pet.name, 'wide name')}${field('Raza', pet.breed, 'wide name')}${field('Fecha de nacimiento', formatDate(pet.birth_date), 'wide')}
-      ${field('Microchip', chipValue(pet), 'wide')}
       ${field('Fecha de emisión', formatDate(pet.registration_date), 'double')}${field('Fecha de expiración', expiryDate(pet))}
     </div>
+    ${chipBlock(pet)}
     <div class="fam-id-signature">${signatureHtml(pet.signature)}<label>FIRMA DEL PROPIETARIO</label></div>
   </div>`;
 }
