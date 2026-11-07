@@ -54,6 +54,11 @@ function donutLegend(rows) {
   </div>`;
 }
 
+function ringHtml(pct, label, tone = '', size = '') {
+  const p = Math.max(0, Math.min(100, Number(pct) || 0));
+  return `<div class="ring ${tone} ${size}" style="--p:${p}"><b>${label ?? p + '%'}</b></div>`;
+}
+
 /* ---------- Skeleton ---------- */
 function skeleton() {
   const kpis = Array(10).fill('<div class="skel skel-kpi"></div>').join('');
@@ -118,30 +123,35 @@ function filtersHtml(allPets, pets) {
 
 /* ---------- KPIs ---------- */
 function kpiCardsHtml(pets, st, hs, analysis, records) {
-  const today = new Date().toISOString().slice(0, 10);
   const overdue = analysis.overdue || [];
-  const overdueVacc = overdue.filter(r => r.type === 'vacuna').length;
-  const overdueDesp = overdue.filter(r => r.type === 'desparasitacion').length;
-  const withCard = pets.filter(p => p.carnet_number).length;
   const totalVacDesp = hs.totalVacunas + hs.totalDesparasitaciones;
   const appliedVacDesp = hs.totalVacunasAplicadas + hs.totalDesparasitacionesAplicadas;
   const coveragePct = totalVacDesp > 0 ? Math.round((appliedVacDesp / totalVacDesp) * 100) : 0;
+  const activePct = pctOf(st.active, st.total);
 
   const kpis = [
-    { lbl: 'Mascotas registradas', num: st.total, ico: iconPaw, cls: 'green', go: 'mascotas', border: 'green', foot: `<div class="kpi-foot">${st.thisMonth} este mes</div>` },
-    { lbl: 'Mascotas activas', num: st.active, ico: iconCheckCircle, cls: 'green', go: 'mascotas', border: 'green', foot: `<div class="kpi-foot">${pctOf(st.active, st.total)}% del padrón</div>` },
-    { lbl: 'Vacunas aplicadas', num: hs.totalVacunasAplicadas, ico: iconSyringe, cls: 'green', go: 'salud', border: 'green', foot: `<div class="kpi-foot">${hs.vacunasPendientes} pendiente${hs.vacunasPendientes !== 1 ? 's' : ''}</div>` },
-    { lbl: 'Dosis vencidas', num: analysis.overdue.length, ico: iconAlert, cls: 'red', go: 'dashboard:alertas', border: 'red', foot: `<div class="kpi-foot">Requieren atención</div>` },
-    { lbl: 'Desparasitaciones aplicadas', num: hs.totalDesparasitacionesAplicadas, ico: iconPill, cls: 'amber', go: 'salud', border: 'amber', foot: `<div class="kpi-foot">${hs.desparasitacionesPendientes} pendiente${hs.desparasitacionesPendientes !== 1 ? 's' : ''}</div>` },
-    { lbl: 'Cobertura sanitaria', num: coveragePct, ico: iconStethoscope, cls: 'blue', go: 'salud', border: 'blue', foot: `<div class="kpi-foot">${totalVacDesp} dosis registradas</div>` },
+    { lbl: 'Mascotas registradas', num: st.total, ico: iconPaw, cls: 'green', go: 'mascotas', border: 'green',
+      foot: `<div class="kpi-foot">${st.thisMonth} este mes</div>` },
+    { lbl: 'Mascotas activas', num: st.active, ico: iconCheckCircle, cls: 'green', go: 'mascotas', border: 'green',
+      ring: activePct, tone: '', foot: `<div class="kpi-foot">del padrón</div>` },
+    { lbl: 'Vacunas aplicadas', num: hs.totalVacunasAplicadas, ico: iconSyringe, cls: 'green', go: 'salud', border: 'green',
+      foot: `<div class="kpi-foot">${hs.vacunasPendientes} pendiente${hs.vacunasPendientes !== 1 ? 's' : ''}</div>` },
+    { lbl: 'Dosis vencidas', num: overdue.length, ico: iconAlert, cls: 'red', go: 'dashboard:alertas', border: 'red',
+      foot: `<div class="kpi-foot">Requieren atención</div>` },
+    { lbl: 'Desparasitaciones aplicadas', num: hs.totalDesparasitacionesAplicadas, ico: iconPill, cls: 'amber', go: 'salud', border: 'amber',
+      foot: `<div class="kpi-foot">${hs.desparasitacionesPendientes} pendiente${hs.desparasitacionesPendientes !== 1 ? 's' : ''}</div>` },
+    { lbl: 'Cobertura sanitaria', num: coveragePct, ico: iconStethoscope, cls: 'blue', go: 'salud', border: 'blue',
+      ring: coveragePct, tone: 'purple', foot: `<div class="kpi-foot">${totalVacDesp} dosis</div>` },
   ];
 
   return `<div class="kpi-grid">
     ${kpis.map(k => `
-    <div class="kpi-card border-left ${k.border}" data-kpi-go="${k.go}" role="button" tabindex="0">
+    <div class="kpi-card ${k.border}" data-kpi-go="${k.go}" role="button" tabindex="0">
       <div class="kpi-top"><span class="kpi-ico ${k.cls}">${k.ico}</span><span class="kpi-lbl">${k.lbl}</span></div>
-      <div class="kpi-num" data-count="${k.num}">${k.num}</div>
-      ${k.foot}
+      <div class="kpi-row">
+        <div><div class="kpi-num" data-count="${k.num}">${k.num}</div>${k.foot}</div>
+        ${k.ring != null ? ringHtml(k.ring, k.ring + '%', k.tone) : ''}
+      </div>
     </div>`).join('')}
   </div>`;
 }
@@ -308,49 +318,18 @@ export function viewDashboard() {
   </div>` : ''}
 
   ${dashTab === 'salud' ? `
-  <!-- Fila de 6 tarjetas de resumen con borde izquierdo de color -->
-  <div class="kpi-grid" style="grid-template-columns:repeat(6,1fr); margin-bottom:20px;">
-    <div class="kpi-card border-left green" role="button" tabindex="0">
-      <div class="kpi-top"><span class="kpi-ico green">${iconPaw}</span><span class="kpi-lbl">Mascotas totales</span></div>
-      <div class="kpi-num">${st.total}</div>
-      <div class="kpi-foot">${st.thisMonth} este mes</div>
-    </div>
-    <div class="kpi-card border-left green" role="button" tabindex="0">
-      <div class="kpi-top"><span class="kpi-ico green">${iconCheckCircle}</span><span class="kpi-lbl">Mascotas activas</span></div>
-      <div class="kpi-num">${st.active}</div>
-      <div class="kpi-foot">${pctOf(st.active, st.total)}% del padrón</div>
-    </div>
-    <div class="kpi-card border-left green" role="button" tabindex="0">
-      <div class="kpi-top"><span class="kpi-ico green">${iconSyringe}</span><span class="kpi-lbl">Vacunas aplicadas</span></div>
-      <div class="kpi-num">${hs.totalVacunasAplicadas}</div>
-      <div class="kpi-foot">${hs.vacunasPendientes} pendiente${hs.vacunasPendientes !== 1 ? 's' : ''}</div>
-    </div>
-    <div class="kpi-card border-left red" role="button" tabindex="0">
-      <div class="kpi-top"><span class="kpi-ico red">${iconAlert}</span><span class="kpi-lbl">Dosis vencidas</span></div>
-      <div class="kpi-num">${analysis.overdue.length}</div>
-      <div class="kpi-foot">Requieren atención</div>
-    </div>
-    <div class="kpi-card border-left amber" role="button" tabindex="0">
-      <div class="kpi-top"><span class="kpi-ico amber">${iconPill}</span><span class="kpi-lbl">Desparasitaciones aplicadas</span></div>
-      <div class="kpi-num">${hs.totalDesparasitacionesAplicadas}</div>
-      <div class="kpi-foot">${hs.desparasitacionesPendientes} pendiente${hs.desparasitacionesPendientes !== 1 ? 's' : ''}</div>
-    </div>
-    <div class="kpi-card border-left blue" role="button" tabindex="0">
-      <div class="kpi-top"><span class="kpi-ico blue">${iconStethoscope}</span><span class="kpi-lbl">Cobertura sanitaria</span></div>
-      <div class="kpi-num">${coveragePct}%</div>
-      <div class="kpi-foot">${totalVacDesp} dosis registradas</div>
-    </div>
-  </div>
+  ${kpiCardsHtml(pets, st, hs, analysis, records)}
 
   <div class="dash12">
-    <!-- Gauge de cobertura de vacunación -->
+    <!-- Cobertura de vacunación -->
     <div class="panel span-4">
       <div class="dash-sec-title"><span>Cobertura de vacunación</span></div>
       <div class="gauge-wrap">
-        <div class="gauge-box"><canvas id="gauge-vaccination" width="132" height="132"></canvas></div>
-        <div class="gauge-center"><b>${coveragePct}%</b><span>Al día</span></div>
+        ${ringHtml(coveragePct, coveragePct + '%', '', 'lg')}
+        <span class="gauge-sub">Al día</span>
+        <canvas id="gauge-vaccination" width="1" height="1" hidden></canvas>
       </div>
-      <div class="mini-note">Porcentaje de mascotas con vacunas al día</div>
+      <div class="mini-note">Porcentaje de dosis aplicadas sobre las registradas</div>
     </div>
 
     <!-- Barras agrupadas: Programado vs Aplicado -->
