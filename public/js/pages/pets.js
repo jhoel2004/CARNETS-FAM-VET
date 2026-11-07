@@ -188,7 +188,6 @@ async function openDetailModal(id, tab) {
         ${detailField('Color', p.color)}${detailField('Peso', p.weight ? p.weight + ' kg' : '—')}
         ${detailField('Categoría', p.category)}${detailField('Edad', formatAge(p))}
         ${detailField('Fecha de registro', p.registration_date)}${detailField('Firma del propietario', p.signature || '—')}
-        ${detailField('Huella', p.fingerprint ? 'Registrada' : 'No registrada')}${detailField('Firma', p.signature || '—')}
       </div>
       <div id="dtab-o" class="detail-view-grid hidden">
         ${detailField('Nombre completo', p.owner_name)}${detailField('CI', p.owner_ci)}
@@ -299,12 +298,12 @@ function calcAgeF(dob) {
 function blankPet() {
   return {
     id: uid(), name: '', carnet_number: '', species: 'perro', breed: '', sex: 'Macho', birth_date: '', color: '', weight: '',
-    category: 'General', status: 'Activo', photo: '', fingerprint: '', offspring: '', registration_date: new Date().toISOString().slice(0, 10),
+    category: 'General', status: 'Activo', photo: '', registration_date: new Date().toISOString().slice(0, 10),
     owner_name: '', owner_ci: '', owner_address: '', owner_city: '', owner_phone: '', owner_email: '',
     distinctive_marks: '',
     medical_vaccinated: 'No', medical_vaccines: '', medical_vet: '', medical_observations: '', medical_diseases: '', medical_allergies: '',
     signature: '',
-    ci_number: '', chip: '', has_chip: 0,
+    chip: '', has_chip: 0,
     age_years: '', age_months: '', age_mode: 'birth_date',
     vaccines_list: '', deworming_history: '', medical_conditions: '', allergies: '', surgeries: '', medications: '',
     sterilized: 0, microchip: '', blood_type: ''
@@ -444,7 +443,6 @@ export async function openPetModal(id, opts = {}) {
         <div id="ftab-animal" class="form-grid">
           <div class="field full"><label>Nombre de la mascota *</label><input required name="name" value="${escapeHtml(pet.name)}"></div>
           <div class="field"><label>N° de carnet / CI *</label><input required name="carnet_number" value="${escapeHtml(pet.carnet_number || '')}" placeholder="Ej: PLI-BO-2026-00001"></div>
-          <div class="field"><label>Registro secuencial (BOL-CAR)</label><input name="ci_number" value="${escapeHtml(pet.ci_number || '')}" placeholder="Automático si se deja vacío"></div>
           <div class="field"><label>Especie</label>
             <div class="toggle-btn-group" id="species-group">
               <button type="button" class="toggle-btn ${pet.species === 'perro' ? 'active' : ''}" data-species="perro">🐕 Perro</button>
@@ -496,8 +494,7 @@ export async function openPetModal(id, opts = {}) {
           <div class="field"><label>Categoría</label><input name="category" value="${escapeHtml(pet.category || '')}"></div>
           <div class="field"><label>Estado</label><select name="status"><option ${pet.status === 'Activo' ? 'selected' : ''}>Activo</option><option ${pet.status === 'Inactivo' ? 'selected' : ''}>Inactivo</option><option ${pet.status === 'Perdido' ? 'selected' : ''}>Perdido</option></select></div>
           <div class="field"><label>Firma del propietario (aparece en el carnet)</label><input name="signature" value="${escapeHtml(pet.signature || '')}" placeholder="Ej: Juan Pérez"></div>
-          <div class="field"><label>Huella (opcional, texto/código)</label><input name="fingerprint" value="${escapeHtml(pet.fingerprint || '')}"></div>
-          <div class="field"><label>Hijos (camada)</label><input name="offspring" value="${escapeHtml(pet.offspring || '')}" placeholder="Ej: 3 cachorros"></div>
+          <div class="field" id="offspring-group" style="display:${pet.sex === 'Hembra' ? '' : 'none'};"><label>Hijos (camada)</label><input name="offspring" value="${escapeHtml(pet.offspring || '')}" placeholder="Ej: 3 cachorros"></div>
           <div class="field"><label>Fecha de registro</label><input type="date" name="registration_date" value="${pet.registration_date || ''}"></div>
           <!-- Foto de la mascota -->
           <div class="field full" style="margin-top:16px;">
@@ -669,6 +666,10 @@ export async function openPetModal(id, opts = {}) {
       document.querySelectorAll('#sex-group .toggle-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('sex-hidden').value = btn.dataset.sex;
+      const offspringGroup = document.getElementById('offspring-group');
+      if (offspringGroup) {
+        offspringGroup.style.display = btn.dataset.sex === 'Hembra' ? '' : 'none';
+      }
     });
   });
 
@@ -898,7 +899,7 @@ async function savePet(id, isEdit) {
     color: document.getElementById('color-hidden')?.value || get('distinctive_marks'), weight: get('weight'),
     category: get('category') || 'General', status: get('status'),
     distinctive_marks: get('distinctive_marks'),
-    fingerprint: get('fingerprint'), offspring: get('offspring'), registration_date: get('registration_date'),
+    registration_date: get('registration_date'),
     photo: photoTemp,
     owner_name: get('owner_name'), owner_ci: get('owner_ci'), owner_address: get('owner_address'),
     owner_city: document.getElementById('ss-hidden-city')?.value || get('owner_city'), owner_phone: get('owner_phone'), owner_email: get('owner_email'),
@@ -906,7 +907,6 @@ async function savePet(id, isEdit) {
     medical_observations: get('medical_observations'),
     medical_diseases: get('medical_conditions'), medical_allergies: get('allergies'),
     signature: get('signature'),
-    ci_number: get('ci_number'),
     chip: fd.get('has_chip') ? get('chip') : '',
     has_chip: fd.get('has_chip') ? 1 : 0,
     age_years: get('age_mode') === 'years_months' ? get('age_years') : '',

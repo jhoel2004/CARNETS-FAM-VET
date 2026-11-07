@@ -100,8 +100,6 @@ async function createSqliteTables() {
     category TEXT DEFAULT 'General',
     status TEXT DEFAULT 'Activo',
     photo TEXT DEFAULT '',
-    fingerprint TEXT DEFAULT '',
-    offspring TEXT DEFAULT '',
     registration_date TEXT DEFAULT (date('now','localtime')),
     owner_name TEXT NOT NULL,
     owner_ci TEXT DEFAULT '',
@@ -121,7 +119,6 @@ async function createSqliteTables() {
     age_mode TEXT DEFAULT 'birth_date',
     vaccines_list TEXT DEFAULT '',
     distinctive_marks TEXT DEFAULT '',
-    ci_number TEXT DEFAULT '',
     chip TEXT DEFAULT '',
     has_chip INTEGER DEFAULT 0,
     paw_photo TEXT DEFAULT '',
@@ -190,7 +187,6 @@ async function createSqliteTables() {
   addCol('pets', "age_mode TEXT DEFAULT 'birth_date'");
   addCol('pets', "vaccines_list TEXT DEFAULT ''");
   addCol('pets', "distinctive_marks TEXT DEFAULT ''");
-  addCol('pets', "ci_number TEXT DEFAULT ''");
   addCol('pets', "chip TEXT DEFAULT ''");
   addCol('pets', "has_chip INTEGER DEFAULT 0");
   addCol('pets', "paw_photo TEXT DEFAULT ''");

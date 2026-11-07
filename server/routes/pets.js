@@ -4,7 +4,7 @@ const db = require('../db');
 const { authenticateToken, requireAdmin, requireAdminOrOperator } = require('../middleware/auth');
 
 const router = express.Router();
-const publicPetColumns = 'id, carnet_number, ci_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight, category, status, photo, fingerprint, offspring, registration_date, owner_name, owner_phone, medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_allergies, chip, has_chip';
+const publicPetColumns = 'id, carnet_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight, category, status, photo, registration_date, owner_name, owner_phone, medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_allergies, chip, has_chip';
 
 function parseDetailList(value) {
   try {
@@ -168,17 +168,16 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
     const id = p.id || 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     const regDate = p.registration_date || new Date().toISOString().slice(0, 10);
     const carnet = String(p.carnet_number).trim();
-    const ciNumber = String(p.ci_number || '').trim() || await nextCiNumber();
 
-    await db.run(`INSERT INTO pets (id, carnet_number, ci_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight,
-      category, status, photo, fingerprint, offspring, registration_date,
+    await db.run(`INSERT INTO pets (id, carnet_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight,
+      category, status, photo, registration_date,
       owner_name, owner_ci, owner_address, owner_city, owner_phone, owner_email,
       medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_diseases, medical_allergies,
       signature, age_years, age_months, chip, has_chip, paw_photo)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35)`, [
-      id, carnet, ciNumber, p.name, p.species || 'perro', p.breed || '', p.sex || 'Macho',
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)`, [
+      id, carnet, p.name, p.species || 'perro', p.breed || '', p.sex || 'Macho',
       p.birth_date || '', p.color || '', p.distinctive_marks || '', p.weight || '', p.category || 'General',
-      p.status || 'Activo', p.photo || '', p.fingerprint || '', p.offspring || '', regDate,
+      p.status || 'Activo', p.photo || '', regDate,
       p.owner_name, p.owner_ci || '', p.owner_address || '', p.owner_city || '', p.owner_phone, p.owner_email || '',
       p.medical_vaccinated || 'No', p.medical_vaccines || '', p.medical_vet || '',
       p.medical_observations || '', p.medical_diseases || '', p.medical_allergies || '',
@@ -216,22 +215,21 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
     }
 
     const hasChip = p.has_chip !== undefined ? (p.has_chip ? 1 : 0) : (existing.has_chip ? 1 : 0);
-    const ciNumber = String(p.ci_number || '').trim() || existing.ci_number || await nextCiNumber();
 
     // Permite actualizaciones parciales: cualquier campo ausente conserva el valor previo.
     const v = (value, fallback = '') => value === undefined ? fallback : value;
 
     await db.run(`UPDATE pets SET
-      carnet_number=$1, ci_number=$2, name=$3, species=$4, breed=$5, sex=$6, birth_date=$7, color=$8, distinctive_marks=$9, weight=$10, category=$11, status=$12,
-      photo=$13, fingerprint=$14, offspring=$15, registration_date=$16,
-      owner_name=$17, owner_ci=$18, owner_address=$19, owner_city=$20, owner_phone=$21, owner_email=$22,
-      medical_vaccinated=$23, medical_vaccines=$24, medical_vet=$25, medical_observations=$26, medical_diseases=$27, medical_allergies=$28,
-      signature=$29, age_years=$30, age_months=$31,
-      chip=$32, has_chip=$33, paw_photo=$34,
-      updated_at=$35
-      WHERE id=$36`, [
-      v(p.carnet_number, existing.carnet_number), ciNumber, v(p.name, existing.name), v(p.species, existing.species), v(p.breed, existing.breed), v(p.sex, existing.sex), v(p.birth_date, existing.birth_date), v(p.color, existing.color), v(p.distinctive_marks, existing.distinctive_marks), v(p.weight, existing.weight), v(p.category, existing.category || 'General'), v(p.status, existing.status || 'Activo'),
-      v(p.photo, existing.photo), v(p.fingerprint, existing.fingerprint), v(p.offspring, existing.offspring), v(p.registration_date, existing.registration_date),
+      carnet_number=$1, name=$2, species=$3, breed=$4, sex=$5, birth_date=$6, color=$7, distinctive_marks=$8, weight=$9, category=$10, status=$11,
+      photo=$12, registration_date=$13,
+      owner_name=$14, owner_ci=$15, owner_address=$16, owner_city=$17, owner_phone=$18, owner_email=$19,
+      medical_vaccinated=$20, medical_vaccines=$21, medical_vet=$22, medical_observations=$23, medical_diseases=$24, medical_allergies=$25,
+      signature=$26, age_years=$27, age_months=$28,
+      chip=$29, has_chip=$30, paw_photo=$31,
+      updated_at=$32
+      WHERE id=$33`, [
+      v(p.carnet_number, existing.carnet_number), v(p.name, existing.name), v(p.species, existing.species), v(p.breed, existing.breed), v(p.sex, existing.sex), v(p.birth_date, existing.birth_date), v(p.color, existing.color), v(p.distinctive_marks, existing.distinctive_marks), v(p.weight, existing.weight), v(p.category, existing.category || 'General'), v(p.status, existing.status || 'Activo'),
+      v(p.photo, existing.photo), v(p.registration_date, existing.registration_date),
       v(p.owner_name, existing.owner_name), v(p.owner_ci, existing.owner_ci), v(p.owner_address, existing.owner_address), v(p.owner_city, existing.owner_city), v(p.owner_phone, existing.owner_phone), v(p.owner_email, existing.owner_email),
       v(p.medical_vaccinated, existing.medical_vaccinated), v(p.medical_vaccines, existing.medical_vaccines), v(p.medical_vet, existing.medical_vet), v(p.medical_observations, existing.medical_observations), v(p.medical_diseases, existing.medical_diseases), v(p.medical_allergies, existing.medical_allergies),
       v(p.signature, existing.signature), v(p.age_years, existing.age_years), v(p.age_months, existing.age_months),
@@ -268,17 +266,6 @@ async function nextCarnetNumber() {
     if (!isNaN(num) && num > max) max = num;
   }
   return `PLI-BO-${year}-${String(max + 1).padStart(5, '0')}`;
-}
-
-// Registro secuencial de identificación: BOL-CAR-00001, BOL-CAR-00002, ...
-async function nextCiNumber() {
-  const rows = await db.query("SELECT ci_number FROM pets WHERE ci_number LIKE $1", ['BOL-CAR-%']);
-  let max = 0;
-  for (const r of rows) {
-    const num = parseInt(String(r.ci_number).split('-').pop(), 10);
-    if (!isNaN(num) && num > max) max = num;
-  }
-  return `BOL-CAR-${String(max + 1).padStart(5, '0')}`;
 }
 
 // ============================================
