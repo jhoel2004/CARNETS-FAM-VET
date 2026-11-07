@@ -29,6 +29,22 @@ export const iconCat = w(`<path d="M5 4l2.5 2.5M19 4l-2.5 2.5"/><circle cx="9.5"
 export const iconCalendar = w(`<rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M8 3v4M16 3v4M3.5 10h17"/>`);
 export const iconChart = w(`<path d="M3 3v16a2 2 0 002 2h16"/><path d="M7 14l4-4 3 3 5-6"/>`);
 
+/* ---- Iconos del rediseño (misma familia: trazo 1.9, round, 24x24) ---- */
+export const iconUsers = w(`<circle cx="9" cy="8" r="3.2"/><path d="M2.5 19c1.1-2.8 3.7-4.4 6.5-4.4s5.4 1.6 6.5 4.4"/><path d="M16 11a3 3 0 100-6"/><path d="M17.5 14.8c2 .7 3.5 2.1 4 4.2"/>`);
+export const iconStethoscope = w(`<path d="M5 3v5a5 5 0 0010 0V3"/><path d="M10 13v2.5a5.5 5.5 0 0011 0V13"/><circle cx="21" cy="10" r="1.6"/>`);
+export const iconSyringe = w(`<path d="M17 3l4 4M19.5 4.5L12 12M3 21l1.5-4.5L16 5l3 3L7.5 19.5 3 21z"/><path d="M9.5 10.5l2 2M12 8l2 2"/>`);
+export const iconPill = w(`<rect x="3" y="9" width="18" height="9" rx="4.5" transform="rotate(-45 12 12)"/><path d="M8.6 8.6l6.8 6.8"/>`);
+export const iconHeartbeat = w(`<path d="M3 12h3.5l2-4.5 3 9 2.5-6 1.7 3.5H21"/><path d="M4.5 8.5C4.5 6 6.5 4.5 8.6 4.5c1.6 0 2.9.9 3.4 2.2.5-1.3 1.8-2.2 3.4-2.2 2.1 0 4.1 1.5 4.1 4"/>`);
+export const iconScissors = w(`<circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8.2 7.8L20 19.5M8.2 16.2L20 4.5"/>`);
+export const iconBell = w(`<path d="M18 15.5V10a6 6 0 10-12 0v5.5L4.5 18h15L18 15.5z"/><path d="M10.2 21a2.2 2.2 0 003.6 0"/>`);
+export const iconChevronDown = w(`<path d="M6 9.5l6 6 6-6"/>`);
+export const iconChevronRight = w(`<path d="M9.5 6l6 6-6 6"/>`);
+export const iconHome = w(`<path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-4.5v-6h-5v6H5a1 1 0 01-1-1v-9.5z"/>`);
+export const iconActivity = w(`<path d="M3 12h4l2.5-6 4 12 2.5-6H21"/>`);
+export const iconFileText = w(`<path d="M6 2h8l5 5v13a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M14 2v5h5"/><path d="M9 13h6M9 17h6"/>`);
+export const iconPanelLeft = w(`<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9.5 4v16"/>`);
+export const iconBookmark = w(`<path d="M6 3h12v18l-6-4.5L6 21V3z"/>`);
+
 export function pawSvg(size = 34) {
   return `<svg class="paw" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="9.5" r="2" fill="#C59A38"/><circle cx="12" cy="6.2" r="2" fill="#C59A38"/><circle cx="17" cy="9.5" r="2" fill="#C59A38"/><path d="M7 15.4c0-2.5 2.1-4.4 5-4.4s5 1.9 5 4.4-2.2 3.9-5 3.9-5-1.4-5-3.9z" fill="#C59A38"/></svg>`;
 }

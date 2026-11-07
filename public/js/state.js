@@ -75,6 +75,20 @@ class AppState {
 
   async loadAllHealthRecords() {
     try {
+      // Fuente única: /api/pets/analytics ya trae todos los health records.
+      // Evita el N+1 que hacía una petición por mascota.
+      const analytics = this._analytics || {};
+      if (Array.isArray(analytics.healthRecords)) {
+        const map = new Map();
+        for (const r of analytics.healthRecords) {
+          if (!r || !r.pet_id) continue;
+          const arr = map.get(r.pet_id);
+          if (arr) arr.push(r); else map.set(r.pet_id, [r]);
+        }
+        map.forEach((recs, petId) => { this._healthRecords[petId] = recs; });
+        this._allHealthRecordsMap = map;
+        return;
+      }
       const map = new Map();
       for (const p of this._pets) {
         try {
