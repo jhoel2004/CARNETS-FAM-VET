@@ -592,30 +592,96 @@ export async function openPetModal(id, opts = {}) {
       </form>
     </div>
     <div class="modal-foot">
+      <button class="btn btn-ghost" id="btn-modal-prev" style="display:none;">Atrás</button>
       <button class="btn btn-ghost" data-close>Cancelar</button>
-      <button class="btn btn-primary" id="btn-save-pet" disabled>${isEdit ? 'Guardar cambios' : 'Registrar mascota'}</button>
+      <button class="btn btn-primary btn-next" id="btn-modal-next" disabled>Siguiente</button>
+      <button class="btn btn-primary" id="btn-save-pet" style="display:none;">${isEdit ? 'Guardar cambios' : 'Registrar mascota'}</button>
     </div>
   `);
 
-  document.querySelectorAll('[data-ftab]').forEach(el => el.addEventListener('click', () => {
-    document.querySelectorAll('[data-ftab]').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-    ['animal', 'prop', 'med'].forEach(k => document.getElementById('ftab-' + k).classList.add('hidden'));
-    document.getElementById('ftab-' + el.dataset.ftab).classList.remove('hidden');
+  const PET_STEPS = ['animal', 'prop', 'med'];
+  const PET_REQUIRED = {
+    animal: ['#ftab-animal input[name="name"]', '#ftab-animal input[name="carnet_number"]'],
+    prop: ['#ftab-prop input[name="owner_name"]', '#ftab-prop input[name="owner_phone"]'],
+    med: []
+  };
+  const PET_REQUIRED_ALL = ['#ftab-animal input[name="name"]', '#ftab-animal input[name="carnet_number"]', '#ftab-prop input[name="owner_name"]', '#ftab-prop input[name="owner_phone"]'];
+
+  const petFieldFilled = (sel) => {
+    const el = document.querySelector(sel);
+    return !!el && String(el.value || '').trim() !== '';
+  };
+
+  const petTabValid = (tab) => (PET_REQUIRED[tab] || []).every(sel => petFieldFilled(sel));
+
+  const petSaveValid = () => PET_REQUIRED_ALL.every(sel => petFieldFilled(sel));
+
+  const updatePetButtons = (tab) => {
+    const btnPrev = document.getElementById('btn-modal-prev');
+    const btnNext = document.getElementById('btn-modal-next');
+    const btnSave = document.getElementById('btn-save-pet');
+    const idx = PET_STEPS.indexOf(tab);
+    const isLast = idx === PET_STEPS.length - 1;
+    if (btnPrev) btnPrev.style.display = idx > 0 ? 'inline-block' : 'none';
+    if (isLast) {
+      if (btnNext) btnNext.style.display = 'none';
+      if (btnSave) {
+        btnSave.style.display = 'inline-block';
+        btnSave.disabled = !petSaveValid();
+        btnSave.textContent = isEdit ? 'Guardar cambios' : 'Registrar mascota';
+      }
+    } else {
+      if (btnNext) {
+        btnNext.style.display = 'inline-block';
+        btnNext.disabled = !petTabValid(tab);
+      }
+      if (btnSave) btnSave.style.display = 'none';
+    }
+  };
+
+  const activatePetTab = (tab) => {
+    document.querySelectorAll('[data-ftab]').forEach(el => {
+      el.classList.toggle('active', el.dataset.ftab === tab);
+    });
+    PET_STEPS.forEach(k => {
+      const el = document.getElementById('ftab-' + k);
+      if (el) el.classList.add('hidden');
+    });
+    const target = document.getElementById('ftab-' + tab);
+    if (target) target.classList.remove('hidden');
     // Actualizar indicador de progreso
     document.querySelectorAll('.form-step').forEach(s => {
       s.classList.remove('active', 'done');
       const step = s.dataset.step;
-      if (step === el.dataset.ftab) s.classList.add('active');
+      if (step === tab) s.classList.add('active');
       const order = ['animal', 'prop', 'med'];
-      if (order.indexOf(step) < order.indexOf(el.dataset.ftab)) s.classList.add('done');
+      if (order.indexOf(step) < order.indexOf(tab)) s.classList.add('done');
     });
-  }));
-  // Abrir directamente en una pestaña (acciones rápidas del dashboard)
-  if (opts.tab) {
-    const btn = document.querySelector(`[data-ftab="${opts.tab}"]`);
-    if (btn) btn.click();
-  }
+    updatePetButtons(tab);
+  };
+
+  document.querySelectorAll('[data-ftab]').forEach(el => el.addEventListener('click', () => activatePetTab(el.dataset.ftab)));
+  document.getElementById('btn-modal-next')?.addEventListener('click', () => {
+    const currentTab = document.querySelector('.tab-btn.active')?.dataset.ftab || 'animal';
+    const idx = PET_STEPS.indexOf(currentTab);
+    if (idx < PET_STEPS.length - 1) activatePetTab(PET_STEPS[idx + 1]);
+  });
+  document.getElementById('btn-modal-prev')?.addEventListener('click', () => {
+    const currentTab = document.querySelector('.tab-btn.active')?.dataset.ftab || 'animal';
+    const idx = PET_STEPS.indexOf(currentTab);
+    if (idx > 0) activatePetTab(PET_STEPS[idx - 1]);
+  });
+
+  // Validación en tiempo real para habilitar/deshabilitar botón Siguiente / Guardar
+  [...new Set([...(PET_REQUIRED.animal || []), ...(PET_REQUIRED.prop || []), ...(PET_REQUIRED.med || [])])].forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      el.addEventListener('input', () => updatePetButtons(document.querySelector('.tab-btn.active')?.dataset.ftab || 'animal'));
+      el.addEventListener('change', () => updatePetButtons(document.querySelector('.tab-btn.active')?.dataset.ftab || 'animal'));
+    });
+  });
+
+  // Estado inicial: abrir en la pestaña indicada (acciones rápidas) o en el primer paso
+  activatePetTab(opts.tab && PET_STEPS.includes(opts.tab) ? opts.tab : 'animal');
 
   // Toggle especie
   document.querySelectorAll('#species-group .toggle-btn').forEach(btn => {
@@ -860,8 +926,17 @@ function rotatePhoto() {
 }
 
 async function savePet(id, isEdit) {
-  const form = document.getElementById('pet-form');
-  const fd = new FormData(form);
+  const fd = new FormData();
+  // Se recolectan desde el contenedor del modal para no depender de la ubicación
+  // exacta de los campos dentro del formulario (pestañas ocultas/combinaciones).
+  const modalEl = document.getElementById('active-modal-overlay');
+  modalEl.querySelectorAll('input, select, textarea').forEach(el => {
+    if (!el.name) return;
+    const type = (el.getAttribute('type') || 'text').toLowerCase();
+    if (type === 'checkbox') { if (el.checked) fd.append(el.name, el.value); return; }
+    if (type === 'radio') { if (el.checked) fd.append(el.name, el.value); return; }
+    fd.append(el.name, el.value ?? '');
+  });
   const get = k => fd.get(k) || '';
 
   if (!get('name').trim() || !get('owner_name').trim() || !get('owner_phone').trim() || !get('carnet_number').trim()) {
@@ -972,35 +1047,6 @@ async function savePet(id, isEdit) {
     import('../app.js').then(m => m.renderApp());
   } catch (e) { toast(e.message, 'error'); }
 }
-
-  // Validación en tiempo real para habilitar/deshabilitar botón Guardar
-  const requiredFields = [
-    document.getElementById('pet-form')?.querySelector('input[name="name"]'),
-    document.getElementById('pet-form')?.querySelector('input[name="owner_name"]'),
-    document.getElementById('pet-form')?.querySelector('input[name="owner_phone"]'),
-    document.getElementById('pet-form')?.querySelector('input[name="carnet_number"]')
-  ].filter(Boolean);
-
-  const validateForm = () => {
-    const isValid = requiredFields.every(input => input.value.trim() !== '');
-    const saveBtn = document.getElementById('btn-save-pet');
-    if (saveBtn) {
-      saveBtn.disabled = !isValid;
-      if (isValid) {
-        saveBtn.classList.remove('btn-disabled');
-      } else {
-        saveBtn.classList.add('btn-disabled');
-      }
-    }
-  };
-
-  requiredFields.forEach(input => {
-    input.addEventListener('input', validateForm);
-    input.addEventListener('change', validateForm);
-  });
-  
-  // Validación inicial
-  validateForm();
 
 function showPetQrModal(pet) {
   const url = publicUrl(pet.id);

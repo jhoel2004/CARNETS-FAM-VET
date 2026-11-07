@@ -262,6 +262,9 @@ export function viewDashboard() {
   const dogs = st.dogs, cats = st.cats, others = st.others, total = st.total;
   const hm = data.healthMap();
   const noHealth = pets.filter(p => (hm.get(p.id) || []).length === 0);
+  const totalVacDesp = hs.totalVacunas + hs.totalDesparasitaciones;
+  const appliedVacDesp = hs.totalVacunasAplicadas + hs.totalDesparasitacionesAplicadas;
+  const coveragePct = totalVacDesp > 0 ? Math.round((appliedVacDesp / totalVacDesp) * 100) : 0;
 
   return `
   <div class="dash-head">
