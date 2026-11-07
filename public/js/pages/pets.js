@@ -13,14 +13,17 @@ const BREEDS_BY_SPECIES = {
 
 const COMMON_COLORS = ['Negro', 'Blanco', 'Marrón', 'Dorado', 'Gris', 'Beige', 'Atigrado', 'Manchado', 'Tricolor', 'Otro'];
 
-const CATEGORIES = ['General', 'Mascota de compañía', 'Mascota de servicio', 'Mascota de trabajo', 'Mascota de exhibición'];
-
 let state = null;
 
 export function initPets(s) {
   state = s;
 }
 
+const rerender = () => import('../app.js').then(m => m.renderApp());
+
+/* ============================================================
+   LISTADO
+   ============================================================ */
 export function viewMascotas(advanced) {
   const list = filteredPets();
   return `
@@ -92,14 +95,14 @@ function filteredPets() {
 }
 
 export function bindPetsEvents() {
-  document.querySelectorAll('[data-species]').forEach(el => el.addEventListener('click', () => { state.filterSpecies = el.dataset.species; import('../app.js').then(m => m.renderApp()); }));
-  document.querySelectorAll('[data-status]').forEach(el => el.addEventListener('click', () => { state.filterStatus = el.dataset.status; import('../app.js').then(m => m.renderApp()); }));
+  document.querySelectorAll('[data-species]').forEach(el => el.addEventListener('click', () => { state.filterSpecies = el.dataset.species; rerender(); }));
+  document.querySelectorAll('[data-status]').forEach(el => el.addEventListener('click', () => { state.filterStatus = el.dataset.status; rerender(); }));
   const sexSel = document.getElementById('filter-sex');
-  if (sexSel) sexSel.addEventListener('change', () => { state.filterSex = sexSel.value; import('../app.js').then(m => m.renderApp()); });
+  if (sexSel) sexSel.addEventListener('change', () => { state.filterSex = sexSel.value; rerender(); });
 
   document.querySelectorAll('[data-view]').forEach(el => el.addEventListener('click', () => openDetailModal(el.dataset.view)));
   document.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openPetModal(el.dataset.edit)));
-  document.querySelectorAll('[data-carnet]').forEach(el => el.addEventListener('click', () => { state.cardPetId = el.dataset.carnet; state.view = 'carnet'; import('../app.js').then(m => m.renderApp()); }));
+  document.querySelectorAll('[data-carnet]').forEach(el => el.addEventListener('click', () => { state.cardPetId = el.dataset.carnet; state.view = 'carnet'; rerender(); }));
   document.querySelectorAll('[data-del]').forEach(el => el.addEventListener('click', () => deletePet(el.dataset.del)));
 
   const exp = document.querySelector('[data-action="export-json"]');
@@ -119,7 +122,7 @@ async function deletePet(id) {
     await state.loadPets();
     api.logHistory('Eliminación', `${pet.name} (${pet.carnet_number})`);
     toast('Mascota eliminada');
-    import('../app.js').then(m => m.renderApp());
+    rerender();
   } catch (e) { toast(e.message, 'error'); }
 }
 
@@ -153,12 +156,15 @@ async function importJson(e) {
       await state.loadPets();
       api.logHistory('Importación de base de datos', `${added} registros nuevos`);
       toast(`${added} registro(s) importado(s)`);
-      import('../app.js').then(m => m.renderApp());
+      rerender();
     } catch (err) { toast('Archivo inválido', 'error'); }
   };
   reader.readAsText(file);
 }
 
+/* ============================================================
+   FICHA (DETALLE)
+   ============================================================ */
 /* Acceso directo a la ficha en una pestaña concreta (dashboard/alertas) */
 export function openPetDetail(id, tab) {
   return openDetailModal(id, tab);
@@ -224,7 +230,7 @@ async function openDetailModal(id, tab) {
       new QRCode(document.getElementById('detail-qr'), { text: publicUrl(p.id), width: 200, height: 200 });
       const dlBtn = document.getElementById('btn-download-qr');
       if (dlBtn) {
-        dlBtn.addEventListener('click', () => {
+        dlBtn.onclick = () => {
           const qrContainer = document.getElementById('detail-qr');
           const canvas = qrContainer.querySelector('canvas');
           const img = qrContainer.querySelector('img');
@@ -234,7 +240,7 @@ async function openDetailModal(id, tab) {
           a.href = src;
           a.download = `QR-${p.carnet_number}.png`;
           a.click();
-        });
+        };
       }
     }
   }));
@@ -252,7 +258,7 @@ async function openDetailModal(id, tab) {
       api.logHistory(newStatus === 'Perdido' ? 'Reporte de mascota perdida' : 'Mascota marcada como encontrada', p.name);
       toast(newStatus === 'Perdido' ? 'Marcada como perdida' : 'Marcada como activa');
       closeModal();
-      import('../app.js').then(m => m.renderApp());
+      rerender();
     } catch (e) { toast(e.message, 'error'); }
   });
 }
@@ -263,13 +269,14 @@ function healthRecordsBlock(petId) {
   if (!recs.length) {
     return `<div class="dv-field full"><label>Historial de salud</label><span class="dv-val">Sin vacunas ni desparasitaciones registradas</span></div>`;
   }
+  const today = new Date().toISOString().slice(0, 10);
   const rows = recs.map(r => {
     const kind = r.type === 'vacuna' ? 'Vacuna' : r.type === 'desparasitacion' ? 'Desparasitación' : 'Nota clínica';
-    const state_ = r.applied ? 'Aplicada' : ((r.next_due && r.next_due < new Date().toISOString().slice(0, 10)) ? 'Vencida' : 'Pendiente');
+    const status = r.applied ? 'Aplicada' : ((r.next_due && r.next_due < today) ? 'Vencida' : 'Pendiente');
     const dates = [r.record_date && `registro ${r.record_date}`, r.next_due && r.next_due !== r.record_date && (r.applied ? 'próxima ' : 'vence ') + r.next_due].filter(Boolean).join(' · ');
     return `<div style="grid-column:1/-1; display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid var(--border); padding:6px 0; font-size:12.5px;">
       <span><b>${escapeHtml(r.title || '—')}</b> <span class="faint">· ${kind}</span><div class="faint" style="font-size:11px;">${escapeHtml(dates || '')}</div></span>
-      <span style="font-weight:600; color:var(--text-2); white-space:nowrap;">${state_}</span>
+      <span style="font-weight:600; color:var(--text-2); white-space:nowrap;">${status}</span>
     </div>`;
   }).join('');
   return `<div class="dv-field full"><label>Historial de salud (${recs.length})</label>${rows}</div>`;
@@ -277,10 +284,11 @@ function healthRecordsBlock(petId) {
 
 function formatAge(p) {
   const parts = [];
-  if (p.age_years) parts.push(`${p.age_years} año${p.age_years !== '1' ? 's' : ''}`);
-  if (p.age_months) parts.push(`${p.age_months} mes${p.age_months !== '1' ? 'es' : ''}`);
+  if (p.age_years) parts.push(`${p.age_years} año${String(p.age_years) !== '1' ? 's' : ''}`);
+  if (p.age_months) parts.push(`${p.age_months} mes${String(p.age_months) !== '1' ? 'es' : ''}`);
   if (parts.length) return parts.join(' ');
-  if (p.birth_date) return calcAgeF(p.birth_date);  return '—';
+  if (p.birth_date) return calcAgeF(p.birth_date);
+  return '—';
 }
 
 function calcAgeF(dob) {
@@ -311,90 +319,41 @@ function blankPet() {
 }
 
 /* ============================================================
-   FUNCIONES HELPER PARA LISTAS DINÁMICAS DE DATOS MÉDICOS
+   LISTAS DINÁMICAS DE DATOS MÉDICOS (un solo helper para las 5)
    ============================================================ */
-
-function parseJsonArray(str) {
-  try { return JSON.parse(str || '[]'); } catch { return []; }
+function parseJsonArray(v) {
+  if (Array.isArray(v)) return v;
+  try { const r = JSON.parse(v || '[]'); return Array.isArray(r) ? r : []; } catch { return []; }
 }
 
-function renderVaccineItems(jsonStr) {
-  const items = parseJsonArray(jsonStr);
-  return items.map(item => renderVaccineItem(item)).join('');
-}
+// tipo -> [nombre del input de texto, nombre del input de fecha, placeholder]
+const DYN = {
+  vaccine:    ['vaccine_name',    'vaccine_date',    'Nombre de la vacuna'],
+  deworming:  ['deworming_name',  'deworming_date',  'Nombre de la desparasitación'],
+  condition:  ['condition_name',  'condition_date',  'Enfermedad'],
+  surgery:    ['surgery_name',    'surgery_date',    'Cirugía'],
+  medication: ['medication_name', 'medication_date', 'Medicamento']
+};
+const DYN_INPUT_STYLE = 'width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;';
 
-function renderVaccineItem(item = {}) {
+function dynItem(kind, item = {}) {
+  const [nameField, dateField, placeholder] = DYN[kind];
   return `
   <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
-    <input type="text" name="vaccine_name" placeholder="Nombre de la vacuna" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="date" name="vaccine_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
+    <input type="text" name="${nameField}" placeholder="${placeholder}" value="${escapeHtml(item.name || '')}" style="${DYN_INPUT_STYLE}">
+    <input type="date" name="${dateField}" value="${escapeHtml(item.date || '')}" style="${DYN_INPUT_STYLE}">
     <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
   </div>`;
 }
 
-function renderDewormingItems(jsonStr) {
-  const items = parseJsonArray(jsonStr);
-  return items.map(item => renderDewormingItem(item)).join('');
-}
-
-function renderDewormingItem(item = {}) {
-  return `
-  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
-    <input type="text" name="deworming_name" placeholder="Nombre de la desparasitación" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="date" name="deworming_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
-  </div>`;
-}
-
-function renderConditionItems(jsonStr) {
-  const items = parseJsonArray(jsonStr);
-  return items.map(item => renderConditionItem(item)).join('');
-}
-
-function renderConditionItem(item = {}) {
-  return `
-  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
-    <input type="text" name="condition_name" placeholder="Enfermedad" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="date" name="condition_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
-  </div>`;
-}
-
-function renderSurgeryItems(jsonStr) {
-  const items = parseJsonArray(jsonStr);
-  return items.map(item => renderSurgeryItem(item)).join('');
-}
-
-function renderSurgeryItem(item = {}) {
-  return `
-  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
-    <input type="text" name="surgery_name" placeholder="Cirugía" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="date" name="surgery_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
-  </div>`;
-}
-
-function renderMedicationItems(jsonStr) {
-  const items = parseJsonArray(jsonStr);
-  return items.map(item => renderMedicationItem(item)).join('');
-}
-
-function renderMedicationItem(item = {}) {
-  return `
-  <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
-    <input type="text" name="medication_name" placeholder="Medicamento" value="${escapeHtml(item.name || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <input type="date" name="medication_date" placeholder="Fecha" value="${escapeHtml(item.date || '')}" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;">
-    <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
-  </div>`;
+function dynItems(kind, data) {
+  return parseJsonArray(data).map(item => dynItem(kind, item)).join('');
 }
 
 function addDynamicItem(listId, html) {
   const container = document.getElementById(listId);
-  if (container) {
-    container.insertAdjacentHTML('beforeend', html);
-  }
+  if (container) container.insertAdjacentHTML('beforeend', html);
 }
-
 
 let photoTemp = '';
 
@@ -407,6 +366,9 @@ function colorToHex(color) {
   return map[color] || '#cccccc';
 }
 
+/* ============================================================
+   FORMULARIO CREAR / EDITAR (3 pasos)
+   ============================================================ */
 export async function openPetModal(id, opts = {}) {
   const isEdit = !!id;
   const pet = isEdit ? { ...state.getPets().find(p => p.id === id) } : blankPet();
@@ -440,6 +402,8 @@ export async function openPetModal(id, opts = {}) {
         <div class="tab-btn" data-ftab="med">Datos médicos</div>
       </div>
       <form id="pet-form">
+
+        <!-- ================= PASO 1: ANIMAL ================= -->
         <div id="ftab-animal" class="form-grid">
           <div class="field full"><label>Nombre de la mascota *</label><input required name="name" value="${escapeHtml(pet.name)}"></div>
           <div class="field"><label>N° de carnet / CI *</label><input required name="carnet_number" value="${escapeHtml(pet.carnet_number || '')}" placeholder="Ej: PLI-BO-2026-00001"></div>
@@ -452,13 +416,13 @@ export async function openPetModal(id, opts = {}) {
             <input type="hidden" name="species" id="species-hidden" value="${escapeHtml(pet.species || 'perro')}">
           </div>
           ${renderSearchableSelect({ id: 'breed', name: 'breed', label: 'Raza', options: BREEDS_BY_SPECIES[pet.species || 'perro'] || [], value: pet.breed || '', placeholder: 'Buscar raza...' })}
+          <div class="field full">
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
               <input type="checkbox" name="has_chip" id="has-chip-check" ${pet.has_chip || pet.microchip ? 'checked' : ''} style="width:16px; height:16px;">
               Sí, tiene microchip implantado
             </label>
           </div>
           <div class="field"><label>Número de chip</label><input name="chip" id="chip-num" value="${escapeHtml(pet.chip || pet.microchip || '')}" ${pet.has_chip || pet.microchip ? '' : 'disabled'} placeholder="Se activa al marcar la casilla"></div>
-          <div class="field"><label>Raza</label><input name="breed" value="${escapeHtml(pet.breed || '')}"></div>
           <div class="field">
             <label>¿Cómo registrar la edad?</label>
             <select name="age_mode" id="age-mode-select" style="width:100%;">
@@ -509,6 +473,8 @@ export async function openPetModal(id, opts = {}) {
             </div>
           </div>
         </div>
+
+        <!-- ================= PASO 2: PROPIETARIO ================= -->
         <div id="ftab-prop" class="form-grid hidden">
           <!-- Búsqueda de propietario existente -->
           <div class="field full">
@@ -534,57 +500,44 @@ export async function openPetModal(id, opts = {}) {
           </div>
           <div class="field full"><label>Dirección</label><input name="owner_address" id="owner-address-input" value="${escapeHtml(pet.owner_address || '')}" placeholder="Calle, número, zona"></div>
         </div>
-        <div id="ftab-med" class="form-grid hidden">
-          <div class="field"><label>Vacunado</label><select name="medical_vaccinated" id="vaccinated-select"><option ${pet.medical_vaccinated === 'Sí' ? 'selected' : ''}>Sí</option><option ${pet.medical_vaccinated === 'No' ? 'selected' : ''}>No</option></select></div>
 
-          <!-- Vacunas dinámicas -->
+        <!-- ================= PASO 3: MÉDICO ================= -->
+        <div id="ftab-med" class="form-grid hidden">
+          <div class="field"><label>Vacunado</label><select name="medical_vaccinated" id="vaccinated-select"><option ${pet.medical_vaccinated === 'Sí' ? 'selected' : ''}>Sí</option><option ${pet.medical_vaccinated !== 'Sí' ? 'selected' : ''}>No</option></select></div>
+
           <div class="field full" id="vaccines-section" style="${pet.medical_vaccinated === 'Sí' ? '' : 'display:none;'}">
             <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Vacunas</label>
-            <div id="vaccines-list" class="dynamic-list">
-              ${renderVaccineItems(pet.vaccines_detail || '[]')}
-            </div>
+            <div id="vaccines-list" class="dynamic-list">${dynItems('vaccine', pet.vaccines_detail)}</div>
             <button type="button" class="btn btn-outline btn-sm" id="btn-add-vaccine" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar vacuna</button>
           </div>
 
-          <!-- Desparasitaciones dinámicas -->
           <div class="field full">
             <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Desparasitaciones</label>
-            <div id="deworming-list" class="dynamic-list">
-              ${renderDewormingItems(pet.deworming_detail || '[]')}
-            </div>
+            <div id="deworming-list" class="dynamic-list">${dynItems('deworming', pet.deworming_detail)}</div>
             <button type="button" class="btn btn-outline btn-sm" id="btn-add-deworming" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar desparasitación</button>
           </div>
 
-          <!-- Enfermedades crónicas dinámicas -->
           <div class="field full">
             <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Enfermedades crónicas</label>
-            <div id="conditions-list" class="dynamic-list">
-              ${renderConditionItems(pet.conditions_detail || '[]')}
-            </div>
+            <div id="conditions-list" class="dynamic-list">${dynItems('condition', pet.conditions_detail)}</div>
             <button type="button" class="btn btn-outline btn-sm" id="btn-add-condition" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar enfermedad</button>
           </div>
 
-          <!-- Cirugías dinámicas -->
           <div class="field full">
             <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Cirugías previas</label>
-            <div id="surgeries-list" class="dynamic-list">
-              ${renderSurgeryItems(pet.surgeries_detail || '[]')}
-            </div>
+            <div id="surgeries-list" class="dynamic-list">${dynItems('surgery', pet.surgeries_detail)}</div>
             <button type="button" class="btn btn-outline btn-sm" id="btn-add-surgery" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar cirugía</button>
           </div>
 
-          <!-- Medicamentos dinámicos -->
           <div class="field full">
             <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Medicamentos actuales</label>
-            <div id="medications-list" class="dynamic-list">
-              ${renderMedicationItems(pet.medications_detail || '[]')}
-            </div>
+            <div id="medications-list" class="dynamic-list">${dynItems('medication', pet.medications_detail)}</div>
             <button type="button" class="btn btn-outline btn-sm" id="btn-add-medication" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar medicamento</button>
           </div>
 
           <div class="field"><label>Veterinaria</label><input name="medical_vet" value="${escapeHtml(pet.medical_vet || '')}"></div>
-          <div class="field"><label>Alergias</label><input name="allergies" value="${escapeHtml(pet.allergies || '')}"></div>
-           <div class="field"><label>Esterilizado</label><select name="sterilized"><option value="0" ${!pet.sterilized ? 'selected' : ''}>No</option><option value="1" ${pet.sterilized ? 'selected' : ''}>Sí</option></select></div>
+          <div class="field"><label>Alergias</label><input name="allergies" value="${escapeHtml(pet.allergies || pet.medical_allergies || '')}"></div>
+          <div class="field"><label>Esterilizado</label><select name="sterilized"><option value="0" ${!pet.sterilized ? 'selected' : ''}>No</option><option value="1" ${pet.sterilized ? 'selected' : ''}>Sí</option></select></div>
           <div class="field full" style="font-size:12px; color:var(--text-2);">El microchip se registra en la pestaña <b>Datos del animal</b>, con su casilla y número.</div>
           <div class="field"><label>Tipo de sangre</label><input name="blood_type" value="${escapeHtml(pet.blood_type || '')}"></div>
           <div class="field"><label>Observaciones</label><textarea name="medical_observations" rows="3">${escapeHtml(pet.medical_observations || '')}</textarea></div>
@@ -599,22 +552,22 @@ export async function openPetModal(id, opts = {}) {
     </div>
   `);
 
+  /* ---------- Navegación por pasos ---------- */
   const PET_STEPS = ['animal', 'prop', 'med'];
   const PET_REQUIRED = {
     animal: ['#ftab-animal input[name="name"]', '#ftab-animal input[name="carnet_number"]'],
     prop: ['#ftab-prop input[name="owner_name"]', '#ftab-prop input[name="owner_phone"]'],
     med: []
   };
-  const PET_REQUIRED_ALL = ['#ftab-animal input[name="name"]', '#ftab-animal input[name="carnet_number"]', '#ftab-prop input[name="owner_name"]', '#ftab-prop input[name="owner_phone"]'];
+  const PET_REQUIRED_ALL = [...PET_REQUIRED.animal, ...PET_REQUIRED.prop];
 
   const petFieldFilled = (sel) => {
     const el = document.querySelector(sel);
     return !!el && String(el.value || '').trim() !== '';
   };
-
-  const petTabValid = (tab) => (PET_REQUIRED[tab] || []).every(sel => petFieldFilled(sel));
-
-  const petSaveValid = () => PET_REQUIRED_ALL.every(sel => petFieldFilled(sel));
+  const petTabValid = (tab) => (PET_REQUIRED[tab] || []).every(petFieldFilled);
+  const petSaveValid = () => PET_REQUIRED_ALL.every(petFieldFilled);
+  const currentTab = () => document.querySelector('[data-ftab].active')?.dataset.ftab || 'animal';
 
   const updatePetButtons = (tab) => {
     const btnPrev = document.getElementById('btn-modal-prev');
@@ -622,93 +575,61 @@ export async function openPetModal(id, opts = {}) {
     const btnSave = document.getElementById('btn-save-pet');
     const idx = PET_STEPS.indexOf(tab);
     const isLast = idx === PET_STEPS.length - 1;
-    if (btnPrev) btnPrev.style.display = idx > 0 ? 'inline-block' : 'none';
+    if (btnPrev) btnPrev.style.display = idx > 0 ? 'inline-flex' : 'none';
     if (isLast) {
       if (btnNext) btnNext.style.display = 'none';
       if (btnSave) {
-        btnSave.style.display = 'inline-block';
+        btnSave.style.display = 'inline-flex';
         btnSave.disabled = !petSaveValid();
-        btnSave.textContent = isEdit ? 'Guardar cambios' : 'Registrar mascota';
       }
     } else {
       if (btnNext) {
-        btnNext.style.display = 'inline-block';
+        btnNext.style.display = 'inline-flex';
         btnNext.disabled = !petTabValid(tab);
       }
       if (btnSave) btnSave.style.display = 'none';
     }
   };
 
+  // Muestra solo el paso activo y oculta los demás. NO borra ningún dato.
   const activatePetTab = (tab) => {
-    document.querySelectorAll('[data-ftab]').forEach(el => {
-      el.classList.toggle('active', el.dataset.ftab === tab);
-    });
-    const sidebar = document.querySelector('.sidebar');
-    if (sidebar) sidebar.classList.toggle('is-collapsed', tab !== 'animal');
-    PET_STEPS.forEach(k => {
-      const el = document.getElementById('ftab-' + k);
-      if (el) el.classList.add('hidden');
-    });
-    const target = document.getElementById('ftab-' + tab);
-    if (target) target.classList.remove('hidden');
-    // Actualizar indicador de progreso
+    document.querySelectorAll('[data-ftab]').forEach(el => el.classList.toggle('active', el.dataset.ftab === tab));
+    PET_STEPS.forEach(k => document.getElementById('ftab-' + k)?.classList.toggle('hidden', k !== tab));
     document.querySelectorAll('.form-step').forEach(s => {
       s.classList.remove('active', 'done');
-      const step = s.dataset.step;
-      if (step === tab) s.classList.add('active');
-      const order = ['animal', 'prop', 'med'];
-      if (order.indexOf(step) < order.indexOf(tab)) s.classList.add('done');
+      if (s.dataset.step === tab) s.classList.add('active');
+      if (PET_STEPS.indexOf(s.dataset.step) < PET_STEPS.indexOf(tab)) s.classList.add('done');
     });
-    updatePetButtons(tab);
-
-    // Al cambiar de pestaña, resetear campos del paso anterior (solo en modo creación)
-    if (!isEdit) {
-      const currentIdx = PET_STEPS.indexOf(tab);
-      // Limpiar campos de pasos anteriores
-      if (currentIdx >= 1) {
-        // Resetear campos del paso "animal" al ir a "prop" o "med"
-        const animalFields = target.form ? target.form.querySelectorAll('[name="name"], [name="carnet_number"], [name="species"], [name="breed"], [name="has_chip"], [name="chip"], [name="breed"], [name="age_mode"], [name="birth_date"], [name="age_years"], [name="age_months"], [name="sex"], [name="color"], [name="distinctive_marks"], [name="weight"], [name="category"], [name="status"], [name="signature"], [name="offspring"], [name="registration_date"]') : [];
-        animalFields.forEach(el => el.value = '');
-      }
-      if (currentIdx >= 2) {
-        // Resetear campos del paso "prop" al ir a "med"
-        const propFields = target.form ? target.form.querySelectorAll('[name="owner_name"], [name="owner_ci"], [name="owner_phone"], [name="owner_email"], [name="owner_department"], [name="owner_city"], [name="owner_address"]') : [];
-        propFields.forEach(el => el.value = '');
-      }
-    }
     updatePetButtons(tab);
   };
 
   document.querySelectorAll('[data-ftab]').forEach(el => el.addEventListener('click', () => activatePetTab(el.dataset.ftab)));
   document.getElementById('btn-modal-next')?.addEventListener('click', () => {
-    const currentTab = document.querySelector('.tab-btn.active')?.dataset.ftab || 'animal';
-    const idx = PET_STEPS.indexOf(currentTab);
+    const idx = PET_STEPS.indexOf(currentTab());
     if (idx < PET_STEPS.length - 1) activatePetTab(PET_STEPS[idx + 1]);
   });
   document.getElementById('btn-modal-prev')?.addEventListener('click', () => {
-    const currentTab = document.querySelector('.tab-btn.active')?.dataset.ftab || 'animal';
-    const idx = PET_STEPS.indexOf(currentTab);
+    const idx = PET_STEPS.indexOf(currentTab());
     if (idx > 0) activatePetTab(PET_STEPS[idx - 1]);
   });
 
-  // Validación en tiempo real para habilitar/deshabilitar botón Siguiente / Guardar
-  [...new Set([...(PET_REQUIRED.animal || []), ...(PET_REQUIRED.prop || []), ...(PET_REQUIRED.med || [])])].forEach(sel => {
-    document.querySelectorAll(sel).forEach(el => {
-      el.addEventListener('input', () => updatePetButtons(document.querySelector('.tab-btn.active')?.dataset.ftab || 'animal'));
-      el.addEventListener('change', () => updatePetButtons(document.querySelector('.tab-btn.active')?.dataset.ftab || 'animal'));
-    });
+  // Validación en tiempo real para habilitar/deshabilitar Siguiente / Guardar
+  PET_REQUIRED_ALL.forEach(sel => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    el.addEventListener('input', () => updatePetButtons(currentTab()));
+    el.addEventListener('change', () => updatePetButtons(currentTab()));
   });
 
-  // Estado inicial: abrir en la pestaña indicada (acciones rápidas) o en el primer paso
+  // Estado inicial: pestaña indicada (acciones rápidas) o primer paso
   activatePetTab(opts.tab && PET_STEPS.includes(opts.tab) ? opts.tab : 'animal');
 
-  // Toggle especie
+  /* ---------- Especie ---------- */
   document.querySelectorAll('#species-group .toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#species-group .toggle-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('species-hidden').value = btn.dataset.species;
-      // Actualizar razas según especie
       const newBreeds = BREEDS_BY_SPECIES[btn.dataset.species] || [];
       initSearchableSelect('breed', newBreeds.map(b => ({ v: b, l: b })), null);
       const breedInput = document.getElementById('ss-input-breed');
@@ -717,7 +638,7 @@ export async function openPetModal(id, opts = {}) {
     });
   });
 
-  // Inicializar searchable selects
+  /* ---------- Selectores con búsqueda ---------- */
   const species = pet.species || 'perro';
   initSearchableSelect('breed', (BREEDS_BY_SPECIES[species] || []).map(b => ({ v: b, l: b })), null);
 
@@ -732,7 +653,6 @@ export async function openPetModal(id, opts = {}) {
 
   // Inicializar ciudad con datos existentes
   if (pet.owner_city) {
-    // Buscar el departamento que contiene esta ciudad
     for (const [dept, cities] of Object.entries(BOLIVIA_LOCATIONS)) {
       if (cities.includes(pet.owner_city)) {
         document.getElementById('ss-input-dept').value = dept;
@@ -745,20 +665,18 @@ export async function openPetModal(id, opts = {}) {
     }
   }
 
-  // Toggle sexo
+  /* ---------- Sexo ---------- */
   document.querySelectorAll('#sex-group .toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#sex-group .toggle-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('sex-hidden').value = btn.dataset.sex;
       const offspringGroup = document.getElementById('offspring-group');
-      if (offspringGroup) {
-        offspringGroup.style.display = btn.dataset.sex === 'Hembra' ? '' : 'none';
-      }
+      if (offspringGroup) offspringGroup.style.display = btn.dataset.sex === 'Hembra' ? '' : 'none';
     });
   });
 
-  // Color chips
+  /* ---------- Color ---------- */
   document.querySelectorAll('#color-chips .color-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       document.querySelectorAll('#color-chips .color-chip').forEach(c => c.classList.remove('active'));
@@ -770,20 +688,34 @@ export async function openPetModal(id, opts = {}) {
     });
   });
 
-  // Cálculo automático de edad desde fecha de nacimiento
+  /* ---------- Edad ---------- */
   const birthDateInput = document.getElementById('birth-date-input');
   if (birthDateInput) {
     birthDateInput.addEventListener('change', () => {
       const result = document.getElementById('age-calc-result');
-      if (birthDateInput.value) {
-        result.textContent = calcAge(birthDateInput.value);
-      } else {
-        result.textContent = 'Selecciona la fecha para calcular la edad';
-      }
+      result.textContent = birthDateInput.value ? calcAge(birthDateInput.value) : 'Selecciona la fecha para calcular la edad';
+    });
+  }
+  const ageModeSelect = document.getElementById('age-mode-select');
+  if (ageModeSelect) {
+    ageModeSelect.addEventListener('change', (e) => {
+      const byYM = e.target.value === 'years_months';
+      document.getElementById('age-birth-date-group').style.display = byYM ? 'none' : '';
+      document.getElementById('age-years-months-group').style.display = byYM ? '' : 'none';
     });
   }
 
-  // Búsqueda de propietario existente
+  /* ---------- Microchip ---------- */
+  const hasChipCheck = document.getElementById('has-chip-check');
+  if (hasChipCheck) {
+    const chipInput = document.getElementById('chip-num');
+    hasChipCheck.addEventListener('change', () => {
+      chipInput.disabled = !hasChipCheck.checked;
+      if (hasChipCheck.checked) chipInput.focus();
+    });
+  }
+
+  /* ---------- Búsqueda de propietario existente ---------- */
   const btnSearchOwner = document.getElementById('btn-search-owner');
   if (btnSearchOwner) {
     btnSearchOwner.addEventListener('click', async () => {
@@ -814,6 +746,7 @@ export async function openPetModal(id, opts = {}) {
               document.getElementById('ss-input-city').value = owner.owner_city;
               document.getElementById('ss-hidden-city').value = owner.owner_city;
             }
+            updatePetButtons(currentTab());
             toast('Datos del propietario cargados');
           });
         } else {
@@ -824,23 +757,7 @@ export async function openPetModal(id, opts = {}) {
     });
   }
 
-  // Toggle modo de edad
-  const ageModeSelect = document.getElementById('age-mode-select');
-  if (ageModeSelect) {
-    ageModeSelect.addEventListener('change', (e) => {
-      const bdGroup = document.getElementById('age-birth-date-group');
-      const ymGroup = document.getElementById('age-years-months-group');
-      if (e.target.value === 'years_months') {
-        bdGroup.style.display = 'none';
-        ymGroup.style.display = '';
-      } else {
-        bdGroup.style.display = '';
-        ymGroup.style.display = 'none';
-      }
-    });
-  }
-
-  // Toggle vacunas según vacunado
+  /* ---------- Médico ---------- */
   const vaccinatedSelect = document.getElementById('vaccinated-select');
   if (vaccinatedSelect) {
     vaccinatedSelect.addEventListener('change', (e) => {
@@ -849,59 +766,27 @@ export async function openPetModal(id, opts = {}) {
     });
   }
 
-  // Toggle número de chip según la casilla "¿Tiene microchip?"
-  const hasChipCheck = document.getElementById('has-chip-check');
-  if (hasChipCheck) {
-    const chipInput = document.getElementById('chip-num');
-    hasChipCheck.addEventListener('change', () => {
-      chipInput.disabled = !hasChipCheck.checked;
-      if (hasChipCheck.checked) chipInput.focus();
+  // Agregar / eliminar items de las 5 listas dinámicas
+  [
+    ['vaccine', 'vaccines-list', 'btn-add-vaccine'],
+    ['deworming', 'deworming-list', 'btn-add-deworming'],
+    ['condition', 'conditions-list', 'btn-add-condition'],
+    ['surgery', 'surgeries-list', 'btn-add-surgery'],
+    ['medication', 'medications-list', 'btn-add-medication']
+  ].forEach(([kind, listId, btnId]) => {
+    document.getElementById(btnId)?.addEventListener('click', () => addDynamicItem(listId, dynItem(kind)));
+    document.getElementById(listId)?.addEventListener('click', (e) => {
+      if (e.target && e.target.classList.contains('btn-remove-item')) e.target.closest('.dynamic-item').remove();
     });
-  }
-
-  // Event listeners para agregar items dinámicos
-  const btnAddVaccine = document.getElementById('btn-add-vaccine');
-  if (btnAddVaccine) {
-    btnAddVaccine.addEventListener('click', () => addDynamicItem('vaccines-list', renderVaccineItem()));
-  }
-  const btnAddDeworming = document.getElementById('btn-add-deworming');
-  if (btnAddDeworming) {
-    btnAddDeworming.addEventListener('click', () => addDynamicItem('deworming-list', renderDewormingItem()));
-  }
-  const btnAddCondition = document.getElementById('btn-add-condition');
-  if (btnAddCondition) {
-    btnAddCondition.addEventListener('click', () => addDynamicItem('conditions-list', renderConditionItem()));
-  }
-  const btnAddSurgery = document.getElementById('btn-add-surgery');
-  if (btnAddSurgery) {
-    btnAddSurgery.addEventListener('click', () => addDynamicItem('surgeries-list', renderSurgeryItem()));
-  }
-  const btnAddMedication = document.getElementById('btn-add-medication');
-  if (btnAddMedication) {
-    btnAddMedication.addEventListener('click', () => addDynamicItem('medications-list', renderMedicationItem()));
-  }
-
-  // Delegación para eliminar items dinámicos
-  document.getElementById('vaccines-list')?.addEventListener('click', (e) => {
-    if (e.target && e.target.classList.contains('btn-remove-item')) e.target.closest('.dynamic-item').remove();
-  });
-  document.getElementById('deworming-list')?.addEventListener('click', (e) => {
-    if (e.target && e.target.classList.contains('btn-remove-item')) e.target.closest('.dynamic-item').remove();
-  });
-  document.getElementById('conditions-list')?.addEventListener('click', (e) => {
-    if (e.target && e.target.classList.contains('btn-remove-item')) e.target.closest('.dynamic-item').remove();
-  });
-  document.getElementById('surgeries-list')?.addEventListener('click', (e) => {
-    if (e.target && e.target.classList.contains('btn-remove-item')) e.target.closest('.dynamic-item').remove();
-  });
-  document.getElementById('medications-list')?.addEventListener('click', (e) => {
-    if (e.target && e.target.classList.contains('btn-remove-item')) e.target.closest('.dynamic-item').remove();
   });
 
   bindPhotoEditor();
   document.getElementById('btn-save-pet').addEventListener('click', () => savePet(pet.id, isEdit));
 }
 
+/* ============================================================
+   FOTO
+   ============================================================ */
 function bindPhotoEditor() {
   const drop = document.getElementById('photo-drop');
   const input = document.getElementById('photo-input');
@@ -944,6 +829,9 @@ function rotatePhoto() {
   img.src = photoTemp;
 }
 
+/* ============================================================
+   GUARDAR
+   ============================================================ */
 async function savePet(id, isEdit) {
   const fd = new FormData();
   // Se recolectan desde el contenedor del modal para no depender de la ubicación
@@ -971,10 +859,7 @@ async function savePet(id, isEdit) {
     container.querySelectorAll('.dynamic-item').forEach(el => {
       const nameInput = el.querySelector(`input[name="${nameField}"]`);
       const dateInput = el.querySelector(`input[name="${dateField}"]`);
-      items.push({
-        name: nameInput ? nameInput.value : '',
-        date: dateInput ? dateInput.value : ''
-      });
+      items.push({ name: nameInput ? nameInput.value : '', date: dateInput ? dateInput.value : '' });
     });
     return items.filter(i => i.name.trim());
   };
@@ -984,38 +869,49 @@ async function savePet(id, isEdit) {
   const conditions = collectDynamicList('conditions-list', 'condition_name', 'condition_date');
   const surgeries = collectDynamicList('surgeries-list', 'surgery_name', 'surgery_date');
   const medications = collectDynamicList('medications-list', 'medication_name', 'medication_date');
+  const names = list => list.map(i => i.name).filter(Boolean).join(', ');
+
+  const hasChip = !!fd.get('has_chip');
 
   const petData = {
     id,
     carnet_number: get('carnet_number'),
-    name: get('name'), species: document.getElementById('species-hidden')?.value || get('species'), breed: document.getElementById('ss-hidden-breed')?.value || get('breed'), sex: document.getElementById('sex-hidden')?.value || get('sex'),
+    name: get('name'),
+    species: document.getElementById('species-hidden')?.value || get('species'),
+    breed: document.getElementById('ss-hidden-breed')?.value || get('breed'),
+    sex: document.getElementById('sex-hidden')?.value || get('sex'),
     birth_date: get('age_mode') === 'birth_date' ? get('birth_date') : '',
-    color: document.getElementById('color-hidden')?.value || get('distinctive_marks'), weight: get('weight'),
-    category: get('category') || 'General', status: get('status'),
+    color: document.getElementById('color-hidden')?.value || get('distinctive_marks'),
+    weight: get('weight'),
+    category: get('category') || 'General',
+    status: get('status'),
     distinctive_marks: get('distinctive_marks'),
     registration_date: get('registration_date'),
     photo: photoTemp,
     owner_name: get('owner_name'), owner_ci: get('owner_ci'), owner_address: get('owner_address'),
-    owner_city: document.getElementById('ss-hidden-city')?.value || get('owner_city'), owner_phone: get('owner_phone'), owner_email: get('owner_email'),
-    medical_vaccinated: get('medical_vaccinated'), medical_vet: get('medical_vet'),
+    owner_city: document.getElementById('ss-hidden-city')?.value || get('owner_city'),
+    owner_phone: get('owner_phone'), owner_email: get('owner_email'),
+    medical_vaccinated: get('medical_vaccinated'),
+    medical_vaccines: names(vaccines),
+    medical_vet: get('medical_vet'),
     medical_observations: get('medical_observations'),
-    medical_diseases: get('medical_conditions'), medical_allergies: get('allergies'),
+    medical_diseases: names(conditions),
+    medical_allergies: get('allergies'),
     signature: get('signature'),
-    chip: fd.get('has_chip') ? get('chip') : '',
-    has_chip: fd.get('has_chip') ? 1 : 0,
+    chip: hasChip ? get('chip') : '',
+    has_chip: hasChip ? 1 : 0,
     age_years: get('age_mode') === 'years_months' ? get('age_years') : '',
     age_months: get('age_mode') === 'years_months' ? get('age_months') : '',
     age_mode: get('age_mode'),
-    vaccines_list: vaccines.map(v => v.name).filter(Boolean).join(', '),
-    deworming_history: dewormings.map(d => d.name).filter(Boolean).join(', '),
-    medical_conditions: conditions.map(c => c.name).filter(Boolean).join(', '),
-    surgeries: surgeries.map(s => s.name).filter(Boolean).join(', '),
-    medications: medications.map(m => m.name).filter(Boolean).join(', '),
-    sterilized: get('sterilized') === '1' ? 1 : 0, microchip: fd.get('has_chip') ? get('chip') : '', blood_type: get('blood_type')
+    vaccines_list: names(vaccines),
+    deworming_history: names(dewormings),
+    medical_conditions: names(conditions),
+    surgeries: names(surgeries),
+    medications: names(medications),
+    sterilized: get('sterilized') === '1' ? 1 : 0,
+    microchip: hasChip ? get('chip') : '',
+    blood_type: get('blood_type')
   };
-
-  // El microchip extendido (tabla pet_medical_details) se sincroniza con el chip de la ficha.
-  const microchipValue = petData.chip;
 
   try {
     let createdId = id;
@@ -1028,16 +924,16 @@ async function savePet(id, isEdit) {
     await state.loadPets();
     api.logHistory(isEdit ? 'Edición' : 'Creación', `${petData.name} (${petData.carnet_number})`);
 
-    // Guardar detalles médicos extendidos con listas dinámicas como JSON
+    // Detalles médicos extendidos (listas dinámicas como JSON)
     const medicalDetails = {
       vaccines_list: petData.vaccines_list,
       deworming_history: petData.deworming_history,
       medical_conditions: petData.medical_conditions,
-       allergies: get('allergies'),
+      allergies: get('allergies'),
       surgeries: petData.surgeries,
       medications: petData.medications,
       sterilized: petData.sterilized,
-      microchip: microchipValue,
+      microchip: petData.microchip,
       blood_type: petData.blood_type,
       vaccines_detail: vaccines,
       deworming_detail: dewormings,
@@ -1048,6 +944,9 @@ async function savePet(id, isEdit) {
     try {
       await api.updateMedicalDetails(createdId, medicalDetails);
     } catch (_) { /* no bloquear si falla */ }
+
+    state.cardPetId = createdId;
+    state.view = isEdit ? state.view : 'mascotas';
 
     if (!isEdit) {
       const newPet = state.getPets().find(x => x.id === createdId);
@@ -1061,9 +960,7 @@ async function savePet(id, isEdit) {
       toast('Cambios guardados');
       closeModal();
     }
-    state.cardPetId = createdId;
-    state.view = isEdit ? state.view : 'mascotas';
-    import('../app.js').then(m => m.renderApp());
+    rerender();
   } catch (e) { toast(e.message, 'error'); }
 }
 
