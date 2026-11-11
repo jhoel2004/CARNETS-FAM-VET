@@ -19,6 +19,7 @@ class AppState {
     this.filterStatus = '';
     this.filterSex = '';
     this.filterUser = '';   // filtro de mascotas por usuario responsable
+    this.filterOwner = '';  // filtro de mascotas por propietario
     this.cardPetId = null;
     this.cardTemplate = null;
     this.sidebarOpen = false;

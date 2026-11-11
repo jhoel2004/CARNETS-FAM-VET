@@ -168,6 +168,7 @@ export function viewMascotas(advanced) {
       <option value="Hembra" ${state.filterSex === 'Hembra' ? 'selected' : ''}>Hembra</option>
     </select>
     ${state.filterUser ? `<span class="chip active" data-clear-user style="cursor:pointer;" title="Quitar filtro de usuario">👤 Usuario: ${escapeHtml(state.filterUser)} ✕</span>` : ''}
+    ${state.filterOwner ? `<span class="chip active" data-clear-owner style="cursor:pointer;" title="Quitar filtro de propietario">🏠 Propietario: ${escapeHtml(state.filterOwner)} ✕</span>` : ''}
   </div>
   <div class="table-wrap">
     ${list.length ? `<table>
@@ -206,6 +207,7 @@ function filteredPets() {
     if (state.filterStatus && p.status !== state.filterStatus) return false;
     if (state.filterSex && p.sex !== state.filterSex) return false;
     if (state.filterUser && p.created_by !== state.filterUser) return false;
+    if (state.filterOwner && p.owner_ci !== state.filterOwner && p.owner_name !== state.filterOwner) return false;
     return true;
   });
 }
@@ -214,6 +216,7 @@ export function bindPetsEvents() {
   document.querySelectorAll('[data-species]').forEach(el => el.addEventListener('click', () => { state.filterSpecies = el.dataset.species; rerender(); }));
   document.querySelectorAll('[data-status]').forEach(el => el.addEventListener('click', () => { state.filterStatus = el.dataset.status; rerender(); }));
   document.querySelectorAll('[data-clear-user]').forEach(el => el.addEventListener('click', () => { state.filterUser = ''; rerender(); }));
+  document.querySelectorAll('[data-clear-owner]').forEach(el => el.addEventListener('click', () => { state.filterOwner = ''; rerender(); }));
   const sexSel = document.getElementById('filter-sex');
   if (sexSel) sexSel.addEventListener('change', () => { state.filterSex = sexSel.value; rerender(); });
 

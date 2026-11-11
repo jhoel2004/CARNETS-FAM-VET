@@ -17,7 +17,7 @@ export function initConfig(s) {
 export function viewConfig() {
   const s = state.getSettings();
   return `
-  <div class="page-head"><div><h1>Configuración</h1><p>Identidad y plantillas de FAM J VET. La gestión de usuarios está en la vista Usuarios.</p></div></div>
+  <div class="page-head"><div><h1>Configuración</h1><p>Identidad del sistema, plantillas y gestión de usuarios de FAM J VET.</p></div></div>
   <div class="panel">
     <h3>Identidad del sistema</h3>
     <div class="form-grid">
@@ -32,18 +32,9 @@ export function viewConfig() {
       </div>
     </div>
     <button class="btn btn-primary" id="btn-save-config" style="margin-top:14px;">Guardar configuración</button>
-  </div>`;
-}
+  </div>
 
-/* ============================================================
-   VISTA USUARIOS (sidebar "Usuarios")
-   Un usuario puede tener varias mascotas; una mascota pertenece
-   a un solo usuario (pets.created_by).
-   ============================================================ */
-export function viewUsuarios() {
-  return `
-  <div class="page-head"><div><h1>Usuarios</h1><p>Personal del sistema y las mascotas que cada uno ha registrado.</p></div></div>
-  <div class="panel">
+  <div class="panel" style="margin-top:18px;">
     <h3>Usuarios y roles</h3>
     <div class="table-wrap" style="box-shadow:none;">
       <table><thead><tr><th>Usuario</th><th>Rol</th><th></th></tr></thead>

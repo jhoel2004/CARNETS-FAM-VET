@@ -8,7 +8,7 @@ import { initDashboard, viewDashboard, drawCharts, bindDashboardEvents } from '.
 import { initPets, viewMascotas, bindPetsEvents, openPetModal, openPetDetail } from './pages/pets.js';
 import { initCard, viewCarnet, renderCardPreview, bindCarnetEvents } from './pages/card-generator.js';
 import { initHistory, viewHistorial } from './pages/history.js';
-import { initConfig, viewConfig, viewUsuarios, bindConfigEvents } from './pages/config.js';
+import { initConfig, viewConfig, bindConfigEvents } from './pages/config.js';
 import { initSalud, viewSalud, bindSaludEvents, getSaludSubtab, setSaludSubtab } from './pages/health.js';
 import { renderPublicPage } from './pages/public.js';
 import { initDashboardData, getDashTab, setDashTab, DASH_TABS, buildAlerts } from './pages/dashboard-data.js';
@@ -117,8 +117,7 @@ const NAV_GROUPS = () => {
       { id: 'salud', label: 'Salud', icon: iconStethoscope, subtab: 'vacunacion', section: 'section-salud' },
     ]},
     { label: 'Administración', items: [
-      { id: 'usuarios', label: 'Usuarios', icon: iconUser, adminOnly: true, section: 'section-admin' },
-      { id: 'config', label: 'Configuración', icon: iconGear, adminOnly: true, section: 'section-admin' },
+      { id: 'config', label: 'Configuración y usuarios', icon: iconGear, adminOnly: true, section: 'section-admin' },
     ]},
   ].map(g => ({ ...g, items: g.items.filter(i => !i.adminOnly || isAdmin) }))
 };
@@ -209,7 +208,7 @@ function profileMenuHtml() {
         <div style="font-size:13px; font-weight:700;">${escapeHtml(state.user.name)}</div>
         <div style="font-size:11px; color:var(--text-2);">${escapeHtml(state.user.role)}</div>
       </div>
-      ${isAdmin ? `<button class="menu-item" data-goto="usuarios">${iconUser} Usuarios</button><button class="menu-item" data-goto="config">${iconGear} Configuración</button>` : ''}
+      ${isAdmin ? `<button class="menu-item" data-goto="config">${iconGear} Configuración y usuarios</button>` : ''}
       <button class="menu-item danger" data-action="logout">${iconLogout} Cerrar sesión</button>
     </div>
   </div>`;
@@ -342,7 +341,6 @@ export async function renderView() {
   else if (state.view === 'historial') body.innerHTML = viewHistorial();
   else if (state.view === 'salud') body.innerHTML = viewSalud();
   else if (state.view === 'config') body.innerHTML = state.user.role === 'Administrador' ? viewConfig() : `<p>No autorizado.</p>`;
-  else if (state.view === 'usuarios') body.innerHTML = state.user.role === 'Administrador' ? viewUsuarios() : `<p>No autorizado.</p>`;
   bindViewEvents();
   if (state.view === 'dashboard') drawCharts();
   if (state.view === 'carnet') await renderCardPreview();

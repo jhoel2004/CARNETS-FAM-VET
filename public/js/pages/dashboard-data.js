@@ -304,3 +304,27 @@ export function buildAlerts(pets) {
   alerts.forEach(a => counts[a.priority]++);
   return { alerts, counts, total: alerts.length };
 }
+
+/* ---------- Propietarios (agrupación por CI/nombre) ---------- */
+// Agrupa todas las mascotas por propietario (clave: owner_ci || owner_name)
+// y devuelve la lista completa con sus datos y sus mascotas.
+export function ownerList(pets) {
+  const byOwner = new Map();
+  pets.forEach(p => {
+    const key = (p.owner_ci || p.owner_name || '').trim() || 'Sin CI';
+    if (!byOwner.has(key)) {
+      byOwner.set(key, {
+        key,
+        name: (p.owner_name || 'Sin nombre').trim(),
+        ci: (p.owner_ci || '').trim(),
+        phone: (p.owner_phone || '').trim(),
+        email: (p.owner_email || '').trim(),
+        city: (p.owner_city || '').trim(),
+        address: (p.owner_address || '').trim(),
+        pets: []
+      });
+    }
+    byOwner.get(key).pets.push(p);
+  });
+  return [...byOwner.values()].sort((a, b) => b.pets.length - a.pets.length || a.name.localeCompare(b.name));
+}

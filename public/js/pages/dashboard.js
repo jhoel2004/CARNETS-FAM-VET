@@ -2,9 +2,9 @@
    Dashboard: vista, eventos y exportaciones.
    Datos → dashboard-data.js · Gráficos → dashboard-charts.js
    ============================================================ */
-import { escapeHtml, statusBadge, placeholderPhoto, groupHistoryByDay, describeHistory, calcDashboardStats, calcHealthStats, pctOf, toast, petAgeYears } from '../utils.js';
+import { escapeHtml, statusBadge, placeholderPhoto, groupHistoryByDay, describeHistory, calcDashboardStats, calcHealthStats, pctOf, toast, petAgeYears, speciesLabel } from '../utils.js';
 import { api } from '../api.js';
-import { iconPaw, iconCheckCircle, iconAlert, iconCard, iconPlus, iconActivity, iconUsers, iconChevronRight, iconFileText, iconSyringe, iconUser, iconStethoscope, iconDownload, iconPill, iconHeartbeat } from '../icons.js';
+import { iconPaw, iconCheckCircle, iconAlert, iconCard, iconPlus, iconActivity, iconUsers, iconChevronRight, iconFileText, iconSyringe, iconUser, iconStethoscope, iconDownload, iconPill, iconHeartbeat, iconX } from '../icons.js';
 import { openModal, closeModal } from '../components/modal.js';
 import { openPetModal, openPetDetail } from './pets.js';
 import * as data from './dashboard-data.js';
@@ -460,7 +460,25 @@ export function viewDashboard() {
         <div><div class="kpi-num" style="font-size:24px;">${st.newOwnersMonth}</div><div class="kpi-lbl">Nuevos este mes</div></div>
         <div><div class="kpi-num" style="font-size:24px;">${st.ownersCount ? (st.total / st.ownersCount).toFixed(1) : '—'}</div><div class="kpi-lbl">Mascotas / prop.</div></div>
       </div>
-      ${st.topOwners.length ? st.topOwners.map(o => `<div class="owner-row"><span class="o-av">${escapeHtml(initials(o.name))}</span><span>${escapeHtml(o.name)}<div class="o-sub">${o.count} ${o.count === 1 ? 'mascota' : 'mascotas'}</div></span><b>${o.count}</b></div>`).join('') : `<p class="faint">Sin propietarios registrados.</p>`}
+      <div style="margin-top:10px;">
+        <input type="text" id="owner-search" placeholder="Buscar propietario (nombre, CI o teléfono)..." style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; background:var(--surface); font-size:12px;">
+        <div class="faint" style="font-size:11px; margin-top:4px;">${st.topOwners.length ? st.topOwners.map(o => `<span class="chip owner-chip" style="cursor:pointer;" data-owner="${escapeHtml(o.key)}">${escapeHtml(o.name)} <b>${o.count}</b></span>`).join('') : ''}</div>
+      </div>
+    </div>
+  </div>
+  <div class="panel span-12" style="margin-top:12px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+      <h3 style="margin:0; font-size:15px;">Listado de propietarios</h3>
+      <span class="chip" id="owner-sort" style="cursor:pointer; margin-left:auto;">Ordenar: mascotas ↓</span>
+    </div>
+    <div class="table-wrap">
+      <table id="owners-table">
+        <thead><tr><th>Propietario</th><th>CI</th><th>Teléfono</th><th>Ciudad</th><th>Correo</th><th style="text-align:center;">Mascotas</th><th style="width:180px;">Acción</th></tr></thead>
+        <tbody id="owners-tbody">
+          ${ownerRowsHtml()}
+        </tbody>
+      </table>
+      ${!data.ownerList(data.filteredPets()).length ? `<div class="empty-state"><div><b>Sin propietarios registrados.</b></div></div>` : ''}
     </div>
   </div>` : ''}
 
@@ -571,6 +589,123 @@ export function bindDashboardEvents() {
     else if (act === 'report') openReportModal();
   }));
   animateKpiCounters();
+  // ---------- Propietarios ----------
+  const tbody = document.getElementById('owners-tbody');
+  if (tbody) {
+    renderOwnersTable();
+    document.getElementById('owner-search')?.addEventListener('input', renderOwnersTable);
+    document.getElementById('owner-sort')?.addEventListener('click', () => {
+      const el = document.getElementById('owner-sort');
+      el.dataset.dir = el.dataset.dir === 'name' ? 'count' : 'name';
+      el.textContent = el.dataset.dir === 'name' ? 'Ordenar: nombre A-Z' : 'Ordenar: mascotas ↓';
+      renderOwnersTable();
+    });
+    document.querySelectorAll('.owner-chip').forEach(el => el.addEventListener('click', () => {
+      state.filterOwner = el.dataset.owner;
+      state.view = 'mascotas';
+      import('../app.js').then(m => m.renderApp());
+    }));
+  }
+}
+
+/* ---------- Propietarios: listado, modal y filtro ---------- */
+function ownerRowsHtml() {
+  let list = data.ownerList(data.filteredPets());
+  const q = (document.getElementById('owner-search')?.value || '').toLowerCase();
+  const sortByCount = document.getElementById('owner-sort')?.dataset.dir !== 'name';
+  if (q) list = list.filter(o => o.name.toLowerCase().includes(q) || o.ci.toLowerCase().includes(q) || o.phone.includes(q) || o.city.toLowerCase().includes(q));
+  list.sort(sortByCount ? (a, b) => b.pets.length - a.pets.length || a.name.localeCompare(b.name) : (a, b) => a.name.localeCompare(b.name));
+  return list.map(o => `
+    <tr style="cursor:pointer;">
+      <td><span class="o-av">${initials(o.name)}</span> <b>${escapeHtml(o.name)}</b></td>
+      <td class="faint">${o.ci || '—'}</td>
+      <td class="faint">${o.phone || '—'}</td>
+      <td class="faint">${o.city || '—'}</td>
+      <td class="faint">${o.email || '—'}</td>
+      <td style="text-align:center;"><b>${o.pets.length}</b></td>
+      <td><button class="btn btn-outline btn-sm" data-view-owner-pets="${escapeHtml(o.key)}" style="width:170px;">Ver mascotas (${o.pets.length})</button></td>
+    </tr>`).join('') || `<tr><td colspan="7" class="empty-state" style="text-align:center;padding:20px;">No hay propietarios.</td></tr>`;
+}
+
+function renderOwnersTable() {
+  const tbody = document.getElementById('owners-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = ownerRowsHtml();
+  bindOwnersTableEvents();
+}
+
+function bindOwnersTableEvents() {
+  document.querySelectorAll('[data-view-owner-pets]').forEach(el => el.addEventListener('click', () => {
+    const key = el.dataset.viewOwnerPets;
+    const owner = data.ownerList(data.filteredPets()).find(o => o.key === key);
+    if (owner) openOwnerPetsModal(key, owner.name);
+  }));
+}
+
+export function openOwnerPetsModal(ownerKey, ownerName) {
+  const owner = data.ownerList(data.filteredPets()).find(o => o.key === ownerKey);
+  if (!owner) return;
+  const selected = new Set();
+  openModal('modal-lg', `
+    <div class="modal-head"><h3>Mascotas de ${escapeHtml(ownerName)} (${owner.pets.length})</h3><button class="btn-icon" data-close>${iconX}</button></div>
+    <div class="modal-body">
+      <div style="margin-bottom:10px; font-size:12px; color:var(--text-2);">Selecciona una o varias mascotas. Clic en una fila para ver su ficha completa.</div>
+      <div style="max-height:430px; overflow-y:auto;">
+        ${owner.pets.map(p => `
+          <div class="owner-pet-row" data-pet-id="${p.id}" style="margin-bottom:6px; display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" class="owner-pet-sel" data-pet-id="${p.id}" style="width:16px;height:16px; flex:0 0 auto;">
+            <img class="pet-thumb" src="${p.photo || placeholderPhoto()}" alt="" style="width:46px;height:46px;object-fit:cover;border-radius:8px;flex:0 0 auto;">
+            <div class="a-main" style="flex:1; min-width:0;"><div class="a-title">${escapeHtml(p.name)}</div><div class="a-desc">${escapeHtml(p.carnet_number || '')} · ${speciesLabel(p.species, p.species_detail)} · ${escapeHtml(p.status || '—')}</div></div>
+            <span class="a-go">${iconChevronRight}</span>
+          </div>`).join('') || `<div class="alert-none">Este propietario aún no tiene mascotas registradas.</div>`}
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close>Cerrar</button>
+      <button class="btn btn-primary" id="owner-pets-to-mascotas" style="display:none;">Ver en Mascotas</button>
+      <button class="btn btn-outline" id="owner-pets-export" style="display:none;">Exportar CSV seleccionadas</button>
+      <span id="owner-pets-count" style="color:var(--text-2); font-size:12px;">0 seleccionadas</span>
+    </div>`);
+
+  const countEl = document.getElementById('owner-pets-count');
+  const btnMascotas = document.getElementById('owner-pets-to-mascotas');
+  const btnExport = document.getElementById('owner-pets-export');
+  const refresh = () => {
+    const n = selected.size;
+    countEl.textContent = n + ' seleccionada' + (n !== 1 ? 's' : '');
+    btnMascotas.style.display = n ? 'inline-flex' : 'none';
+    btnExport.style.display = n ? 'inline-flex' : 'none';
+  };
+  document.querySelectorAll('.owner-pet-sel').forEach(cb => cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) selected.add(cb.dataset.petId); else selected.delete(cb.dataset.petId);
+    refresh();
+  }));
+  document.querySelectorAll('.owner-pet-row').forEach(row => row.addEventListener('click', (e) => {
+    if (e.target.classList.contains('owner-pet-sel')) return;
+    const pid = row.dataset.petId;
+    closeModal();
+    openPetDetail(pid, 'm');
+  }));
+  btnMascotas.addEventListener('click', () => {
+    state.filterOwner = ownerKey;
+    state.view = 'mascotas';
+    closeModal();
+    import('../app.js').then(m => m.renderApp());
+  });
+  btnExport.addEventListener('click', () => {
+    const selPets = owner.pets.filter(p => selected.has(p.id));
+    if (!selPets.length) return;
+    const head = ['Nombre', 'N° Carnet', 'Especie', 'Raza', 'Sexo', 'Estado', 'Teléfono', 'Ciudad', 'Fecha registro'];
+    const rows = selPets.map(p => [p.name, p.carnet_number || '', speciesLabel(p.species, p.species_detail), p.breed || '', p.sex || '', p.status || '', p.owner_phone || '', p.owner_city || '', p.registration_date || '']);
+    const csv = [head, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `mascotas-${String(ownerName).replace(/[^a-z0-9]/gi, '_')}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    api.logHistory('Exportación de mascotas de propietario', ownerName);
+  });
 }
 
 /* ---------- Contadores animados ---------- */
