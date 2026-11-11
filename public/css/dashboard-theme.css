@@ -1,5 +1,5 @@
 /* =====================================================================
-   dashboard-theme.css · Estilo "aqua" (tarjetas suaves, turquesa + amarillo + violeta)
+   dashboard-theme.css  ·  Estilo "aqua" (tarjetas suaves, turquesa + amarillo + violeta)
    Cargar DESPUÉS de styles.css.
    Incluye también los estilos de clases que usa dashboard.js y que no
    estaban en el CSS enviado (dash-head, dfilters, kpi-foot, alert-item,
@@ -82,21 +82,20 @@ body{background:var(--bg);}
 .dash-tab.active{background:linear-gradient(90deg,#27C6D1,#14A6B8); color:#fff;}
 
 /* ---------- KPIs ---------- */
-.kpi-card{padding:10px 12px; position:relative; cursor:pointer; transition:transform .18s ease, box-shadow .18s ease; min-height:auto; display:flex; flex-direction:column; justify-content:space-between; padding-right:54px;}
-.kpi-card:hover{transform:translateY(-2px); box-shadow:var(--shadow-lg);}
+.kpi-card{padding:18px; position:relative; cursor:pointer; transition:transform .18s ease, box-shadow .18s ease;}
+.kpi-card:hover{transform:translateY(-3px); box-shadow:var(--shadow-lg);}
 .kpi-card.border-left{border-left:none;}
-.kpi-top{justify-content:flex-start; gap:6px; margin-bottom:4px;}
-.kpi-ico{width:28px; height:28px; border-radius:8px; flex:0 0 auto; background:var(--brand-dim); color:var(--brand-3);}
+.kpi-top{justify-content:flex-start; gap:10px; margin-bottom:12px;}
+.kpi-ico{width:34px; height:34px; border-radius:12px; flex:0 0 auto; background:var(--brand-dim); color:var(--brand-3);}
 .kpi-ico.green{background:var(--brand-dim); color:var(--brand-3);}
 .kpi-ico.red{background:var(--red-dim); color:var(--red);}
 .kpi-ico.amber,.kpi-ico.gold{background:var(--gold-dim); color:#C98A00;}
 .kpi-ico.blue{background:var(--purple-dim); color:var(--purple);}
-.kpi-lbl{margin-top:0; font-size:9px; white-space:nowrap;}
-.kpi-row{display:flex; align-items:center; justify-content:space-between; gap:4px;}
-.kpi-num{font-size:26px; font-weight:700; color:var(--text);}
-.kpi-foot{font-size:9px; color:var(--text-2); margin-top:2px; min-height:0; display:flex; align-items:center; gap:2px; flex-wrap:wrap;}
-.kpi-foot svg{width:11px; height:11px;}
-.kpi-foot .faint{display:none;}
+.kpi-lbl{margin-top:0; font-size:11px; white-space:normal; line-height:1.25;}
+.kpi-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.kpi-num{font-size:34px; font-weight:800; color:var(--text);}
+.kpi-foot{font-size:11.5px; color:var(--text-2); margin-top:6px; display:flex; align-items:center; gap:5px;}
+.kpi-foot svg{width:13px; height:13px;}
 .kpi-foot.up{color:var(--brand-3); font-weight:600;} .kpi-foot.down{color:var(--red); font-weight:600;}
 
 /* ---------- Anillos de progreso (como en la imagen) ---------- */
@@ -106,11 +105,6 @@ body{background:var(--bg);}
 .ring b{position:relative; font-size:17px; font-weight:800; color:var(--text);}
 .ring.lg{width:150px; height:150px;} .ring.lg::before{inset:14px;} .ring.lg b{font-size:34px;}
 .ring.purple{--c:#6C63E0; --c2:#9A93F2;} .ring.gold{--c:#F5A524; --c2:#FFD27A;} .ring.red{--c:#F0605D; --c2:#FF9A8F;}
-
-/* Anillo compacto flotante dentro de tarjetas KPI (no estira la altura de la fila) */
-.kpi-card .ring{position:absolute; top:8px; right:10px; width:40px; height:40px;}
-.kpi-card .ring::before{inset:5px;}
-.kpi-card .ring b{font-size:11px;}
 .gauge-wrap{display:flex; flex-direction:column; align-items:center; gap:10px; padding:8px 0 4px;}
 .gauge-sub{font-size:12px; color:var(--text-2);}
 
@@ -151,13 +145,13 @@ body{background:var(--bg);}
 .tl-day{font-size:10.5px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-2); margin:14px 0 6px;}
 .tl-day:first-child{margin-top:0;}
 .tl-item{display:flex; gap:12px;}
-.tl-rail{display:flex; flex-direction:column; align-itemscenter; width:12px; flex:0 0 12px;}
+.tl-rail{display:flex; flex-direction:column; align-items:center; width:12px; flex:0 0 12px;}
 .tl-rail::after{content:""; flex:1; width:2px; background:var(--border); margin-top:4px;}
 .tl-item:last-child .tl-rail::after{display:none;}
 .tl-dot{width:10px; height:10px; border-radius:50%; margin-top:4px; box-shadow:0 0 0 3px #fff;}
 .tl-body{padding-bottom:12px; min-width:0;}
 .tl-desc{font-size:13px; line-height:1.4;}
-.tl-meta{display:flex; gap:10px; font-size:11px; color:var(--text-2); margin-top:2px; align-itemscenter;}
+.tl-meta{display:flex; gap:10px; font-size:11px; color:var(--text-2); margin-top:2px; align-items:center;}
 .tl-user{display:inline-flex; align-items:center; gap:4px;} .tl-user svg{width:12px; height:12px;}
 
 /* ---------- Varios ---------- */
@@ -167,4 +161,13 @@ body{background:var(--bg);}
 .hbar-track i{background:linear-gradient(90deg,var(--brand-2),var(--brand));}
 .meter{border:none; background:#E7F1F3;}
 .badge{border-radius:999px;}
-.donut-center b{color:var(--text);}  en /pages como dashboard-theme.css
+.donut-center b{color:var(--text);}
+
+/* Logo circular del sidebar */
+.sidebar .brand-mark{justify-content:center;}
+.sidebar .logo-circle{
+  width:46px; height:46px; flex:0 0 auto;
+  border-radius:50%; overflow:hidden;
+  box-shadow:0 4px 12px rgba(8,90,105,.25);
+}
+.sidebar .logo-circle svg{width:100%; height:100%; display:block;}

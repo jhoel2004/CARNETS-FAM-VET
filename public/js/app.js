@@ -129,7 +129,7 @@ function sidebarHtml() {
   <div class="sidebar ${state.sidebarOpen ? 'open' : ''}" id="sidebar">
     <div class="brand-mark">
       <div class="fam-logo">
-        <div class="logo-icon">${pawSvg(24)}</div>
+        <div class="logo-icon logo-circle">${logoCircleSvg()}</div>
         <div class="logo-text">
           <div class="fam-name">FAM J VET</div>
           <div class="fam-tag">Identificación animal</div>
@@ -157,6 +157,27 @@ function sidebarHtml() {
     </div>
   </div>`;
 }
+
+function logoCircleSvg() {
+  return `
+  <svg viewBox="0 0 48 48" role="img" aria-label="FAM J VET">
+    <circle cx="24" cy="24" r="23" fill="#ffffff"/>
+    <!-- Anillo tricolor: rojo, amarillo, verde -->
+    <circle cx="24" cy="24" r="21.5" fill="none" stroke="#c8312b" stroke-width="2.6"
+            stroke-dasharray="45 91" transform="rotate(-90 24 24)"/>
+    <circle cx="24" cy="24" r="21.5" fill="none" stroke="#f2b705" stroke-width="2.6"
+            stroke-dasharray="45 91" transform="rotate(30 24 24)"/>
+    <circle cx="24" cy="24" r="21.5" fill="none" stroke="#2e8b4f" stroke-width="2.6"
+            stroke-dasharray="45 91" transform="rotate(150 24 24)"/>
+    <!-- Letra J del logo -->
+    <g transform="translate(24 24) scale(.6) translate(-20.75 -21.25)"
+       fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.5">
+      <path d="M30.5 3.5 V29.5 a9.5 9.5 0 0 1 -19 0 V25" stroke="#2f6fb5"/>
+      <path d="M11 3.5 H30.5" stroke="#2e8b4f"/>
+    </g>
+  </svg>`;
+}
+
 
 /* ---------- Topbar (breadcrumbs, buscador, notificaciones, fecha, perfil) ---------- */
 const VIEW_TITLES = () => {
