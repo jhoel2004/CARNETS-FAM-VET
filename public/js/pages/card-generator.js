@@ -186,6 +186,42 @@ function renderPawDrop() {
   if (input) drop.appendChild(input);
 }
 
+/* Quita el fondo blanco de la patita y recorta la imagen a la figura */
+function autoCleanPaw(dataUrl, threshold = 235) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0, 0, c.width, c.height);
+      const px = data.data;
+      let minX = c.width, minY = c.height, maxX = -1, maxY = -1;
+      for (let y = 0; y < c.height; y++) {
+        for (let x = 0; x < c.width; x++) {
+          const i = (y * c.width + x) * 4;
+          const r = px[i], g = px[i + 1], b = px[i + 2], a = px[i + 3];
+          const isBg = a < 10 || (r >= threshold && g >= threshold && b >= threshold);
+          if (isBg) { px[i + 3] = 0; continue; }
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
+        }
+      }
+      if (maxX < 0) return resolve(dataUrl);
+      ctx.putImageData(data, 0, 0);
+      const pad = 4;
+      const w = maxX - minX + 1 + pad * 2, h = maxY - minY + 1 + pad * 2;
+      const out = document.createElement('canvas');
+      out.width = w; out.height = h;
+      out.getContext('2d').drawImage(c, minX - pad, minY - pad, w, h, 0, 0, w, h);
+      resolve(out.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
 function bindPawUploader() {
   const drop = document.getElementById('paw-drop');
   const input = document.getElementById('paw-photo-input');
@@ -198,7 +234,11 @@ function bindPawUploader() {
     const isPng = file && (file.type === 'image/png' || /\.png$/i.test(file.name));
     if (!isPng) { toast('Solo se aceptan archivos PNG (.png)', 'error'); return; }
     const reader = new FileReader();
-    reader.onload = () => { pawTemp = reader.result; renderPawDrop(); };
+    reader.onload = async () => {
+      try { pawTemp = await autoCleanPaw(reader.result); }
+      catch (_) { pawTemp = reader.result; }
+      renderPawDrop();
+    };
     reader.readAsDataURL(file);
   });
   document.getElementById('btn-clear-paw')?.addEventListener('click', () => { pawTemp = ''; renderPawDrop(); });

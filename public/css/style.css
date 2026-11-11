@@ -726,3 +726,9 @@ tbody tr:hover td{background:rgba(17,24,39,.025);}
   #print-area{position:absolute; left:0; top:0; width:100%;}
 }
 .form-step{cursor:pointer;}
+/* Impronta de patita: sin caja blanca ni borde */
+.fam-id-fingerprint img{
+  background:transparent !important; border:none !important;
+  box-shadow:none !important; mix-blend-mode:multiply;
+  object-fit:contain;
+}
