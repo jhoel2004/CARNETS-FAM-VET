@@ -232,18 +232,18 @@ body{background:var(--bg);}
   justify-content:flex-start !important; padding:10px 0 14px 12px !important;
   margin-bottom:12px !important; border-bottom:none !important;
 }
-.sidebar .brand-mark .fam-logo{width:auto !important; gap:0 !important;}
+.sidebar .brand-mark .fam-logo{width:auto !important; gap:10px !important;}
 .sidebar .brand-mark .logo-icon{
-  width:52px !important; height:52px !important; margin:0 !important;
+  width:56px !important; height:56px !important; flex:0 0 56px; margin:0 !important;
   border-radius:50% !important; background:#fff !important;
   border:2px solid #1FB5C3 !important;
   box-shadow:0 0 0 4px rgba(255,255,255,.25), 0 6px 14px rgba(8,90,105,.28) !important;
   display:flex; align-items:center; justify-content:center; overflow:hidden;
 }
 .sidebar .side-logo{
-  font:700 8px/1 'Barlow Condensed',sans-serif; color:#2f6fb5;
+  font:700 9px/1 'Barlow Condensed',sans-serif; color:#2f6fb5;
   display:flex; align-items:flex-end; letter-spacing:.2px; white-space:nowrap;
 }
-.sidebar .side-logo svg{width:5.5px; height:7px; margin:0 .5px; overflow:visible;}
+.sidebar .side-logo svg{width:6.5px; height:8px; margin:0 .5px; overflow:visible;}
 .sidebar .side-logo path{fill:none; stroke:#2f6fb5; stroke-width:5; stroke-linecap:round; stroke-linejoin:round;}
 .sidebar .side-logo .t{stroke:#2e8b4f;}
