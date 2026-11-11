@@ -169,6 +169,10 @@ a{color:inherit; text-decoration:none;}
 .sidebar .brand-mark .logo-text{min-width:0;}
 .sidebar .brand-mark .fam-name{font-size:16px; font-weight:800; letter-spacing:-.4px; color:var(--text); line-height:1.1;}
 .sidebar .brand-mark .fam-tag{font-size:10.5px; color:var(--text-2); letter-spacing:.8px; text-transform:uppercase; line-height:1;}
+.sidebar .brand-mark .side-logo{display:flex; align-items:flex-end; font:700 15px 'Barlow Condensed',sans-serif; letter-spacing:.3px; color:var(--brand-3); line-height:1;}
+.sidebar .brand-mark .side-logo svg{width:13px; height:17px; margin:0 2px; overflow:visible;}
+.sidebar .brand-mark .side-logo path{fill:none; stroke:var(--brand-3); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round;}
+.sidebar .brand-mark .side-logo .t{stroke:var(--brand);}
 .sidebar .brand-mark .name{font-size:16px; font-weight:700; letter-spacing:-.2px; color:var(--text);}
 .sidebar .brand-mark .name small{display:block; font-size:9.5px; letter-spacing:1.6px; color:var(--brand); font-weight:700; margin-top:1px;}
 

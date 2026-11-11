@@ -129,7 +129,7 @@ function sidebarHtml() {
   <div class="sidebar ${state.sidebarOpen ? 'open' : ''}" id="sidebar">
     <div class="brand-mark">
       <div class="fam-logo">
-        <div class="logo-icon logo-circle">${logoCircleSvg()}</div>
+        <div class="logo-icon"><div class="side-logo">${logoFamSvg()}</div></div>
         <div class="logo-text">
           <div class="fam-name">FAM J VET</div>
           <div class="fam-tag">Identificación animal</div>
@@ -156,6 +156,10 @@ function sidebarHtml() {
       </div>
     </div>
   </div>`;
+}
+
+function logoFamSvg() {
+  return `FAM<svg viewBox="0 0 40 52" aria-hidden="true"><path d="M30.5 3.5 V29.5 a9.5 9.5 0 0 1 -19 0 V25"/><path class="t" d="M11 3.5 H30.5"/></svg>VET`;
 }
 
 function logoCircleSvg() {
