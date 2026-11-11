@@ -649,7 +649,7 @@ function openReportModal() {
 function exportDashboardCsv() {
   const pets = data.filteredPets();
   if (!pets.length) return toast('No hay mascotas en la selección actual', 'error');
-  const head = ['Nombre', 'N° Carnet', 'Registro BOL-CAR', 'Especie', 'Raza', 'Sexo', 'Estado', 'Propietario', 'Teléfono', 'Ciudad', 'Fecha registro', 'Microchip'];
+  const head = ['Nombre', 'N° Carnet', 'Registro', 'Especie', 'Raza', 'Sexo', 'Estado', 'Propietario', 'Teléfono', 'Ciudad', 'Fecha registro', 'Microchip'];
   const rows = pets.map(p => [
     p.name, p.carnet_number, p.ci_number || '', speciesShort(p.species), p.breed || '', p.sex || '', p.status || '',
     p.owner_name || '', p.owner_phone || '', p.owner_city || '', p.registration_date || '', p.has_chip ? `Sí: ${p.chip || ''}` : 'No'

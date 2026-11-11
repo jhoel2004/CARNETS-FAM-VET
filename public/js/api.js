@@ -40,6 +40,7 @@ export const api = {
   getPublicPetHealth: (id) => request('GET', '/pets/public/' + id + '/health'),
   getDashboardAnalytics: () => request('GET', '/pets/analytics'),
   searchOwners: (ci, phone) => request('GET', '/pets/owners/search?' + new URLSearchParams({ ci: ci || '', phone: phone || '' }).toString()),
+  nextCarnetNumber: () => request('GET', '/pets/next-carnet'),
 
   // Health records
   getHealthRecords: (petId) => request('GET', '/pets/' + petId + '/health-records'),

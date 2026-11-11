@@ -24,6 +24,7 @@ export function viewConfig() {
       <div class="field full"><label>Nombre del sistema</label><input id="cfg-name" value="${escapeHtml(s.systemName || '')}"></div>
       <div class="field full"><label>Subtítulo / eslogan</label><input id="cfg-sub" value="${escapeHtml(s.systemSub || '')}"></div>
       <div class="field"><label>Formato de carnet</label><input id="cfg-format" value="${escapeHtml(s.cardFormat || '')}"></div>
+      <div class="field"><label>Prefijo del CI/carnet</label><input id="cfg-prefix" value="${escapeHtml(s.carnetPrefix || 'PLI-BO')}" placeholder="PLI-BO" style="font-family:var(--font-mono);"></div>
       <div class="field"><label>Tamaño de QR (px)</label><input id="cfg-qr" type="number" value="${s.qrSize || 56}"></div>
       <div class="field full"><label>Texto de pie de carnet</label><input id="cfg-footer" value="${escapeHtml(s.footerText || '')}"></div>
       <div class="field full"><label>Plantilla predeterminada</label>
@@ -104,6 +105,7 @@ export function bindConfigEvents() {
         systemName: document.getElementById('cfg-name').value,
         systemSub: document.getElementById('cfg-sub').value,
         cardFormat: document.getElementById('cfg-format').value,
+        carnetPrefix: (document.getElementById('cfg-prefix').value || '').trim().toUpperCase() || 'PLI-BO',
         qrSize: Number(document.getElementById('cfg-qr').value) || 56,
         footerText: document.getElementById('cfg-footer').value,
         defaultTemplate: document.getElementById('cfg-tpl').value

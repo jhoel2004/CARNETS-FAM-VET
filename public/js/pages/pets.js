@@ -523,7 +523,13 @@ export async function openPetModal(id, opts = {}) {
         <!-- ================= PASO 1: ANIMAL ================= -->
         <div id="ftab-animal" class="form-grid">
           <div class="field full"><label>Nombre de la mascota *</label><input required name="name" value="${escapeHtml(pet.name)}"></div>
-          <div class="field"><label>N° de carnet / CI *</label><input required name="carnet_number" value="${escapeHtml(pet.carnet_number || '')}" placeholder="Ej: PLI-BO-2026-00001"></div>
+          <div class="field">
+            <label>N° de carnet / CI ${isEdit ? '*' : ''}</label>
+            <input name="carnet_number" id="carnet-input" ${isEdit ? 'required placeholder="Ej: PLI-BO-2026-00001"' : 'readonly placeholder="Se asigna automáticamente…"'} value="${escapeHtml(pet.carnet_number || '')}" style="${isEdit ? '' : 'font-family:var(--font-mono); letter-spacing:.4px;'}">
+            ${isEdit ? '' : `<label class="faint" style="display:flex; align-items:center; gap:6px; margin-top:6px; cursor:pointer; font-size:11.5px; text-transform:none; letter-spacing:0;">
+              <input type="checkbox" id="custom-carnet-check" style="width:15px; height:15px;"> Personalizar (escribirlo a mano · debe ser único)
+            </label>`}
+          </div>
           <div class="field"><label>Especie</label>
             <div class="toggle-btn-group" id="species-group">
               <button type="button" class="toggle-btn ${pet.species === 'perro' ? 'active' : ''}" data-species="perro">🐕 Perro</button>
@@ -675,19 +681,27 @@ export async function openPetModal(id, opts = {}) {
 
   /* ---------- Navegación por pasos ---------- */
   const PET_STEPS = ['animal', 'prop', 'med'];
+  // El CI es obligatorio solo en modo manual (check "Personalizar") o al editar;
+  // en modo automático el servidor genera el número secuencial único.
+  const animalRequired = () => {
+    const reqs = ['#ftab-animal input[name="name"]'];
+    if (isEdit || document.getElementById('custom-carnet-check')?.checked)
+      reqs.push('#ftab-animal input[name="carnet_number"]');
+    return reqs;
+  };
   const PET_REQUIRED = {
-    animal: ['#ftab-animal input[name="name"]', '#ftab-animal input[name="carnet_number"]'],
+    animal: animalRequired,
     prop: ['#ftab-prop input[name="owner_name"]', '#ftab-prop input[name="owner_phone"]'],
     med: []
   };
-  const PET_REQUIRED_ALL = [...PET_REQUIRED.animal, ...PET_REQUIRED.prop];
+  const reqsFor = (tab) => (typeof PET_REQUIRED[tab] === 'function' ? PET_REQUIRED[tab]() : (PET_REQUIRED[tab] || []));
 
   const petFieldFilled = (sel) => {
     const el = document.querySelector(sel);
     return !!el && String(el.value || '').trim() !== '';
   };
-  const petTabValid = (tab) => (PET_REQUIRED[tab] || []).every(petFieldFilled);
-  const petSaveValid = () => PET_REQUIRED_ALL.every(petFieldFilled);
+  const petTabValid = (tab) => reqsFor(tab).every(petFieldFilled);
+  const petSaveValid = () => [...animalRequired(), ...PET_REQUIRED.prop].every(petFieldFilled);
   const currentTab = () => document.querySelector('[data-ftab].active')?.dataset.ftab || 'animal';
 
   const updatePetButtons = (tab) => {
@@ -735,12 +749,42 @@ export async function openPetModal(id, opts = {}) {
   });
 
   // Validación en tiempo real para habilitar/deshabilitar Siguiente / Guardar
-  PET_REQUIRED_ALL.forEach(sel => {
+  ['#ftab-animal input[name="name"]', '#ftab-animal input[name="carnet_number"]', ...PET_REQUIRED.prop].forEach(sel => {
     const el = document.querySelector(sel);
     if (!el) return;
     el.addEventListener('input', () => updatePetButtons(currentTab()));
     el.addEventListener('change', () => updatePetButtons(currentTab()));
   });
+
+  /* ---------- CI/carnet: automático vs Personalizar ---------- */
+  const carnetInput = document.getElementById('carnet-input');
+  const customCheck = document.getElementById('custom-carnet-check');
+  if (carnetInput && customCheck) {
+    // Vista previa del próximo número (solo registro nuevo). Si la petición
+    // falla, el campo queda vacío y el servidor genera el número igualmente.
+    api.nextCarnetNumber().then(r => {
+      if (r?.carnet_number && !carnetInput.value) {
+        carnetInput.value = r.carnet_number;
+        carnetInput.dataset.preview = r.carnet_number;
+      }
+      updatePetButtons(currentTab());
+    }).catch(() => {});
+    customCheck.addEventListener('change', () => {
+      if (customCheck.checked) {
+        // Modo manual: editable y obligatorio
+        carnetInput.readOnly = false;
+        carnetInput.value = '';
+        carnetInput.placeholder = 'Ej: PLI-BO-2026-00001';
+        carnetInput.focus();
+      } else {
+        // Vuelve al modo automático con la vista previa
+        carnetInput.readOnly = true;
+        carnetInput.placeholder = 'Se asigna automáticamente…';
+        carnetInput.value = carnetInput.dataset.preview || '';
+      }
+      updatePetButtons(currentTab());
+    });
+  }
 
   // Estado inicial: pestaña indicada (acciones rápidas) o primer paso
   activatePetTab(opts.tab && PET_STEPS.includes(opts.tab) ? opts.tab : 'animal');
@@ -981,8 +1025,11 @@ async function savePet(id, isEdit) {
   });
   const get = k => fd.get(k) || '';
 
-  if (!get('name').trim() || !get('owner_name').trim() || !get('owner_phone').trim() || !get('carnet_number').trim()) {
-    toast('Completa los campos obligatorios (*), incluyendo el número de carnet', 'error');
+  // Modo manual = edición o check "Personalizar" activo. En modo automático el
+  // servidor genera el secuencial, así que el CI puede ir vacío.
+  const manualCarnet = isEdit || !!document.getElementById('custom-carnet-check')?.checked;
+  if (!get('name').trim() || !get('owner_name').trim() || !get('owner_phone').trim() || (manualCarnet && !get('carnet_number').trim())) {
+    toast('Completa los campos obligatorios (*)' + (manualCarnet ? ', incluyendo el número de carnet' : ''), 'error');
     return;
   }
 
@@ -1010,7 +1057,8 @@ async function savePet(id, isEdit) {
 
   const petData = {
     id,
-    carnet_number: get('carnet_number'),
+    // Modo automático: se envía vacío para que el servidor genere el secuencial
+    carnet_number: manualCarnet ? get('carnet_number') : '',
     name: get('name'),
     species: document.getElementById('species-hidden')?.value || get('species'),
     species_detail: document.getElementById('ss-hidden-spec-detail')?.value || get('species_detail') || '',
@@ -1051,14 +1099,19 @@ async function savePet(id, isEdit) {
 
   try {
     let createdId = id;
+    let savedCarnet = petData.carnet_number;
     if (isEdit) {
       await api.updatePet(id, petData);
+      // El PUT conserva el número previo si llegó vacío
+      savedCarnet = savedCarnet || pet.carnet_number || '';
     } else {
       const res = await api.createPet(petData);
       createdId = res.id;
+      // El número definitivo lo asignó el servidor
+      savedCarnet = res.carnet_number || savedCarnet;
     }
     await state.loadPets();
-    api.logHistory(isEdit ? 'Edición' : 'Creación', `${petData.name} (${petData.carnet_number})`);
+    api.logHistory(isEdit ? 'Edición' : 'Creación', `${petData.name} (${savedCarnet})`);
 
     // Detalles médicos extendidos (listas dinámicas como JSON)
     const medicalDetails = {

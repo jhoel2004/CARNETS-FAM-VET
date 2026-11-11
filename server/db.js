@@ -90,6 +90,7 @@ async function createSqliteTables() {
   sqlJsDb.run(`CREATE TABLE IF NOT EXISTS pets (
     id TEXT PRIMARY KEY,
     carnet_number TEXT UNIQUE NOT NULL,
+    ci_number TEXT DEFAULT '',
     name TEXT NOT NULL,
     species TEXT DEFAULT 'perro',
     breed TEXT DEFAULT '',
@@ -206,6 +207,7 @@ async function createSqliteTables() {
   addCol('pets', "paw_photo TEXT DEFAULT ''");
   addCol('pets', "created_by TEXT DEFAULT ''");
   addCol('pets', "species_detail TEXT DEFAULT ''");
+  addCol('pets', "ci_number TEXT DEFAULT ''");
   addCol('pet_medical_details', "vaccines_detail TEXT DEFAULT '[]'");
   addCol('pet_medical_details', "deworming_detail TEXT DEFAULT '[]'");
   addCol('pet_medical_details', "conditions_detail TEXT DEFAULT '[]'");
@@ -253,9 +255,17 @@ async function createSqliteTables() {
 // Convierte "$1, $2, $3" a "?, ?, ?" para sql.js
 function toSqlite(sql, params) {
   if (usePg) return { sql, params };
-  let idx = 0;
-  const converted = sql.replace(/\$\d+/g, () => params[idx++] !== undefined ? '?' : '?');
-  return { sql: converted, params };
+  // Los placeholders $N se convierten a '?' posicionales. Si el mismo $N se
+  // usa varias veces (p. ej. INSERT ... ON CONFLICT DO UPDATE SET value = $2),
+  // cada aparición debe recibir su valor: se reconstruye el arreglo de params
+  // en orden de aparición en vez de consumirlo secuencialmente.
+  const expanded = [];
+  const converted = sql.replace(/\$\d+/g, (m) => {
+    const v = params[parseInt(m.slice(1), 10) - 1];
+    expanded.push(v === undefined ? null : v);
+    return '?';
+  });
+  return { sql: converted, params: expanded };
 }
 
 async function query(sql, params = []) {
@@ -394,7 +404,8 @@ async function ensurePgSchema(client) {
     ['systemName', 'FAM J VET'],
     ['systemSub', 'Sistema Nacional de Identificación de Mascotas'],
     ['defaultTemplate', 'bolivia'],
-    ['cardFormat', 'CR80 (85.6 × 54 mm)']
+    ['cardFormat', 'CR80 (85.6 × 54 mm)'],
+    ['carnetPrefix', 'PLI-BO']
   ]) {
     await client.query(
       'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING',
