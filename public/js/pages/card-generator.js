@@ -65,11 +65,17 @@ function expiryDate(pet) {
   return formatDate(d.toISOString().slice(0, 10));
 }
 
+/* Zona legible por máquina: 3 líneas de 30 caracteres exactos */
 function mrzLines(pet) {
   const clean = value => String(value || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]+/g, '<');
   const pad = (value, size) => clean(value).padEnd(size, '<').slice(0, size);
   const birth = String(pet.birth_date || '').replaceAll('-', '').slice(2) || '000000';
-  return `${pad(`PETBO${pet.carnet_number}`, 19)}<<${pad(pet.carnet_number, 9)}\n${birth}<${pet.sex === 'Hembra' ? 'F' : 'M'}${pad('BOL', 3)}<<<<<<<<<<<<<<<<\n${pad(`${pet.name}<<${pet.breed}`, 30)}`;
+  const sex = pet.sex === 'Hembra' ? 'F' : 'M';
+  return [
+    pad(`PETBO<${pet.carnet_number || ''}`, 30),
+    pad(`${birth}<${sex}<BOL`, 30),
+    pad(`${pet.name || ''}<<${pet.breed || ''}`, 30),
+  ].join('\n');
 }
 
 function logoSvg() { return `FAM<svg viewBox="0 0 40 52" aria-hidden="true"><path d="M30.5 3.5 V29.5 a9.5 9.5 0 0 1 -19 0 V25"/><path class="t" d="M11 3.5 H30.5"/></svg>VET`; }
@@ -89,8 +95,8 @@ function signatureHtml(signature) {
   return `<span>${escapeHtml(signature || '—')}</span>`;
 }
 
-// Bloque de microchip en la parte libre derecha del carnet:
-// con chip → check arriba y número abajo; sin chip → texto alineado a la derecha.
+// Bloque de microchip (abajo a la derecha, libre de campos):
+// con chip → check arriba y número abajo; sin chip → texto.
 function chipBlock(pet) {
   if (pet.has_chip) {
     return `<div class="fam-id-chip ok"><label>MICROCHIP</label><span class="check">✓</span><b>${escapeHtml(pet.chip || 'Sin número')}</b></div>`;
@@ -107,8 +113,9 @@ function frontHtml(pet) {
     <div class="fam-id-number">Nº ${escapeHtml(pet.carnet_number || '—')}<small>${escapeHtml(pet.ci_number || '')}</small></div>
     <div class="fam-id-fields fam-id-front-fields">
       ${field('Especie', speciesLabel(pet.species, pet.species_detail))}${field('Sexo', pet.sex)}${field('Peso', pet.weight ? `${pet.weight} kg` : '—')}
-      ${field('Nombre', pet.name, 'wide name')}${field('Raza', pet.breed, 'wide name')}${field('Fecha de nacimiento', formatDate(pet.birth_date), 'wide')}
-      ${field('Fecha de emisión', formatDate(pet.registration_date), 'double')}${field('Fecha de expiración', expiryDate(pet))}
+      ${field('Nombre', pet.name, 'wide name')}
+      ${field('Raza', pet.breed, 'double name')}${field('Nacimiento', formatDate(pet.birth_date))}
+      ${field('Emisión', formatDate(pet.registration_date))}${field('Expiración', expiryDate(pet))}
     </div>
     ${chipBlock(pet)}
     <div class="fam-id-signature">${signatureHtml(pet.signature)}<label>FIRMA DEL PROPIETARIO</label></div>
@@ -122,7 +129,7 @@ function backHtml(pet) {
   const vaccination = pet.medical_vaccinated === 'Sí' || pet.vaccines_list ? 'Al día' : 'Sin registro';
   return `<div class="fam-id-card fam-id-back" id="the-id-card-back">
     <div class="fam-id-guil"></div><div class="fam-id-qr" id="card-qr"></div>
-    <div class="fam-id-vet">FAMUVET<label>REGISTRO VETERINARIO</label></div>
+    <div class="fam-id-vet"><div class="fam-id-logo">${logoSvg()}</div><label>REGISTRO VETERINARIO</label></div>
     <div class="fam-id-fields fam-id-back-fields">
       ${field('Ciudad de registro', pet.owner_city || 'Bolivia', 'wide')}${field('Domicilio', [pet.owner_address, pet.owner_city].filter(Boolean).join(', '), 'wide')}
       ${field('Propietario', pet.owner_name, 'wide name')}${field('Teléfono', pet.owner_phone)}${field('Esterilizado', pet.sterilized ? 'Sí' : 'No')}
