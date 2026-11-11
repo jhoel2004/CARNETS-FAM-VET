@@ -53,7 +53,7 @@ function donutLegend(rows) {
     ${rows.map(r => `<div class="legend-row"><span class="sw" style="background:${r.color}"></span>${r.label}<b>${r.n}</b><span class="pct">${r.pct}%</span></div>`).join('')}
   </div>`;
 }
-
+/* Anillo de progreso (CSS puro) */
 function ringHtml(pct, label, tone = '', size = '') {
   const p = Math.max(0, Math.min(100, Number(pct) || 0));
   return `<div class="ring ${tone} ${size}" style="--p:${p}"><b>${label ?? p + '%'}</b></div>`;
@@ -121,7 +121,7 @@ function filtersHtml(allPets, pets) {
   </div>`;
 }
 
-/* ---------- KPIs ---------- */
+/* ---------- KPIs (con anillos de progreso) ---------- */
 function kpiCardsHtml(pets, st, hs, analysis, records) {
   const overdue = analysis.overdue || [];
   const totalVacDesp = hs.totalVacunas + hs.totalDesparasitaciones;
@@ -405,7 +405,7 @@ export function viewDashboard() {
         ${donutLegend([
     { label: 'Perros', color: 'var(--brand)', n: dogs, pct: pctOf(dogs, total) },
     { label: 'Gatos', color: 'var(--gold)', n: cats, pct: pctOf(cats, total) },
-    { label: 'Otros', color: 'var(--text-2)', n: others, pct: pctOf(others, total) },
+    { label: 'Otros', color: 'var(--purple)', n: others, pct: pctOf(others, total) },
   ])}
       </div>
     </div>

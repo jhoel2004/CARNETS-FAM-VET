@@ -410,7 +410,8 @@ export function drawCharts() {
     const appliedVacDesp = records.filter(r => (r.type === 'vacuna' || r.type === 'desparasitacion') && r.applied).length;
     const coveragePct = totalVacDesp > 0 ? Math.round((appliedVacDesp / totalVacDesp) * 100) : 0;
 
-    drawGauge('gauge-vaccination', coveragePct, 'Al día');
+    // El gauge Chart.js fue reemplazado por el anillo CSS (.ring.lg) en dashboard.js.
+    // drawGauge('gauge-vaccination', coveragePct, 'Al día');
 
     const months6 = lastMonths(6);
     const progData = months6.map(mo => regCount(pets, mo));
