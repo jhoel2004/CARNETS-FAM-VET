@@ -439,29 +439,33 @@ function blankPet() {
 }
 
 /* ============================================================
-   LISTAS DINÁMICAS DE DATOS MÉDICOS (un solo helper para las 5)
+   LISTAS DINÁMICAS DE DATOS MÉDICOS (un solo helper para las 6)
    ============================================================ */
 function parseJsonArray(v) {
   if (Array.isArray(v)) return v;
   try { const r = JSON.parse(v || '[]'); return Array.isArray(r) ? r : []; } catch { return []; }
 }
 
-// tipo -> [nombre del input de texto, nombre del input de fecha, placeholder]
+// tipo -> [nombre del input de texto, nombre del input de fecha (null = sin fecha), placeholder]
 const DYN = {
   vaccine:    ['vaccine_name',    'vaccine_date',    'Nombre de la vacuna'],
   deworming:  ['deworming_name',  'deworming_date',  'Nombre de la desparasitación'],
   condition:  ['condition_name',  'condition_date',  'Enfermedad'],
   surgery:    ['surgery_name',    'surgery_date',    'Cirugía'],
-  medication: ['medication_name', 'medication_date', 'Medicamento']
+  medication: ['medication_name', 'medication_date', 'Medicamento'],
+  allergy:    ['allergy_name',    null,              'Alergia']
 };
 const DYN_INPUT_STYLE = 'width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-size:12px;';
 
 function dynItem(kind, item = {}) {
   const [nameField, dateField, placeholder] = DYN[kind];
+  const dateInput = dateField
+    ? `<input type="date" name="${dateField}" value="${escapeHtml(item.date || '')}" style="${DYN_INPUT_STYLE}">`
+    : '';
   return `
   <div class="dynamic-item" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
     <input type="text" name="${nameField}" placeholder="${placeholder}" value="${escapeHtml(item.name || '')}" style="${DYN_INPUT_STYLE}">
-    <input type="date" name="${dateField}" value="${escapeHtml(item.date || '')}" style="${DYN_INPUT_STYLE}">
+    ${dateInput}
     <button type="button" class="btn-remove-item" style="grid-column:1/-1; width:fit-content; align-self:flex-start; background:var(--red); color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer;">Eliminar</button>
   </div>`;
 }
@@ -582,7 +586,6 @@ export async function openPetModal(id, opts = {}) {
           <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" name="weight" value="${pet.weight || ''}"></div>
           <div class="field"><label>Categoría</label><input name="category" value="${escapeHtml(pet.category || '')}"></div>
           <div class="field"><label>Estado</label><select name="status"><option ${pet.status === 'Activo' ? 'selected' : ''}>Activo</option><option ${pet.status === 'Inactivo' ? 'selected' : ''}>Inactivo</option><option ${pet.status === 'Perdido' ? 'selected' : ''}>Perdido</option></select></div>
-          <div class="field"><label>Firma del propietario (aparece en el carnet)</label><input name="signature" value="${escapeHtml(pet.signature || '')}" placeholder="Ej: Juan Pérez"></div>
           <div class="field" id="offspring-group" style="display:${pet.sex === 'Hembra' ? '' : 'none'};"><label>Hijos (camada)</label><input name="offspring" value="${escapeHtml(pet.offspring || '')}" placeholder="Ej: 3 cachorros"></div>
           <div class="field"><label>Fecha de registro</label><input type="date" name="registration_date" value="${pet.registration_date || ''}"></div>
           <!-- Foto de la mascota -->
@@ -660,12 +663,45 @@ export async function openPetModal(id, opts = {}) {
             <button type="button" class="btn btn-outline btn-sm" id="btn-add-medication" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar medicamento</button>
           </div>
 
-          <div class="field"><label>Veterinaria</label><input name="medical_vet" value="${escapeHtml(pet.medical_vet || '')}"></div>
-          <div class="field"><label>Alergias</label><input name="allergies" value="${escapeHtml(pet.allergies || pet.medical_allergies || '')}"></div>
+          <div class="field full">
+            <label style="display:block; font-weight:600; margin-bottom:8px; color:var(--text-2); text-transform:uppercase; letter-spacing:.6px; font-size:11px;">Alergias</label>
+            <div id="allergies-list" class="dynamic-list">${dynItems('allergy', (() => {
+              const d = parseJsonArray(pet.allergies_detail);
+              if (d.length) return d;
+              const legacy = String(pet.allergies || pet.medical_allergies || '').trim();
+              return legacy ? [{ name: legacy }] : [];
+            })())}</div>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-allergy" style="width:fit-content; align-self:flex-start; margin-top:8px;">+ Agregar alergia</button>
+          </div>
+
+          <div class="field"><label>Tipo de sangre</label>${(() => {
+            const v = String(pet.blood_type || '').trim();
+            const known = ['', 'DEA 1.1', 'DEA 1.3', 'DEA 1.5', 'DEA 1.7', 'DEA 3', 'DEA 4', 'DEA 5', 'DEA 7', 'DEA 8', 'A', 'B', 'AB'];
+            const extra = v && !known.includes(v) ? `<option value="${escapeHtml(v)}" selected>${escapeHtml(v)} (valor guardado)</option>` : '';
+            return `<select name="blood_type">
+              <option value="" ${!v ? 'selected' : ''}>No especificar</option>
+              ${extra}
+              <optgroup label="Perro (DEA)">
+                <option value="DEA 1.1" ${v === 'DEA 1.1' ? 'selected' : ''}>DEA 1.1</option>
+                <option value="DEA 1.3" ${v === 'DEA 1.3' ? 'selected' : ''}>DEA 1.3</option>
+                <option value="DEA 1.5" ${v === 'DEA 1.5' ? 'selected' : ''}>DEA 1.5</option>
+                <option value="DEA 1.7" ${v === 'DEA 1.7' ? 'selected' : ''}>DEA 1.7</option>
+                <option value="DEA 3" ${v === 'DEA 3' ? 'selected' : ''}>DEA 3</option>
+                <option value="DEA 4" ${v === 'DEA 4' ? 'selected' : ''}>DEA 4</option>
+                <option value="DEA 5" ${v === 'DEA 5' ? 'selected' : ''}>DEA 5</option>
+                <option value="DEA 7" ${v === 'DEA 7' ? 'selected' : ''}>DEA 7</option>
+                <option value="DEA 8" ${v === 'DEA 8' ? 'selected' : ''}>DEA 8</option>
+              </optgroup>
+              <optgroup label="Gato">
+                <option value="A" ${v === 'A' ? 'selected' : ''}>A</option>
+                <option value="B" ${v === 'B' ? 'selected' : ''}>B</option>
+                <option value="AB" ${v === 'AB' ? 'selected' : ''}>AB</option>
+              </optgroup>
+            </select>`;
+          })()}</div>
           <div class="field"><label>Esterilizado</label><select name="sterilized"><option value="0" ${!pet.sterilized ? 'selected' : ''}>No</option><option value="1" ${pet.sterilized ? 'selected' : ''}>Sí</option></select></div>
+          <div class="field full"><label>Observaciones</label><textarea name="medical_observations" rows="3">${escapeHtml(pet.medical_observations || '')}</textarea></div>
           <div class="field full" style="font-size:12px; color:var(--text-2);">El microchip se registra en la pestaña <b>Datos del animal</b>, con su casilla y número.</div>
-          <div class="field"><label>Tipo de sangre</label><input name="blood_type" value="${escapeHtml(pet.blood_type || '')}"></div>
-          <div class="field"><label>Observaciones</label><textarea name="medical_observations" rows="3">${escapeHtml(pet.medical_observations || '')}</textarea></div>
         </div>
       </form>
     </div>
@@ -942,13 +978,14 @@ export async function openPetModal(id, opts = {}) {
     });
   }
 
-  // Agregar / eliminar items de las 5 listas dinámicas
+  // Agregar / eliminar items de las 6 listas dinámicas
   [
     ['vaccine', 'vaccines-list', 'btn-add-vaccine'],
     ['deworming', 'deworming-list', 'btn-add-deworming'],
     ['condition', 'conditions-list', 'btn-add-condition'],
     ['surgery', 'surgeries-list', 'btn-add-surgery'],
-    ['medication', 'medications-list', 'btn-add-medication']
+    ['medication', 'medications-list', 'btn-add-medication'],
+    ['allergy', 'allergies-list', 'btn-add-allergy']
   ].forEach(([kind, listId, btnId]) => {
     document.getElementById(btnId)?.addEventListener('click', () => addDynamicItem(listId, dynItem(kind)));
     document.getElementById(listId)?.addEventListener('click', (e) => {
@@ -1030,14 +1067,14 @@ async function savePet(id, isEdit) {
     return;
   }
 
-  // Recolectar items dinámicos de cada sección médica (solo nombre y fecha)
+  // Recolectar items dinámicos de cada sección médica (nombre y fecha opcional)
   const collectDynamicList = (containerId, nameField, dateField) => {
     const container = document.getElementById(containerId);
     if (!container) return [];
     const items = [];
     container.querySelectorAll('.dynamic-item').forEach(el => {
       const nameInput = el.querySelector(`input[name="${nameField}"]`);
-      const dateInput = el.querySelector(`input[name="${dateField}"]`);
+      const dateInput = dateField ? el.querySelector(`input[name="${dateField}"]`) : null;
       items.push({ name: nameInput ? nameInput.value : '', date: dateInput ? dateInput.value : '' });
     });
     return items.filter(i => i.name.trim());
@@ -1048,6 +1085,7 @@ async function savePet(id, isEdit) {
   const conditions = collectDynamicList('conditions-list', 'condition_name', 'condition_date');
   const surgeries = collectDynamicList('surgeries-list', 'surgery_name', 'surgery_date');
   const medications = collectDynamicList('medications-list', 'medication_name', 'medication_date');
+  const allergies = collectDynamicList('allergies-list', 'allergy_name', null);
   const names = list => list.map(i => i.name).filter(Boolean).join(', ');
 
   const hasChip = !!fd.get('has_chip');
@@ -1074,11 +1112,9 @@ async function savePet(id, isEdit) {
     owner_phone: get('owner_phone'), owner_email: get('owner_email'),
     medical_vaccinated: get('medical_vaccinated'),
     medical_vaccines: names(vaccines),
-    medical_vet: get('medical_vet'),
     medical_observations: get('medical_observations'),
     medical_diseases: names(conditions),
-    medical_allergies: get('allergies'),
-    signature: get('signature'),
+    medical_allergies: names(allergies),
     chip: hasChip ? get('chip') : '',
     has_chip: hasChip ? 1 : 0,
     age_years: get('age_mode') === 'years_months' ? get('age_years') : '',
@@ -1115,7 +1151,7 @@ async function savePet(id, isEdit) {
       vaccines_list: petData.vaccines_list,
       deworming_history: petData.deworming_history,
       medical_conditions: petData.medical_conditions,
-      allergies: get('allergies'),
+      allergies: names(allergies),
       surgeries: petData.surgeries,
       medications: petData.medications,
       sterilized: petData.sterilized,
@@ -1125,7 +1161,8 @@ async function savePet(id, isEdit) {
       deworming_detail: dewormings,
       conditions_detail: conditions,
       surgeries_detail: surgeries,
-      medications_detail: medications
+      medications_detail: medications,
+      allergies_detail: allergies
     };
     try {
       await api.updateMedicalDetails(createdId, medicalDetails);

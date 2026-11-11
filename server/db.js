@@ -163,6 +163,7 @@ async function createSqliteTables() {
     conditions_detail TEXT DEFAULT '[]',
     surgeries_detail TEXT DEFAULT '[]',
     medications_detail TEXT DEFAULT '[]',
+    allergies_detail TEXT DEFAULT '[]',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
@@ -213,6 +214,7 @@ async function createSqliteTables() {
   addCol('pet_medical_details', "conditions_detail TEXT DEFAULT '[]'");
   addCol('pet_medical_details', "surgeries_detail TEXT DEFAULT '[]'");
   addCol('pet_medical_details', "medications_detail TEXT DEFAULT '[]'");
+  addCol('pet_medical_details', "allergies_detail TEXT DEFAULT '[]'");
   addCol('pet_health_records', "batch TEXT DEFAULT ''");
   addCol('pet_health_records', "scheduled_date TEXT DEFAULT ''");
 
@@ -234,6 +236,7 @@ async function createSqliteTables() {
     conditions_detail TEXT DEFAULT '[]',
     surgeries_detail TEXT DEFAULT '[]',
     medications_detail TEXT DEFAULT '[]',
+    allergies_detail TEXT DEFAULT '[]',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
@@ -337,6 +340,7 @@ async function ensurePgSchema(client) {
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS conditions_detail TEXT DEFAULT '[]';
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS surgeries_detail TEXT DEFAULT '[]';
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS medications_detail TEXT DEFAULT '[]';
+    ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS allergies_detail TEXT DEFAULT '[]';
     ALTER TABLE IF EXISTS pet_health_records ADD COLUMN IF NOT EXISTS batch TEXT DEFAULT '';
     ALTER TABLE IF EXISTS pet_health_records ADD COLUMN IF NOT EXISTS scheduled_date TEXT DEFAULT '';
     CREATE TABLE IF NOT EXISTS pet_health_records (
@@ -374,6 +378,7 @@ async function ensurePgSchema(client) {
       conditions_detail TEXT DEFAULT '[]',
       surgeries_detail TEXT DEFAULT '[]',
       medications_detail TEXT DEFAULT '[]',
+      allergies_detail TEXT DEFAULT '[]',
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );

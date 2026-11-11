@@ -541,8 +541,8 @@ router.put('/:id/medical-details', authenticateToken, requireAdminOrOperator, as
       await db.run(`UPDATE pet_medical_details SET
         vaccines_list=$1, deworming_history=$2, medical_conditions=$3, allergies=$4, surgeries=$5,
         medications=$6, sterilized=$7, microchip=$8, blood_type=$9,
-        vaccines_detail=$10, deworming_detail=$11, conditions_detail=$12, surgeries_detail=$13, medications_detail=$14, updated_at=$15
-        WHERE pet_id=$16`, [
+        vaccines_detail=$10, deworming_detail=$11, conditions_detail=$12, surgeries_detail=$13, medications_detail=$14, allergies_detail=$15, updated_at=$16
+        WHERE pet_id=$17`, [
         d.vaccines_list || '', d.deworming_history || '', d.medical_conditions || '',
         d.allergies || '', d.surgeries || '', d.medications || '',
         d.sterilized ? 1 : 0, d.microchip || '', d.blood_type || '',
@@ -551,6 +551,7 @@ router.put('/:id/medical-details', authenticateToken, requireAdminOrOperator, as
         d.conditions_detail ? JSON.stringify(d.conditions_detail) : '[]',
         d.surgeries_detail ? JSON.stringify(d.surgeries_detail) : '[]',
         d.medications_detail ? JSON.stringify(d.medications_detail) : '[]',
+        d.allergies_detail ? JSON.stringify(d.allergies_detail) : '[]',
         now, req.params.id
       ]);
     } else {
@@ -558,9 +559,9 @@ router.put('/:id/medical-details', authenticateToken, requireAdminOrOperator, as
       await db.run(`INSERT INTO pet_medical_details (
         id, pet_id, vaccines_list, deworming_history, medical_conditions, allergies, surgeries,
         medications, sterilized, microchip, blood_type,
-        vaccines_detail, deworming_detail, conditions_detail, surgeries_detail, medications_detail,
+        vaccines_detail, deworming_detail, conditions_detail, surgeries_detail, medications_detail, allergies_detail,
         created_at, updated_at
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`, [
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`, [
         id, req.params.id, d.vaccines_list || '', d.deworming_history || '',
         d.medical_conditions || '', d.allergies || '', d.surgeries || '',
         d.medications || '', d.sterilized ? 1 : 0, d.microchip || '', d.blood_type || '',
@@ -569,6 +570,7 @@ router.put('/:id/medical-details', authenticateToken, requireAdminOrOperator, as
         d.conditions_detail ? JSON.stringify(d.conditions_detail) : '[]',
         d.surgeries_detail ? JSON.stringify(d.surgeries_detail) : '[]',
         d.medications_detail ? JSON.stringify(d.medications_detail) : '[]',
+        d.allergies_detail ? JSON.stringify(d.allergies_detail) : '[]',
         now, now
       ]);
     }
