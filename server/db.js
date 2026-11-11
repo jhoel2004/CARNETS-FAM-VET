@@ -122,6 +122,7 @@ async function createSqliteTables() {
     chip TEXT DEFAULT '',
     has_chip INTEGER DEFAULT 0,
     paw_photo TEXT DEFAULT '',
+    created_by TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
@@ -190,6 +191,7 @@ async function createSqliteTables() {
   addCol('pets', "chip TEXT DEFAULT ''");
   addCol('pets', "has_chip INTEGER DEFAULT 0");
   addCol('pets', "paw_photo TEXT DEFAULT ''");
+  addCol('pets', "created_by TEXT DEFAULT ''");
   addCol('pet_medical_details', "vaccines_detail TEXT DEFAULT '[]'");
   addCol('pet_medical_details', "deworming_detail TEXT DEFAULT '[]'");
   addCol('pet_medical_details', "conditions_detail TEXT DEFAULT '[]'");
@@ -304,6 +306,7 @@ async function ensurePgSchema(client) {
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS chip TEXT DEFAULT '';
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS has_chip INTEGER DEFAULT 0;
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS paw_photo TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS created_by TEXT DEFAULT '';
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS vaccines_detail TEXT DEFAULT '[]';
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS deworming_detail TEXT DEFAULT '[]';
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS conditions_detail TEXT DEFAULT '[]';

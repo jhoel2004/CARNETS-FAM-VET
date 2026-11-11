@@ -173,8 +173,8 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       category, status, photo, registration_date,
       owner_name, owner_ci, owner_address, owner_city, owner_phone, owner_email,
       medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_diseases, medical_allergies,
-      signature, age_years, age_months, chip, has_chip, paw_photo)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)`, [
+      signature, age_years, age_months, chip, has_chip, paw_photo, created_by)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33)`, [
       id, carnet, p.name, p.species || 'perro', p.breed || '', p.sex || 'Macho',
       p.birth_date || '', p.color || '', p.distinctive_marks || '', p.weight || '', p.category || 'General',
       p.status || 'Activo', p.photo || '', regDate,
@@ -182,7 +182,8 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       p.medical_vaccinated || 'No', p.medical_vaccines || '', p.medical_vet || '',
       p.medical_observations || '', p.medical_diseases || '', p.medical_allergies || '',
       p.signature || '', p.age_years || '', p.age_months || '',
-      p.chip || '', p.has_chip ? 1 : 0, p.paw_photo || ''
+      p.chip || '', p.has_chip ? 1 : 0, p.paw_photo || '',
+      req.user.username || p.created_by || ''
     ]);
 
     // Auto-crear espectador con password = CI

@@ -1,6 +1,8 @@
 import { api } from '../api.js';
-import { iconTrash } from '../icons.js';
-import { escapeHtml, toast } from '../utils.js';
+import { iconTrash, iconChevronRight, iconX } from '../icons.js';
+import { escapeHtml, toast, speciesLabel, statusBadge, placeholderPhoto } from '../utils.js';
+import { openModal, closeModal } from '../components/modal.js';
+import { openPetDetail } from './pets.js';
 
 let state = null;
 const TEMPLATES = [
@@ -35,8 +37,9 @@ export function viewConfig() {
       <h3>Usuarios y roles</h3>
       <div class="table-wrap" style="box-shadow:none;">
         <table><thead><tr><th>Usuario</th><th>Rol</th><th></th></tr></thead>
-        <tbody>${state.getUsers().map((u, i) => `<tr><td><b>${escapeHtml(u.name)}</b><div class="faint">@${u.username}</div></td><td>${u.role}</td><td><button class="btn-icon" data-deluser="${u.id}">${iconTrash}</button></td></tr>`).join('')}</tbody></table>
+        <tbody>${state.getUsers().map((u, i) => `<tr data-user-pets="${u.id}" style="cursor:pointer;"><td><b>${escapeHtml(u.name)}</b><div class="faint">@${u.username}</div></td><td>${u.role}</td><td><button class="btn-icon" data-deluser="${u.id}" title="Eliminar usuario">${iconTrash}</button></td></tr>`).join('')}</tbody></table>
       </div>
+      <div class="faint" style="font-size:11px; margin-top:8px;">Haz clic en un usuario para ver las mascotas que registró.</div>
       <div class="form-grid" style="margin-top:14px;">
         <div class="field"><label>Usuario nuevo</label><input id="new-user-name" placeholder="nombre.usuario"></div>
         <div class="field"><label>Contraseña</label><input id="new-user-pass" placeholder="••••••"></div>
@@ -96,5 +99,33 @@ export function bindConfigEvents() {
       toast('Usuario eliminado');
       import('../app.js').then(m => m.renderApp());
     } catch (e) { toast(e.message, 'error'); }
+  }));
+
+  // Mascotas registradas por usuario (clic en la fila de la tabla)
+  document.querySelectorAll('[data-user-pets]').forEach(el => el.addEventListener('click', (e) => {
+    if (e.target.closest('[data-deluser]')) return; // no abrir el modal al pulsar eliminar
+    const id = Number(el.dataset.userPets);
+    const user = state.getUsers().find(u => u.id === id);
+    if (!user) return;
+    const pets = state.getPets().filter(p => p.created_by === user.username);
+    const unattributed = state.getPets().filter(p => !p.created_by).length;
+    openModal('modal-md', `
+      <div class="modal-head"><h3>Mascotas de ${escapeHtml(user.name)} (${pets.length})</h3><button class="btn-icon" data-close>${iconX}</button></div>
+      <div class="modal-body">
+        <div style="max-height:380px; overflow-y:auto;">
+          ${pets.map(p => `
+            <div class="alert-item" data-user-pet="${p.id}" style="margin-bottom:6px;">
+              <img class="pet-thumb" src="${p.photo || placeholderPhoto()}" alt="">
+              <div class="a-main"><div class="a-title">${escapeHtml(p.name)}</div><div class="a-desc">${escapeHtml(p.carnet_number || '')} · ${speciesLabel(p.species)} · ${escapeHtml(p.owner_name || '')} · ${escapeHtml(p.registration_date || '')}</div></div>
+              ${statusBadge(p.status)}
+              <span class="a-go">${iconChevronRight}</span>
+            </div>`).join('') || `<div class="alert-none">Este usuario aún no ha registrado mascotas.</div>`}
+        </div>
+        ${unattributed ? `<div class="faint" style="font-size:11px; margin-top:10px;">${unattributed} mascota(s) sin atribución (registradas antes de este control).</div>` : ''}
+      </div>`);
+    document.querySelectorAll('[data-user-pet]').forEach(item => item.addEventListener('click', () => {
+      closeModal();
+      openPetDetail(item.dataset.userPet);
+    }));
   }));
 }
