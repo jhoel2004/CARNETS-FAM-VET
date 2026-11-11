@@ -609,28 +609,6 @@ export async function openPetModal(id, opts = {}) {
               <div id="owner-search-result" style="display:none;"></div>
             </div>
           </div>
-          <div class="field full">
-            <label>Usuario responsable</label>
-            <div class="flex gap-2" style="align-items:center; flex-wrap:wrap;">
-              <select id="pet-user-select" name="created_by" style="flex:1; min-width:220px;">
-                ${state.getUsers().map(u => `<option value="${escapeHtml(u.username)}" ${(pet.created_by || state.user?.username) === u.username ? 'selected' : ''}>${escapeHtml(u.name)} (@${escapeHtml(u.username)}) · ${escapeHtml(u.role)}</option>`).join('')}
-              </select>
-              <button type="button" class="btn btn-outline btn-sm" id="btn-add-user-inline">+ Nuevo usuario</button>
-            </div>
-            <div id="inline-user-form" class="hidden" style="margin-top:8px; padding:10px; border:1px dashed var(--border); border-radius:9px;">
-              <div class="form-grid">
-                <div class="field"><label>Usuario</label><input id="inline-user-username" placeholder="nombre.usuario"></div>
-                <div class="field"><label>Contraseña</label><input id="inline-user-pass" type="password" placeholder="••••••"></div>
-                <div class="field"><label>Nombre completo</label><input id="inline-user-fullname" placeholder="Nombre Apellido"></div>
-                <div class="field"><label>Rol</label><select id="inline-user-role"><option>Operador</option>${state.user?.role === 'Administrador' ? '<option>Administrador</option>' : ''}</select></div>
-              </div>
-              <div class="flex gap-2">
-                <button type="button" class="btn btn-primary btn-sm" id="btn-save-inline-user">Crear y asignar</button>
-                <button type="button" class="btn btn-ghost btn-sm" id="btn-cancel-inline-user">Cancelar</button>
-              </div>
-            </div>
-            <div class="faint" style="font-size:11px; margin-top:4px;">Un usuario puede tener varias mascotas; cada mascota pertenece a un solo usuario.</div>
-          </div>
           <div class="field full"><label>Nombre completo *</label><input required name="owner_name" id="owner-name-input" value="${escapeHtml(pet.owner_name || '')}" placeholder="Nombre y apellidos"></div>
           <div class="field"><label>CI</label><input name="owner_ci" id="owner-ci-input" value="${escapeHtml(pet.owner_ci || '')}" placeholder="Cédula de identidad"></div>
           <div class="field"><label>Teléfono *</label><input required name="owner_phone" id="owner-phone-input" value="${escapeHtml(pet.owner_phone || '')}" placeholder="Ej: 70012345"></div>
@@ -939,41 +917,6 @@ export async function openPetModal(id, opts = {}) {
 
   bindPhotoEditor();
   document.getElementById('btn-save-pet').addEventListener('click', () => savePet(pet.id, isEdit));
-
-  /* ---------- Usuario responsable: alta inline ---------- */
-  const inlineBtn = document.getElementById('btn-add-user-inline');
-  const inlineForm = document.getElementById('inline-user-form');
-  if (inlineBtn && inlineForm) {
-    inlineBtn.addEventListener('click', () => {
-      inlineForm.classList.toggle('hidden');
-      if (!inlineForm.classList.contains('hidden')) document.getElementById('inline-user-username')?.focus();
-    });
-    const cancelInline = document.getElementById('btn-cancel-inline-user');
-    if (cancelInline) cancelInline.addEventListener('click', () => inlineForm.classList.add('hidden'));
-    const saveInline = document.getElementById('btn-save-inline-user');
-    if (saveInline) saveInline.addEventListener('click', async () => {
-      const username = document.getElementById('inline-user-username').value.trim();
-      const password = document.getElementById('inline-user-pass').value;
-      const fullname = document.getElementById('inline-user-fullname').value.trim() || username;
-      const role = document.getElementById('inline-user-role').value;
-      if (!username || !password) { toast('Completa usuario y contraseña', 'error'); return; }
-      try {
-        await api.createUser({ username, password, name: fullname, role });
-        await state.loadUsers();
-        // Refrescar el select de usuarios con el nuevo usuario seleccionado
-        const sel = document.getElementById('pet-user-select');
-        if (sel) {
-          sel.innerHTML = state.getUsers().map(u => `<option value="${escapeHtml(u.username)}" ${u.username === username ? 'selected' : ''}>${escapeHtml(u.name)} (@${escapeHtml(u.username)}) · ${escapeHtml(u.role)}</option>`).join('');
-        }
-        inlineForm.classList.add('hidden');
-        document.getElementById('inline-user-username').value = '';
-        document.getElementById('inline-user-pass').value = '';
-        document.getElementById('inline-user-fullname').value = '';
-        api.logHistory('Usuario creado', fullname);
-        toast(`Usuario ${username} creado y asignado`);
-      } catch (e) { toast(e.message, 'error'); }
-    });
-  }
 }
 
 /* ============================================================
@@ -1071,7 +1014,6 @@ async function savePet(id, isEdit) {
     name: get('name'),
     species: document.getElementById('species-hidden')?.value || get('species'),
     species_detail: document.getElementById('ss-hidden-spec-detail')?.value || get('species_detail') || '',
-    created_by: get('created_by') || state.user?.username || '',
     breed: document.getElementById('ss-hidden-breed')?.value || get('breed'),
     sex: document.getElementById('sex-hidden')?.value || get('sex'),
     birth_date: get('age_mode') === 'birth_date' ? get('birth_date') : '',
