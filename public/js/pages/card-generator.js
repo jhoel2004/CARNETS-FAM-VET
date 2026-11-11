@@ -115,8 +115,9 @@ function frontHtml(pet) {
       ${field('Especie', speciesLabel(pet.species, pet.species_detail))}${field('Sexo', pet.sex)}${field('Peso', pet.weight ? `${pet.weight} kg` : '—')}
       ${field('Nombre', pet.name, 'wide name')}
       ${field('Raza', pet.breed, 'double name')}${field('Nacimiento', formatDate(pet.birth_date))}
-      ${field('Emisión', formatDate(pet.registration_date))}${field('Expiración', expiryDate(pet))}
+      ${field('Emisión', formatDate(pet.registration_date))}
     </div>
+    <div class="fam-id-expiry"><label>EXPIRACIÓN</label><span>${expiryDate(pet)}</span></div>
     ${chipBlock(pet)}
     <div class="fam-id-signature">${signatureHtml(pet.signature)}<label>FIRMA DEL PROPIETARIO</label></div>
   </div>`;

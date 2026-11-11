@@ -6,7 +6,7 @@
   --brand-soft:#E8F5F0; --brand-dim:rgba(20,125,100,.10);
 
   /* Fondos y superficies */
-  --bg:#F3F4F6; --content:#F3F4F6; --sb:#FFFFFF; --sidebar:#1B1F2A;
+  --bg:#F3F4F6; --content:#F3F4F6; --sb:#FFFFFF; --sidebar:#1B1F2A; --ink:#1c2430; --soft:#6b7480;
   --surface:#FFFFFF; --surface-2:#F9FAFB; --surface-3:#EDF2F0;
 
   /* Texto */
@@ -562,72 +562,108 @@ tbody tr:hover td{background:rgba(17,24,39,.025);}
 .tpl-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:16px;}
 .tpl-name{font-size:11.5px; text-align:center; margin-top:6px; font-weight:500; color:var(--text-2);}
 
-/* ---------- CREDENCIAL FAMUVET ---------- */
+/* ---------- CREDENCIAL FAMUVET ----------
+   Medidas en cqw = % del ancho del carnet (100cqw = ancho, alto = 63cqw).
+   IMPORTANTE: en el propio contenedor (.fam-id-card) cqw NO se refiere a sí mismo,
+   por eso el radio y la sombra del carnet van en % / px. */
 .fam-id-stage .carnet-preview-col{min-width:min(620px,100%);}
-.fam-id-card{--id-navy:#1f3566; --id-blue:#2f6fb5; --id-green:#2e8b4f; --id-red:#c8312b; --id-yellow:#f2b705; container-type:inline-size; position:relative; width:min(620px,96vw); aspect-ratio:1.586; overflow:hidden; border-radius:4cqw; color:#18233f; background:linear-gradient(115deg,#fbfdfb 0%,#eef7f0 35%,#fdf0ee 62%,#f1f8ee 100%); box-shadow:0 3cqw 7cqw rgba(10,20,50,.35); font-family:Barlow,Arial,sans-serif;}
-.fam-id-guil{position:absolute; inset:0; background:repeating-radial-gradient(circle at 12% 120%,transparent 0 .9cqw,rgba(47,139,79,.08) .9cqw 1cqw),repeating-radial-gradient(circle at 92% -20%,transparent 0 1cqw,rgba(214,90,90,.09) 1cqw 1.1cqw); pointer-events:none;}
-.fam-id-burst{position:absolute; left:30cqw; top:-26cqw; width:60cqw; height:60cqw; border-radius:50%; background:repeating-conic-gradient(rgba(214,90,90,.16) 0 .8deg,transparent .8deg 5deg); -webkit-mask:radial-gradient(circle,#000 20%,transparent 68%); mask:radial-gradient(circle,#000 20%,transparent 68%);}
-.fam-id-vcode{position:absolute; left:2.4cqw; top:50%; transform:translate(-50%,-50%) rotate(-90deg); font:500 2.3cqw 'IBM Plex Mono',monospace; color:var(--id-red); letter-spacing:.3cqw; white-space:nowrap;}
-.fam-id-head{position:absolute; left:6cqw; right:5cqw; top:4cqw; display:flex; justify-content:space-between; align-items:flex-start;}
-.fam-id-flag{display:flex; width:6cqw; height:3.6cqw; border-radius:.4cqw; overflow:hidden; margin-bottom:.7cqw;}
+.fam-id-card{--id-navy:#1f3566;--id-blue:#2f6fb5;--id-green:#2e8b4f;--id-red:#c8312b;--id-yellow:#f2b705;
+  container-type:inline-size;position:relative;width:min(620px,96vw);aspect-ratio:1.586;overflow:hidden;
+  border-radius:4% / 6.3%;color:#18233f;
+  background:linear-gradient(115deg,#fbfdfb 0%,#eef7f0 35%,#fdf0ee 62%,#f1f8ee 100%);
+  box-shadow:0 14px 34px rgba(10,20,50,.28);font-family:Barlow,Arial,sans-serif;}
+.fam-id-guil{position:absolute;inset:0;background:repeating-radial-gradient(circle at 12% 120%,transparent 0 .9cqw,rgba(47,139,79,.08) .9cqw 1cqw),repeating-radial-gradient(circle at 92% -20%,transparent 0 1cqw,rgba(214,90,90,.09) 1cqw 1.1cqw);pointer-events:none;}
+.fam-id-burst{position:absolute;left:30cqw;top:-26cqw;width:60cqw;height:60cqw;border-radius:50%;background:repeating-conic-gradient(rgba(214,90,90,.16) 0 .8deg,transparent .8deg 5deg);-webkit-mask:radial-gradient(circle,#000 20%,transparent 68%);mask:radial-gradient(circle,#000 20%,transparent 68%);}
+.fam-id-vcode{position:absolute;left:2.6cqw;top:50%;transform:translate(-50%,-50%) rotate(-90deg);font:500 2.1cqw 'IBM Plex Mono',monospace;color:var(--id-red);letter-spacing:.3cqw;white-space:nowrap;}
+
+/* Cabecera */
+.fam-id-head{position:absolute;left:6cqw;right:5cqw;top:4cqw;display:flex;justify-content:space-between;align-items:flex-start;}
+.fam-id-flag{display:flex;width:6cqw;height:3.6cqw;border-radius:.4cqw;overflow:hidden;margin-bottom:.7cqw;}
 .fam-id-flag i{flex:1;}
 .fam-id-flag i:nth-child(1){background:var(--id-red);}
 .fam-id-flag i:nth-child(2){background:var(--id-yellow);}
 .fam-id-flag i:nth-child(3){background:var(--id-green);}
-.fam-id-logo{font:700 6cqw/1 'Barlow Condensed',sans-serif; color:var(--id-blue); display:flex; align-items:flex-end;}
-.fam-id-logo svg{width:3.8cqw; height:5cqw; margin:0 .2cqw; overflow:visible;}
-.fam-id-logo path{fill:none; stroke:var(--id-blue); stroke-width:2.2; stroke-linecap:round;}
+.fam-id-logo{font:700 5.6cqw/1 'Barlow Condensed',sans-serif;color:var(--id-blue);display:flex;align-items:flex-end;letter-spacing:.1cqw;}
+.fam-id-logo svg{width:3.4cqw;height:4.6cqw;margin:0 .35cqw;overflow:visible;}
+.fam-id-logo path{fill:none;stroke:var(--id-blue);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;}
 .fam-id-logo .t{stroke:var(--id-green);}
-.fam-id-sub{font:600 1.9cqw Barlow,sans-serif; color:#46567d; letter-spacing:.1cqw; margin-top:.4cqw;}
-.fam-id-title{text-align:right; font:700 5.4cqw/.95 'Barlow Condensed',sans-serif; color:var(--id-green); letter-spacing:.2cqw;}
-.fam-id-title small{display:block; font:600 2cqw Barlow,sans-serif; letter-spacing:.3cqw; color:#46567d; margin-top:.8cqw;}
-.fam-id-photo{position:absolute; left:6cqw; top:17.5cqw; width:27cqw; height:33cqw; border:.4cqw solid rgba(31,53,102,.35); overflow:hidden; background:#dfeefb; border-radius:.6cqw;}
-.fam-id-photo img{width:100%; height:100%; object-fit:cover; display:block;}
-.fam-id-number{position:absolute; left:6cqw; top:52.2cqw; font:700 5.2cqw/1 'Barlow Condensed',sans-serif; color:var(--id-red); letter-spacing:.15cqw; white-space:nowrap;}
-.fam-id-number small{display:block; font:500 2.3cqw/1 'IBM Plex Mono',monospace; color:#46567d; letter-spacing:.25cqw; margin-top:.7cqw;}
-.fam-id-fields{position:absolute; display:grid; gap:.9cqw 3cqw; align-content:start;}
-.fam-id-front-fields{left:36.5cqw; right:5cqw; top:16cqw; grid-template-columns:repeat(3,1fr);}
-.fam-id-back-fields{left:31cqw; right:32cqw; top:5cqw; grid-template-columns:1fr 1fr;}
+.fam-id-sub{font:600 1.7cqw Barlow,sans-serif;color:#46567d;letter-spacing:.1cqw;margin-top:.6cqw;white-space:nowrap;}
+.fam-id-title{text-align:right;font:700 5cqw/.95 'Barlow Condensed',sans-serif;color:var(--id-green);letter-spacing:.2cqw;}
+.fam-id-title small{display:block;font:600 1.8cqw Barlow,sans-serif;letter-spacing:.3cqw;color:#46567d;margin-top:.8cqw;}
+
+/* Foto + número (el número ya no desborda hacia la firma) */
+.fam-id-photo{position:absolute;left:6cqw;top:20.5cqw;width:25cqw;height:30cqw;border:.4cqw solid rgba(31,53,102,.35);overflow:hidden;background:#dfeefb;border-radius:.6cqw;}
+.fam-id-photo img{width:100%;height:100%;object-fit:cover;display:block;}
+.fam-id-number{position:absolute;left:6cqw;top:52cqw;width:27cqw;font:700 3.2cqw/1 'Barlow Condensed',sans-serif;color:var(--id-red);letter-spacing:.05cqw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fam-id-number small{display:block;font:500 1.8cqw/1 'IBM Plex Mono',monospace;color:#46567d;letter-spacing:.15cqw;margin-top:.9cqw;overflow:hidden;text-overflow:ellipsis;}
+
+/* Campos */
+.fam-id-fields{position:absolute;display:grid;gap:.8cqw 3cqw;align-content:start;}
+.fam-id-front-fields{left:35cqw;right:5cqw;top:20.5cqw;grid-template-columns:repeat(3,1fr);}
+.fam-id-back-fields{left:28cqw;right:30cqw;top:6cqw;grid-template-columns:1fr 1fr;gap:.8cqw 2cqw;}
 .fam-id-field{min-width:0;}
 .fam-id-field.wide{grid-column:span 3;}
-.fam-id-back-fields .wide{grid-column:span 2;}
 .fam-id-field.double{grid-column:span 2;}
-.fam-id-field label{display:block; font:600 1.8cqw 'Barlow Condensed',sans-serif; letter-spacing:.25cqw; color:#5b6a8f; text-transform:uppercase;}
-.fam-id-field span{display:block; font:600 3.1cqw/1.2 Barlow,sans-serif; color:#18233f; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.fam-id-field.name span{font:700 4.3cqw/1.15 'Barlow Condensed',sans-serif; text-transform:uppercase; letter-spacing:.15cqw;}
-.fam-id-back-fields .fam-id-field span{font-size:3cqw;}
-.fam-id-signature{position:absolute; left:36.5cqw; bottom:4.2cqw; width:36cqw; text-align:center; border-bottom:.25cqw solid #8a96b5; height:8cqw;}
-.fam-id-signature img{width:100%; height:6.5cqw; object-fit:contain; display:block;}
-.fam-id-signature span{display:block; font:italic 4cqw 'Barlow Condensed',sans-serif; height:6.5cqw; color:var(--id-navy);}
-.fam-id-signature label{display:block; font-size:1.8cqw; letter-spacing:.2cqw; color:#5b6a8f; font-weight:600; padding-top:.4cqw;}
-.fam-id-chip{position:absolute; right:4cqw; bottom:4.6cqw; width:23cqw; text-align:center;}
-.fam-id-chip label{display:block; font:600 1.8cqw 'Barlow Condensed',sans-serif; letter-spacing:.25cqw; color:#5b6a8f; text-transform:uppercase;}
-.fam-id-chip .check{display:inline-block; font:700 5cqw/1 'Barlow Condensed',sans-serif; color:#2e8b4f; margin:.5cqw 0 .2cqw;}
-.fam-id-chip.ok b{display:block; font:500 2.15cqw/1.25 'IBM Plex Mono',monospace; color:#18233f; letter-spacing:.08cqw; word-break:break-all;}
-.fam-id-chip .val{display:inline-block; font:600 2.5cqw Barlow,sans-serif; color:#5b6a8f;}
-.fam-id-qr{position:absolute; left:4cqw; top:5cqw; width:23cqw; aspect-ratio:1; background:#fff; padding:1.4cqw; border-radius:.8cqw; box-shadow:0 0 0 .3cqw rgba(31,53,102,.18);}
-.fam-id-qr img,.fam-id-qr canvas{width:100% !important; height:100% !important; display:block;}
-.fam-id-vet{position:absolute; left:4cqw; top:30.5cqw; width:23cqw; text-align:center; color:var(--id-blue);}
-.fam-id-vet .fam-id-logo{justify-content:center; font-size:5cqw; align-items:flex-end;}
-.fam-id-vet .fam-id-logo svg{width:3.3cqw; height:4.4cqw; margin:0 .15cqw;}
-.fam-id-vet label{display:block; font:600 1.5cqw Barlow,sans-serif; color:#46567d; border-top:.25cqw solid #8a96b5; padding-top:.5cqw; letter-spacing:.1cqw; margin-top:.6cqw;}
-.fam-id-fingerprint{position:absolute; right:4cqw; top:5cqw; width:24cqw; text-align:center;}
-.fam-id-fingerprint svg{width:100%; height:31cqw;}
-.fam-id-fingerprint img{width:100%; height:31cqw; object-fit:contain; background:#fff; border-radius:.6cqw; border:.2cqw solid rgba(31,53,102,.25);}
-.fam-id-fingerprint label{display:block; font-size:1.7cqw; color:#46567d; font-weight:600;}
-.fam-id-band{position:absolute; left:0; right:0; bottom:0; height:17cqw; background:#fff; border-top:1.2cqw solid transparent; border-image:linear-gradient(90deg,var(--id-red) 33.3%,var(--id-yellow) 33.3% 66.6%,var(--id-green) 66.6%) 1;}
-.fam-id-band svg{position:absolute; left:4cqw; top:50%; width:6cqw; height:6cqw; transform:translateY(-50%); fill:#18233f;}
-.fam-id-band pre{position:absolute; left:13cqw; right:2cqw; top:50%; transform:translateY(-50%); margin:0; font:500 2.65cqw/1.25 'IBM Plex Mono',monospace; color:#10182f; white-space:pre; overflow:hidden;}
-.signature-pad{width:100%; height:120px; background:#fff; border:1px dashed var(--border); border-radius:8px; touch-action:none; cursor:crosshair;}
-.paw-drop{border:1px dashed var(--border); border-radius:var(--radius); padding:12px; text-align:center; cursor:pointer; background:var(--surface-2); min-height:110px; display:flex; align-items:center; justify-content:center;}
+.fam-id-back-fields .wide{grid-column:span 2;}
+.fam-id-field label{display:block;font:600 1.7cqw 'Barlow Condensed',sans-serif;letter-spacing:.22cqw;color:#5b6a8f;text-transform:uppercase;white-space:nowrap;}
+.fam-id-field span{display:block;font:600 3cqw/1.2 Barlow,sans-serif;color:#18233f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fam-id-field.name span{font:700 4cqw/1.15 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.12cqw;}
+.fam-id-back-fields .fam-id-field span{font-size:2.8cqw;}
+.fam-id-back-fields .fam-id-field.name span{font-size:3.4cqw;}
+
+/* Firma + microchip (ya no comparten zona con la fecha de expiración) */
+.fam-id-signature{position:absolute;left:35cqw;bottom:4.2cqw;width:33cqw;text-align:center;border-bottom:.25cqw solid #8a96b5;height:8cqw;}
+.fam-id-signature img{width:100%;height:6.5cqw;object-fit:contain;display:block;}
+.fam-id-signature span{display:block;font:italic 4cqw 'Barlow Condensed',sans-serif;height:6.5cqw;color:var(--id-navy);}
+.fam-id-signature label{display:block;font-size:1.7cqw;letter-spacing:.2cqw;color:#5b6a8f;font-weight:600;padding-top:.4cqw;}
+.fam-id-chip{position:absolute;right:5cqw;bottom:4.6cqw;width:22cqw;text-align:center;}
+.fam-id-chip label{display:block;font:600 1.7cqw 'Barlow Condensed',sans-serif;letter-spacing:.22cqw;color:#5b6a8f;text-transform:uppercase;}
+.fam-id-chip .check{display:inline-block;font:700 4cqw/1 'Barlow Condensed',sans-serif;color:#2e8b4f;margin:.4cqw 0 .2cqw;}
+.fam-id-chip.ok b{display:block;font:500 2cqw/1.25 'IBM Plex Mono',monospace;color:#18233f;letter-spacing:.05cqw;word-break:break-all;}
+.fam-id-chip .val{display:inline-block;font:600 2.4cqw Barlow,sans-serif;color:#5b6a8f;margin-top:1cqw;}
+
+/* Reverso: QR más pequeño, logo FAM J VET igual al del anverso */
+.fam-id-qr{position:absolute;left:6cqw;top:6cqw;width:18cqw;aspect-ratio:1;background:#fff;padding:1.1cqw;border-radius:.8cqw;box-shadow:0 0 0 .3cqw rgba(31,53,102,.18);}
+.fam-id-qr img,.fam-id-qr canvas{width:100% !important;height:100% !important;display:block;}
+.fam-id-vet{position:absolute;left:5cqw;top:27.5cqw;width:20cqw;text-align:center;}
+.fam-id-vet .fam-id-logo{justify-content:center;font-size:4.4cqw;}
+.fam-id-vet .fam-id-logo svg{width:2.6cqw;height:3.5cqw;margin:0 .25cqw;}
+.fam-id-vet label{display:block;font:600 1.4cqw Barlow,sans-serif;color:#46567d;border-top:.25cqw solid #8a96b5;padding-top:.5cqw;margin-top:.8cqw;letter-spacing:.12cqw;}
+.fam-id-fingerprint{position:absolute;right:4cqw;top:6cqw;width:24cqw;text-align:center;}
+.fam-id-fingerprint svg{width:100%;height:30cqw;}
+.fam-id-fingerprint img{width:100%;height:30cqw;object-fit:contain;background:#fff;border-radius:.6cqw;border:.2cqw solid rgba(31,53,102,.25);}
+.fam-id-fingerprint label{display:block;font-size:1.6cqw;color:#46567d;font-weight:600;margin-top:.6cqw;}
+.fam-id-band{position:absolute;left:0;right:0;bottom:0;height:17cqw;background:#fff;border-top:1.2cqw solid transparent;border-image:linear-gradient(90deg,var(--id-red) 33.3%,var(--id-yellow) 33.3% 66.6%,var(--id-green) 66.6%) 1;}
+.fam-id-band svg{position:absolute;left:4cqw;top:50%;width:6cqw;height:6cqw;transform:translateY(-50%);fill:#18233f;}
+.fam-id-band pre{position:absolute;left:13cqw;right:2cqw;top:50%;transform:translateY(-50%);margin:0;font:500 2.9cqw/1.3 'IBM Plex Mono',monospace;color:#10182f;white-space:pre;overflow:hidden;}
+
+.signature-pad{width:100%;height:120px;background:#fff;border:1px dashed var(--border);border-radius:8px;touch-action:none;cursor:crosshair;}
+.paw-drop{border:1px dashed var(--border);border-radius:var(--radius);padding:12px;text-align:center;cursor:pointer;background:var(--surface-2);min-height:110px;display:flex;align-items:center;justify-content:center;}
 .paw-drop:hover{border-color:var(--brand);}
-.paw-drop img{max-width:100%; max-height:130px; border-radius:6px; object-fit:contain;}
-.fam-id-print{display:flex; flex-direction:column; align-items:center; gap:24px; padding:24px; background:#fff;}
+.paw-drop img{max-width:100%;max-height:130px;border-radius:6px;object-fit:contain;}
+.fam-id-print{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px;background:#fff;}
 @media(max-width:760px){
   .fam-id-stage .carnet-preview-col{min-width:100%;}
   .fam-id-card{width:96vw;}
   .carnet-options-col{width:100%;}
 }
+
+/* ---------- CREDENCIAL · AJUSTES FINALES ---------- */
+.fam-id-front-fields{top:22cqw;}
+.fam-id-number{top:52cqw;width:26cqw;font-size:2.3cqw;letter-spacing:.03cqw;}
+.fam-id-number small{font-size:1.6cqw;}
+.fam-id-signature{left:37cqw;width:31cqw;bottom:4cqw;}
+/* Microchip: recuadro con filete fino rojo / amarillo / verde */
+.fam-id-chip{right:5cqw;bottom:4cqw;width:22cqw;padding:1.1cqw 0 1.3cqw;background:rgba(255,255,255,.6);
+  border:.25cqw solid transparent;
+  border-image:linear-gradient(90deg,var(--id-red) 33.3%,var(--id-yellow) 33.3% 66.6%,var(--id-green) 66.6%) 1;}
+.fam-id-chip .check{font-size:3.2cqw;margin:.2cqw 0 0;}
+.fam-id-chip.ok b{font-size:1.9cqw;margin-top:.3cqw;}
+.fam-id-chip .val{font-size:1.9cqw;margin-top:.6cqw;}
+/* Expiración: alineada a la derecha, justo encima del microchip */
+.fam-id-expiry{position:absolute;right:5cqw;bottom:17.5cqw;width:22cqw;text-align:center;}
+.fam-id-expiry label{display:block;font:600 1.7cqw 'Barlow Condensed',sans-serif;letter-spacing:.22cqw;color:#5b6a8f;text-transform:uppercase;white-space:nowrap;}
+.fam-id-expiry span{display:block;font:600 2.8cqw/1.2 Barlow,sans-serif;color:#18233f;white-space:nowrap;}
 
 /* ---------- PÁGINAS PÚBLICAS / TOAST / SWITCH ---------- */
 .public-page{min-height:100vh; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:24px;}
