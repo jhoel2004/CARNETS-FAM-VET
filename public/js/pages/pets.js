@@ -7,9 +7,10 @@ import { renderSearchableSelect, initSearchableSelect } from '../components/sear
 
 const BREEDS_BY_SPECIES = {
   perro: ['Mestizo', 'Labrador', 'Pastor Alemán', 'Golden Retriever', 'Bulldog', 'Poodle', 'Chihuahua', 'Beagle', 'Rottweiler', 'Husky Siberiano', 'Dálmata', 'Boxer', 'Shih Tzu', 'Yorkshire Terrier', 'Pug', 'Schnauzer', 'Cocker Spaniel', 'Border Collie', 'Pitbull', 'Doberman', 'San Bernardo', 'Gran Danés', 'Akita', 'Shar Pei', 'Bichón Frisé', 'Maltés', 'Pomerania', 'Corgi', 'Dachshund', 'Otro'],
-  gato: ['Mestizo', 'Siamés', 'Persa', 'Maine Coon', 'Bengalí', 'Ragdoll', 'British Shorthair', 'Sphynx', 'Scottish Fold', 'Angora', 'Exótico', 'Abisinio', 'Birmano', 'Otro'],
-  otro: ['Conejo', 'Hámster', 'Cobayo', 'Loro', 'Canario', 'Tortuga', 'Iguana', 'Pez', 'Hurón', 'Otro']
+  gato: ['Mestizo', 'Siamés', 'Persa', 'Maine Coon', 'Bengalí', 'Ragdoll', 'British Shorthair', 'Sphynx', 'Scottish Fold', 'Angora', 'Exótico', 'Abisinio', 'Birmano', 'Otro']
 };
+// Predeterminados para el grupo "Otro": son especies específicas, no razas.
+const DEFAULT_OTRO_SPECIES = ['Conejo', 'Hámster', 'Cobayo', 'Loro', 'Canario', 'Tortuga', 'Iguana', 'Pez', 'Hurón'];
 
 const COMMON_COLORS = ['Negro', 'Blanco', 'Marrón', 'Dorado', 'Gris', 'Beige', 'Atigrado', 'Manchado', 'Tricolor', 'Otro'];
 
@@ -20,6 +21,119 @@ export function initPets(s) {
 }
 
 const rerender = () => import('../app.js').then(m => m.renderApp());
+
+/* ============================================================
+   CATÁLOGO: especies específicas (grupo "Otro") y razas por especie
+   Predeterminados del código + lo guardado en BD (pet_species / pet_breeds)
+   ============================================================ */
+function specificSpeciesOptions() {
+  const saved = state.getSpecies().map(s => s.name);
+  const seen = new Set(); const out = [];
+  for (const n of [...DEFAULT_OTRO_SPECIES, ...saved]) {
+    const k = String(n).trim().toLowerCase();
+    if (!k || k === 'otro' || seen.has(k)) continue;
+    seen.add(k); out.push(String(n).trim());
+  }
+  return out;
+}
+
+function breedOptionsFor(speciesKey) {
+  const key = String(speciesKey || '').trim().toLowerCase();
+  const defaults = (key === 'perro' || key === 'gato') ? (BREEDS_BY_SPECIES[key] || []) : [];
+  const saved = state.getBreeds().filter(b => b.species === key).map(b => b.name);
+  const seen = new Set(); const out = [];
+  for (const n of [...defaults, ...saved]) {
+    const k = String(n).trim().toLowerCase();
+    if (!k || seen.has(k)) continue;
+    seen.add(k); out.push(String(n).trim());
+  }
+  return out;
+}
+
+// Llave de especie para el catálogo de razas: 'perro'/'gato' o la especie específica
+function currentSpeciesKey() {
+  const group = document.getElementById('species-hidden')?.value || 'perro';
+  if (group === 'otro') return (document.getElementById('ss-hidden-spec-detail')?.value || '').trim().toLowerCase();
+  return group;
+}
+
+// Re-inicializa el desplegable de razas con alta dinámica
+function refreshBreeds(speciesKey) {
+  initSearchableSelect('breed', breedOptionsFor(speciesKey).map(b => ({ v: b, l: b })), null, {
+    addNew: true,
+    addNewLabel: '+ Agregar nueva raza',
+    onAddNew: (typed) => {
+      const key = currentSpeciesKey();
+      if (!key) { toast('Elige primero la especie específica (grupo "Otro")', 'error'); return; }
+      openInlineAdd('breed', typed, key);
+    }
+  });
+}
+
+// Inicializa el desplegable de especie específica con alta dinámica
+function specDetailInit() {
+  initSearchableSelect('spec-detail', specificSpeciesOptions().map(n => ({ v: n.toLowerCase(), l: n })), (v) => {
+    document.getElementById('ss-hidden-spec-detail').value = v;
+    refreshBreeds(v);
+  }, {
+    addNew: true,
+    addNewLabel: '+ Agregar nueva especie',
+    onAddNew: (typed) => openInlineAdd('spec-detail', typed)
+  });
+}
+
+// Formulario inline de alta (especie o raza) bajo el desplegable
+function openInlineAdd(id, prefill = '', speciesKey = '') {
+  const wrap = document.getElementById(`ss-${id}`);
+  if (!wrap) return;
+  const fieldEl = wrap.parentElement;
+  let form = document.getElementById(`ss-add-${id}`);
+  if (!form) {
+    form = document.createElement('div');
+    form.id = `ss-add-${id}`;
+    form.style.cssText = 'display:none; gap:6px; margin-top:8px; align-items:center;';
+    form.innerHTML = `
+      <input type="text" id="ss-add-input-${id}" placeholder="Escribe el nombre" style="flex:1; min-width:140px; height:34px; padding:0 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); font-size:13px;">
+      <button type="button" class="btn btn-primary btn-sm" id="ss-add-save-${id}">Guardar</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="ss-add-cancel-${id}">Cancelar</button>`;
+    fieldEl.appendChild(form);
+  }
+  form.style.display = 'flex';
+  const input = document.getElementById(`ss-add-input-${id}`);
+  input.value = (prefill || '').trim();
+  input.focus();
+  document.getElementById(`ss-add-cancel-${id}`).onclick = () => { form.style.display = 'none'; };
+  document.getElementById(`ss-add-save-${id}`).onclick = async () => {
+    const name = input.value.trim();
+    if (!name) { toast('Escribe un nombre', 'error'); return; }
+    try {
+      if (id === 'spec-detail') {
+        await api.createSpecies(name);
+        await state.loadCatalog();
+        specDetailInit();
+        const val = name.toLowerCase();
+        const inputEl = document.getElementById('ss-input-spec-detail');
+        const hiddenEl = document.getElementById('ss-hidden-spec-detail');
+        inputEl.value = val.charAt(0).toUpperCase() + val.slice(1);
+        hiddenEl.value = val;
+        refreshBreeds(val);
+        api.logHistory('Especie agregada', val);
+        toast('Especie agregada al catálogo');
+      } else {
+        const key = (speciesKey || currentSpeciesKey() || '').toLowerCase();
+        if (!key) { toast('Elige primero la especie', 'error'); return; }
+        await api.createBreed(key, name);
+        await state.loadCatalog();
+        refreshBreeds(key);
+        document.getElementById('ss-input-breed').value = name;
+        document.getElementById('ss-hidden-breed').value = name;
+        api.logHistory('Raza agregada', `${name} (${key})`);
+        toast('Raza agregada al catálogo');
+      }
+      form.style.display = 'none';
+    } catch (e) { toast(e.message, 'error'); }
+  };
+}
 
 /* ============================================================
    LISTADO
@@ -53,6 +167,7 @@ export function viewMascotas(advanced) {
       <option value="Macho" ${state.filterSex === 'Macho' ? 'selected' : ''}>Macho</option>
       <option value="Hembra" ${state.filterSex === 'Hembra' ? 'selected' : ''}>Hembra</option>
     </select>
+    ${state.filterUser ? `<span class="chip active" data-clear-user style="cursor:pointer;" title="Quitar filtro de usuario">👤 Usuario: ${escapeHtml(state.filterUser)} ✕</span>` : ''}
   </div>
   <div class="table-wrap">
     ${list.length ? `<table>
@@ -64,7 +179,7 @@ export function viewMascotas(advanced) {
             <td class="faint" style="font-family:var(--font-mono); font-size:12px;">${p.carnet_number}</td>
             <td><b>${escapeHtml(p.name)}</b></td>
             <td>${escapeHtml(p.owner_name)}</td>
-            <td>${speciesLabel(p.species)}</td>
+            <td>${speciesLabel(p.species, p.species_detail)}</td>
             <td>${statusBadge(p.status)}</td>
             <td>
               <div class="row-actions" style="justify-content:flex-end;">
@@ -90,6 +205,7 @@ function filteredPets() {
     if (state.filterSpecies && p.species !== state.filterSpecies) return false;
     if (state.filterStatus && p.status !== state.filterStatus) return false;
     if (state.filterSex && p.sex !== state.filterSex) return false;
+    if (state.filterUser && p.created_by !== state.filterUser) return false;
     return true;
   });
 }
@@ -97,6 +213,7 @@ function filteredPets() {
 export function bindPetsEvents() {
   document.querySelectorAll('[data-species]').forEach(el => el.addEventListener('click', () => { state.filterSpecies = el.dataset.species; rerender(); }));
   document.querySelectorAll('[data-status]').forEach(el => el.addEventListener('click', () => { state.filterStatus = el.dataset.status; rerender(); }));
+  document.querySelectorAll('[data-clear-user]').forEach(el => el.addEventListener('click', () => { state.filterUser = ''; rerender(); }));
   const sexSel = document.getElementById('filter-sex');
   if (sexSel) sexSel.addEventListener('change', () => { state.filterSex = sexSel.value; rerender(); });
 
@@ -181,7 +298,7 @@ async function openDetailModal(id, tab) {
         <div style="flex:1; min-width:240px;">
           <div class="flex items-center gap-2">${statusBadge(p.status)} <span class="faint" style="font-family:var(--font-mono);">${p.carnet_number}</span></div>
           <h2 style="margin-top:8px;">${escapeHtml(p.name)}</h2>
-          <p class="muted">${speciesLabel(p.species)} · ${escapeHtml(p.breed || '—')} · ${p.sex} · ${formatAge(p)}</p>
+          <p class="muted">${speciesLabel(p.species, p.species_detail)} · ${escapeHtml(p.breed || '—')} · ${p.sex} · ${formatAge(p)}</p>
         </div>
       </div>
       <div class="tabs" style="margin-top:20px;">
@@ -415,7 +532,11 @@ export async function openPetModal(id, opts = {}) {
             </div>
             <input type="hidden" name="species" id="species-hidden" value="${escapeHtml(pet.species || 'perro')}">
           </div>
-          ${renderSearchableSelect({ id: 'breed', name: 'breed', label: 'Raza', options: BREEDS_BY_SPECIES[pet.species || 'perro'] || [], value: pet.breed || '', placeholder: 'Buscar raza...' })}
+          <div id="species-detail-field" class="${pet.species === 'otro' ? '' : 'hidden'}">
+            ${renderSearchableSelect({ id: 'spec-detail', name: 'species_detail', label: 'Especie específica', options: specificSpeciesOptions(), value: pet.species_detail || '', placeholder: 'Buscar especie...' })}
+            <div class="faint" style="font-size:11px; margin-top:-8px;">Puedes agregar una especie nueva al final del desplegable.</div>
+          </div>
+          ${renderSearchableSelect({ id: 'breed', name: 'breed', label: 'Raza', options: breedOptionsFor(pet.species === 'otro' ? (pet.species_detail || '') : (pet.species || 'perro')), value: pet.breed || '', placeholder: 'Buscar raza...' })}
           <div class="field full">
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
               <input type="checkbox" name="has_chip" id="has-chip-check" ${pet.has_chip || pet.microchip ? 'checked' : ''} style="width:16px; height:16px;">
@@ -487,6 +608,28 @@ export async function openPetModal(id, opts = {}) {
               </div>
               <div id="owner-search-result" style="display:none;"></div>
             </div>
+          </div>
+          <div class="field full">
+            <label>Usuario responsable</label>
+            <div class="flex gap-2" style="align-items:center; flex-wrap:wrap;">
+              <select id="pet-user-select" name="created_by" style="flex:1; min-width:220px;">
+                ${state.getUsers().map(u => `<option value="${escapeHtml(u.username)}" ${(pet.created_by || state.user?.username) === u.username ? 'selected' : ''}>${escapeHtml(u.name)} (@${escapeHtml(u.username)}) · ${escapeHtml(u.role)}</option>`).join('')}
+              </select>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-add-user-inline">+ Nuevo usuario</button>
+            </div>
+            <div id="inline-user-form" class="hidden" style="margin-top:8px; padding:10px; border:1px dashed var(--border); border-radius:9px;">
+              <div class="form-grid">
+                <div class="field"><label>Usuario</label><input id="inline-user-username" placeholder="nombre.usuario"></div>
+                <div class="field"><label>Contraseña</label><input id="inline-user-pass" type="password" placeholder="••••••"></div>
+                <div class="field"><label>Nombre completo</label><input id="inline-user-fullname" placeholder="Nombre Apellido"></div>
+                <div class="field"><label>Rol</label><select id="inline-user-role"><option>Operador</option>${state.user?.role === 'Administrador' ? '<option>Administrador</option>' : ''}</select></div>
+              </div>
+              <div class="flex gap-2">
+                <button type="button" class="btn btn-primary btn-sm" id="btn-save-inline-user">Crear y asignar</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-cancel-inline-user">Cancelar</button>
+              </div>
+            </div>
+            <div class="faint" style="font-size:11px; margin-top:4px;">Un usuario puede tener varias mascotas; cada mascota pertenece a un solo usuario.</div>
           </div>
           <div class="field full"><label>Nombre completo *</label><input required name="owner_name" id="owner-name-input" value="${escapeHtml(pet.owner_name || '')}" placeholder="Nombre y apellidos"></div>
           <div class="field"><label>CI</label><input name="owner_ci" id="owner-ci-input" value="${escapeHtml(pet.owner_ci || '')}" placeholder="Cédula de identidad"></div>
@@ -630,8 +773,21 @@ export async function openPetModal(id, opts = {}) {
       document.querySelectorAll('#species-group .toggle-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('species-hidden').value = btn.dataset.species;
-      const newBreeds = BREEDS_BY_SPECIES[btn.dataset.species] || [];
-      initSearchableSelect('breed', newBreeds.map(b => ({ v: b, l: b })), null);
+      const detailField = document.getElementById('species-detail-field');
+      if (btn.dataset.species === 'otro') {
+        detailField.classList.remove('hidden');
+        specDetailInit();
+        const specInput = document.getElementById('ss-input-spec-detail');
+        if (specInput) specInput.value = '';
+        document.getElementById('ss-hidden-spec-detail').value = '';
+        refreshBreeds('');
+      } else {
+        detailField.classList.add('hidden');
+        const specInput = document.getElementById('ss-input-spec-detail');
+        if (specInput) specInput.value = '';
+        document.getElementById('ss-hidden-spec-detail').value = '';
+        refreshBreeds(btn.dataset.species);
+      }
       const breedInput = document.getElementById('ss-input-breed');
       if (breedInput) breedInput.value = '';
       document.getElementById('ss-hidden-breed').value = '';
@@ -640,7 +796,8 @@ export async function openPetModal(id, opts = {}) {
 
   /* ---------- Selectores con búsqueda ---------- */
   const species = pet.species || 'perro';
-  initSearchableSelect('breed', (BREEDS_BY_SPECIES[species] || []).map(b => ({ v: b, l: b })), null);
+  refreshBreeds(species === 'otro' ? (pet.species_detail || '') : species);
+  if (species === 'otro') specDetailInit();
 
   // Departamento → Ciudad
   initSearchableSelect('dept', DEPARTMENTS.map(d => ({ v: d, l: d })), (dept) => {
@@ -782,6 +939,41 @@ export async function openPetModal(id, opts = {}) {
 
   bindPhotoEditor();
   document.getElementById('btn-save-pet').addEventListener('click', () => savePet(pet.id, isEdit));
+
+  /* ---------- Usuario responsable: alta inline ---------- */
+  const inlineBtn = document.getElementById('btn-add-user-inline');
+  const inlineForm = document.getElementById('inline-user-form');
+  if (inlineBtn && inlineForm) {
+    inlineBtn.addEventListener('click', () => {
+      inlineForm.classList.toggle('hidden');
+      if (!inlineForm.classList.contains('hidden')) document.getElementById('inline-user-username')?.focus();
+    });
+    const cancelInline = document.getElementById('btn-cancel-inline-user');
+    if (cancelInline) cancelInline.addEventListener('click', () => inlineForm.classList.add('hidden'));
+    const saveInline = document.getElementById('btn-save-inline-user');
+    if (saveInline) saveInline.addEventListener('click', async () => {
+      const username = document.getElementById('inline-user-username').value.trim();
+      const password = document.getElementById('inline-user-pass').value;
+      const fullname = document.getElementById('inline-user-fullname').value.trim() || username;
+      const role = document.getElementById('inline-user-role').value;
+      if (!username || !password) { toast('Completa usuario y contraseña', 'error'); return; }
+      try {
+        await api.createUser({ username, password, name: fullname, role });
+        await state.loadUsers();
+        // Refrescar el select de usuarios con el nuevo usuario seleccionado
+        const sel = document.getElementById('pet-user-select');
+        if (sel) {
+          sel.innerHTML = state.getUsers().map(u => `<option value="${escapeHtml(u.username)}" ${u.username === username ? 'selected' : ''}>${escapeHtml(u.name)} (@${escapeHtml(u.username)}) · ${escapeHtml(u.role)}</option>`).join('');
+        }
+        inlineForm.classList.add('hidden');
+        document.getElementById('inline-user-username').value = '';
+        document.getElementById('inline-user-pass').value = '';
+        document.getElementById('inline-user-fullname').value = '';
+        api.logHistory('Usuario creado', fullname);
+        toast(`Usuario ${username} creado y asignado`);
+      } catch (e) { toast(e.message, 'error'); }
+    });
+  }
 }
 
 /* ============================================================
@@ -878,6 +1070,8 @@ async function savePet(id, isEdit) {
     carnet_number: get('carnet_number'),
     name: get('name'),
     species: document.getElementById('species-hidden')?.value || get('species'),
+    species_detail: document.getElementById('ss-hidden-spec-detail')?.value || get('species_detail') || '',
+    created_by: get('created_by') || state.user?.username || '',
     breed: document.getElementById('ss-hidden-breed')?.value || get('breed'),
     sex: document.getElementById('sex-hidden')?.value || get('sex'),
     birth_date: get('age_mode') === 'birth_date' ? get('birth_date') : '',

@@ -121,7 +121,7 @@ export function viewHealthCard(p) {
             <div class="hc-form">
               <div class="hc-row"><b>NOMBRE:</b><span class="v" id="hc-nm" contenteditable="true" spellcheck="false">${escapeHtml(pet.name || '—')}</span></div>
               <div class="hc-row">
-                <b>ESPECIE:</b><span class="v" contenteditable="true">${speciesLabel(pet.species) || '—'}</span>
+                <b>ESPECIE:</b><span class="v" contenteditable="true">${speciesLabel(pet.species, pet.species_detail) || '—'}</span>
                 <b>RAZA:</b><span class="v" contenteditable="true">${escapeHtml(pet.breed || '—')}</span>
               </div>
               <div class="hc-row">

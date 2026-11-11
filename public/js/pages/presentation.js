@@ -174,7 +174,7 @@ export async function viewPresentation(petId) {
       <div class="form">
         <div class="row"><b>NOMBRE:</b><span class="v" id="nm" spellcheck="false">${escapeHtml(pet.name || '—')}</span></div>
         <div class="row">
-          <b>ESPECIE:</b><span class="v">${escapeHtml(speciesLabel(pet.species) || '—')}</span>
+          <b>ESPECIE:</b><span class="v">${escapeHtml(speciesLabel(pet.species, pet.species_detail) || '—')}</span>
           <b>RAZA:</b><span class="v">${escapeHtml(pet.breed || '—')}</span>
         </div>
         <div class="row">

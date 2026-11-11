@@ -77,6 +77,7 @@ const petRoutes = require('./routes/pets');
 const settingsRoutes = require('./routes/settings');
 const historyRoutes = require('./routes/history');
 const userRoutes = require('./routes/users');
+const catalogRoutes = require('./routes/catalog');
 
 // Health check primero: responde siempre, esté lista la DB o no (así Render no devuelve 503).
 app.get('/api/health', (req, res) => {
@@ -102,6 +103,7 @@ app.use('/api/pets', petRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/catalog', catalogRoutes);
 
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Endpoint no encontrado' });

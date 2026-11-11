@@ -63,5 +63,11 @@ export const api = {
   // Users
   getUsers: () => request('GET', '/users'),
   createUser: (data) => request('POST', '/users', data),
-  deleteUser: (id) => request('DELETE', '/users/' + id)
+  deleteUser: (id) => request('DELETE', '/users/' + id),
+
+  // Catálogo de especies y razas
+  getSpecies: () => request('GET', '/catalog/species'),
+  createSpecies: (name) => request('POST', '/catalog/species', { name }),
+  getBreeds: (species) => request('GET', '/catalog/breeds' + (species ? '?species=' + encodeURIComponent(species) : '')),
+  createBreed: (species, name) => request('POST', '/catalog/breeds', { species, name })
 };

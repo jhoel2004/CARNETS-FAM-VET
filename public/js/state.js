@@ -11,11 +11,14 @@ class AppState {
     this._allHealthRecordsMap = null; // Map petId -> records[] (para dashboard)
     this._analytics = { medicalDetails: [] };
     this._user = null;
+    this._species = [];   // especies personalizadas (catálogo)
+    this._breeds = [];    // razas guardadas por especie (catálogo)
     this.view = 'dashboard';
     this.search = '';
     this.filterSpecies = '';
     this.filterStatus = '';
     this.filterSex = '';
+    this.filterUser = '';   // filtro de mascotas por usuario responsable
     this.cardPetId = null;
     this.cardTemplate = null;
     this.sidebarOpen = false;
@@ -27,6 +30,8 @@ class AppState {
 
   getPets() { return this._pets; }
   getUsers() { return this._users; }
+  getSpecies() { return this._species; }
+  getBreeds() { return this._breeds; }
   getSettings() { return this._settings; }
   setSettings(s) { this._settings = s || {}; }
   getHistory() { return this._history; }
@@ -49,7 +54,7 @@ class AppState {
         return;
       }
     }
-    const tasks = [this.loadPets(), this.loadSettings()];
+    const tasks = [this.loadPets(), this.loadSettings(), this.loadCatalog()];
     if (this._user.role !== 'Espectador') {
       tasks.push(this.loadHistory());
       tasks.push(this.loadUsers());
@@ -103,6 +108,11 @@ class AppState {
 
   async loadUsers() {
     try { this._users = await api.getUsers(); } catch { this._users = []; }
+  }
+
+  async loadCatalog() {
+    try { this._species = await api.getSpecies(); } catch { this._species = []; }
+    try { this._breeds = await api.getBreeds(); } catch { this._breeds = []; }
   }
 
   async loadSettings() {

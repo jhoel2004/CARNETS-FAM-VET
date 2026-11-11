@@ -107,6 +107,8 @@ a{color:inherit; text-decoration:none;}
 .ss-option:hover{background:var(--surface-2);}
 .ss-option.selected{background:var(--brand-dim); color:var(--brand-3); font-weight:600;}
 .ss-empty{padding:10px; text-align:center; color:var(--text-2); font-size:12.5px;}
+.ss-add{padding:9px 10px; margin-top:4px; border-top:1px dashed var(--border); border-radius:6px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--brand-3); display:flex; align-items:center; gap:6px;}
+.ss-add:hover{background:var(--brand-dim);}
 
 /* ---------- PASOS DEL FORMULARIO ---------- */
 .form-steps{display:flex; align-items:center; gap:8px; margin-bottom:18px; padding:0 4px;}

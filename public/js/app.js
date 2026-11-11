@@ -8,7 +8,7 @@ import { initDashboard, viewDashboard, drawCharts, bindDashboardEvents } from '.
 import { initPets, viewMascotas, bindPetsEvents, openPetModal, openPetDetail } from './pages/pets.js';
 import { initCard, viewCarnet, renderCardPreview, bindCarnetEvents } from './pages/card-generator.js';
 import { initHistory, viewHistorial } from './pages/history.js';
-import { initConfig, viewConfig, bindConfigEvents } from './pages/config.js';
+import { initConfig, viewConfig, viewUsuarios, bindConfigEvents } from './pages/config.js';
 import { initSalud, viewSalud, bindSaludEvents, getSaludSubtab, setSaludSubtab } from './pages/health.js';
 import { renderPublicPage } from './pages/public.js';
 import { initDashboardData, getDashTab, setDashTab, DASH_TABS, buildAlerts } from './pages/dashboard-data.js';
@@ -72,7 +72,7 @@ export function renderSpectador() {
           </div>
           <div class="spec-body">
             <h1>${escapeHtml(pet.name)}</h1>
-            <div class="sub">${speciesLabel(pet.species)} · ${escapeHtml(pet.breed || '—')} · N° ${pet.carnet_number}</div>
+            <div class="sub">${speciesLabel(pet.species, pet.species_detail)} · ${escapeHtml(pet.breed || '—')} · N° ${pet.carnet_number}</div>
             <div style="margin-top:8px;">${statusBadge(pet.status)}</div>
             <div class="public-grid">
               <div><b>Sexo</b><span>${pet.sex || '—'}</span></div>
@@ -117,7 +117,7 @@ const NAV_GROUPS = () => {
       { id: 'salud', label: 'Salud', icon: iconStethoscope, subtab: 'vacunacion', section: 'section-salud' },
     ]},
     { label: 'Administración', items: [
-      { id: 'config', label: 'Usuarios', icon: iconUser, adminOnly: true, section: 'section-admin' },
+      { id: 'usuarios', label: 'Usuarios', icon: iconUser, adminOnly: true, section: 'section-admin' },
       { id: 'config', label: 'Configuración', icon: iconGear, adminOnly: true, section: 'section-admin' },
     ]},
   ].map(g => ({ ...g, items: g.items.filter(i => !i.adminOnly || isAdmin) }))
@@ -170,7 +170,7 @@ const VIEW_TITLES = () => {
   };
   return {
     dashboard: 'Panel principal', mascotas: 'Mascotas', carnet: 'Carnets', buscar: 'Búsqueda avanzada',
-    historial: 'Historial', config: 'Configuración', salud: saludLabels[saludTab] || 'Salud',
+    historial: 'Historial', config: 'Configuración', usuarios: 'Usuarios', salud: saludLabels[saludTab] || 'Salud',
   };
 };
 
@@ -209,7 +209,7 @@ function profileMenuHtml() {
         <div style="font-size:13px; font-weight:700;">${escapeHtml(state.user.name)}</div>
         <div style="font-size:11px; color:var(--text-2);">${escapeHtml(state.user.role)}</div>
       </div>
-      ${isAdmin ? `<button class="menu-item" data-goto="config">${iconGear} Configuración y usuarios</button>` : ''}
+      ${isAdmin ? `<button class="menu-item" data-goto="usuarios">${iconUser} Usuarios</button><button class="menu-item" data-goto="config">${iconGear} Configuración</button>` : ''}
       <button class="menu-item danger" data-action="logout">${iconLogout} Cerrar sesión</button>
     </div>
   </div>`;
@@ -342,6 +342,7 @@ export async function renderView() {
   else if (state.view === 'historial') body.innerHTML = viewHistorial();
   else if (state.view === 'salud') body.innerHTML = viewSalud();
   else if (state.view === 'config') body.innerHTML = state.user.role === 'Administrador' ? viewConfig() : `<p>No autorizado.</p>`;
+  else if (state.view === 'usuarios') body.innerHTML = state.user.role === 'Administrador' ? viewUsuarios() : `<p>No autorizado.</p>`;
   bindViewEvents();
   if (state.view === 'dashboard') drawCharts();
   if (state.view === 'carnet') await renderCardPreview();

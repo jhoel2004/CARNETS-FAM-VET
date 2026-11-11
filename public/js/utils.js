@@ -18,8 +18,14 @@ export function escapeHtml(s) {
   return (s || '').toString().replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
 }
 
-export function speciesLabel(s) {
-  return { perro: 'Perro', gato: 'Gato', otro: 'Otro' }[s] || s || '—';
+export function speciesLabel(s, detail = '') {
+  const base = { perro: 'Perro', gato: 'Gato', otro: 'Otro' }[s] || s || '—';
+  // Para el grupo "otro": si hay especie concreta guardada, mostrarla en su lugar.
+  if (s === 'otro' && detail) {
+    const d = String(detail).trim();
+    return d ? d.charAt(0).toUpperCase() + d.slice(1) : 'Otro';
+  }
+  return base;
 }
 
 export function statusBadge(s) {

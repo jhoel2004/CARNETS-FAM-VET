@@ -4,7 +4,7 @@ const db = require('../db');
 const { authenticateToken, requireAdmin, requireAdminOrOperator } = require('../middleware/auth');
 
 const router = express.Router();
-const publicPetColumns = 'id, carnet_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight, category, status, photo, registration_date, owner_name, owner_phone, medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_allergies, chip, has_chip';
+const publicPetColumns = 'id, carnet_number, name, species, species_detail, breed, sex, birth_date, color, distinctive_marks, weight, category, status, photo, registration_date, owner_name, owner_phone, medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_allergies, chip, has_chip';
 
 function parseDetailList(value) {
   try {
@@ -169,12 +169,21 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
     const regDate = p.registration_date || new Date().toISOString().slice(0, 10);
     const carnet = String(p.carnet_number).trim();
 
+    // Usuario responsable (1 usuario : N mascotas). Si se indica created_by
+    // debe existir en users; si no existe o falta, se usa quien registra.
+    let createdBy = String(p.created_by || '').trim();
+    if (createdBy) {
+      const userExists = await db.get('SELECT id FROM users WHERE username = $1', [createdBy]);
+      if (!userExists) createdBy = '';
+    }
+    if (!createdBy) createdBy = req.user.username || '';
+
     await db.run(`INSERT INTO pets (id, carnet_number, name, species, breed, sex, birth_date, color, distinctive_marks, weight,
       category, status, photo, registration_date,
       owner_name, owner_ci, owner_address, owner_city, owner_phone, owner_email,
       medical_vaccinated, medical_vaccines, medical_vet, medical_observations, medical_diseases, medical_allergies,
-      signature, age_years, age_months, chip, has_chip, paw_photo, created_by)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33)`, [
+      signature, age_years, age_months, chip, has_chip, paw_photo, created_by, species_detail)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34)`, [
       id, carnet, p.name, p.species || 'perro', p.breed || '', p.sex || 'Macho',
       p.birth_date || '', p.color || '', p.distinctive_marks || '', p.weight || '', p.category || 'General',
       p.status || 'Activo', p.photo || '', regDate,
@@ -183,7 +192,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       p.medical_observations || '', p.medical_diseases || '', p.medical_allergies || '',
       p.signature || '', p.age_years || '', p.age_months || '',
       p.chip || '', p.has_chip ? 1 : 0, p.paw_photo || '',
-      req.user.username || p.created_by || ''
+      createdBy, String(p.species_detail || '').trim().toLowerCase()
     ]);
 
     // Auto-crear espectador con password = CI
@@ -227,8 +236,8 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
       medical_vaccinated=$20, medical_vaccines=$21, medical_vet=$22, medical_observations=$23, medical_diseases=$24, medical_allergies=$25,
       signature=$26, age_years=$27, age_months=$28,
       chip=$29, has_chip=$30, paw_photo=$31,
-      updated_at=$32
-      WHERE id=$33`, [
+      created_by=$32, species_detail=$33, updated_at=$34
+      WHERE id=$35`, [
       v(p.carnet_number, existing.carnet_number), v(p.name, existing.name), v(p.species, existing.species), v(p.breed, existing.breed), v(p.sex, existing.sex), v(p.birth_date, existing.birth_date), v(p.color, existing.color), v(p.distinctive_marks, existing.distinctive_marks), v(p.weight, existing.weight), v(p.category, existing.category || 'General'), v(p.status, existing.status || 'Activo'),
       v(p.photo, existing.photo), v(p.registration_date, existing.registration_date),
       v(p.owner_name, existing.owner_name), v(p.owner_ci, existing.owner_ci), v(p.owner_address, existing.owner_address), v(p.owner_city, existing.owner_city), v(p.owner_phone, existing.owner_phone), v(p.owner_email, existing.owner_email),
@@ -236,6 +245,8 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
       v(p.signature, existing.signature), v(p.age_years, existing.age_years), v(p.age_months, existing.age_months),
       p.chip !== undefined ? p.chip : existing.chip, hasChip,
       p.paw_photo !== undefined ? p.paw_photo : existing.paw_photo,
+      v(p.created_by, existing.created_by),
+      v(p.species_detail, existing.species_detail),
       new Date().toISOString(), req.params.id
     ]);
 

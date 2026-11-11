@@ -106,7 +106,7 @@ function frontHtml(pet) {
     <div class="fam-id-photo"><img src="${pet.photo || placeholderPhoto()}" alt="Foto de ${escapeHtml(pet.name)}"></div>
     <div class="fam-id-number">Nº ${escapeHtml(pet.carnet_number || '—')}<small>${escapeHtml(pet.ci_number || 'BOL-CAR-—')}</small></div>
     <div class="fam-id-fields fam-id-front-fields">
-      ${field('Especie', speciesLabel(pet.species))}${field('Sexo', pet.sex)}${field('Peso', pet.weight ? `${pet.weight} kg` : '—')}
+      ${field('Especie', speciesLabel(pet.species, pet.species_detail))}${field('Sexo', pet.sex)}${field('Peso', pet.weight ? `${pet.weight} kg` : '—')}
       ${field('Nombre', pet.name, 'wide name')}${field('Raza', pet.breed, 'wide name')}${field('Fecha de nacimiento', formatDate(pet.birth_date), 'wide')}
       ${field('Fecha de emisión', formatDate(pet.registration_date), 'double')}${field('Fecha de expiración', expiryDate(pet))}
     </div>

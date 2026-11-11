@@ -123,6 +123,7 @@ async function createSqliteTables() {
     has_chip INTEGER DEFAULT 0,
     paw_photo TEXT DEFAULT '',
     created_by TEXT DEFAULT '',
+    species_detail TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
@@ -177,6 +178,18 @@ async function createSqliteTables() {
     time TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
+  // Catálogo dinámico: especies personalizadas (rama "Otro") y razas por especie
+  sqlJsDb.run(`CREATE TABLE IF NOT EXISTS pet_species (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+  )`);
+  sqlJsDb.run(`CREATE TABLE IF NOT EXISTS pet_breeds (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    species TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+  )`);
 
   // Add new columns to existing tables if missing
   const addCol = (table, col) => {
@@ -192,6 +205,7 @@ async function createSqliteTables() {
   addCol('pets', "has_chip INTEGER DEFAULT 0");
   addCol('pets', "paw_photo TEXT DEFAULT ''");
   addCol('pets', "created_by TEXT DEFAULT ''");
+  addCol('pets', "species_detail TEXT DEFAULT ''");
   addCol('pet_medical_details', "vaccines_detail TEXT DEFAULT '[]'");
   addCol('pet_medical_details', "deworming_detail TEXT DEFAULT '[]'");
   addCol('pet_medical_details', "conditions_detail TEXT DEFAULT '[]'");
@@ -307,6 +321,7 @@ async function ensurePgSchema(client) {
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS has_chip INTEGER DEFAULT 0;
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS paw_photo TEXT DEFAULT '';
     ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS created_by TEXT DEFAULT '';
+    ALTER TABLE IF EXISTS pets ADD COLUMN IF NOT EXISTS species_detail TEXT DEFAULT '';
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS vaccines_detail TEXT DEFAULT '[]';
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS deworming_detail TEXT DEFAULT '[]';
     ALTER TABLE IF EXISTS pet_medical_details ADD COLUMN IF NOT EXISTS conditions_detail TEXT DEFAULT '[]';
@@ -356,6 +371,19 @@ async function ensurePgSchema(client) {
     CREATE INDEX IF NOT EXISTS idx_pet_health_records_type ON pet_health_records(type);
     CREATE INDEX IF NOT EXISTS idx_pet_health_records_date ON pet_health_records(record_date DESC);
     CREATE INDEX IF NOT EXISTS idx_pet_medical_details_pet_id ON pet_medical_details(pet_id);
+    CREATE TABLE IF NOT EXISTS pet_species (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS pet_breeds (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      species TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_pet_species_name ON pet_species (LOWER(name));
+    CREATE INDEX IF NOT EXISTS idx_pet_breeds_species ON pet_breeds (species, LOWER(name));
   `);
   for (const [key, value] of [
     ['healthTagline', 'Amor, cuidado y salud para toda la vida'],
