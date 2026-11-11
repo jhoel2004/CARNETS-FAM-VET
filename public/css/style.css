@@ -725,3 +725,4 @@ tbody tr:hover td{background:rgba(17,24,39,.025);}
   #print-area,#print-area *{visibility:visible;}
   #print-area{position:absolute; left:0; top:0; width:100%;}
 }
+.form-step{cursor:pointer;}

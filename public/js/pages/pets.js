@@ -516,11 +516,6 @@ export async function openPetModal(id, opts = {}) {
         <div class="form-step-sep"></div>
         <div class="form-step" data-step="med"><span class="step-num">3</span> Médico</div>
       </div>
-      <div class="tabs">
-        <div class="tab-btn active" data-ftab="animal">Datos del animal</div>
-        <div class="tab-btn" data-ftab="prop">Propietario</div>
-        <div class="tab-btn" data-ftab="med">Datos médicos</div>
-      </div>
       <form id="pet-form">
 
         <!-- ================= PASO 1: ANIMAL ================= -->
@@ -619,7 +614,7 @@ export async function openPetModal(id, opts = {}) {
             </div>
           </div>
           <div class="field full"><label>Nombre completo *</label><input required name="owner_name" id="owner-name-input" value="${escapeHtml(pet.owner_name || '')}" placeholder="Nombre y apellidos"></div>
-          <div class="field"><label>CI</label><input name="owner_ci" id="owner-ci-input" value="${escapeHtml(pet.owner_ci || '')}" placeholder="Cédula de identidad"></div>
+          <div class="field"><label>CI</label><input name="owner_ci" id="owner-ci-input" value="${escapeHtml(pet.owner_ci || '')}" placeholder="Cédula de identidad" style="font-size:15px;"></div>
           <div class="field"><label>Teléfono *</label><input required name="owner_phone" id="owner-phone-input" value="${escapeHtml(pet.owner_phone || '')}" placeholder="Ej: 70012345"></div>
           <div class="field"><label>Correo electrónico</label><input type="email" name="owner_email" id="owner-email-input" value="${escapeHtml(pet.owner_email || '')}" placeholder="correo@ejemplo.com"></div>
           <div class="field"><label>Departamento</label>
@@ -705,7 +700,7 @@ export async function openPetModal(id, opts = {}) {
   };
   const petTabValid = (tab) => reqsFor(tab).every(petFieldFilled);
   const petSaveValid = () => [...animalRequired(), ...PET_REQUIRED.prop].every(petFieldFilled);
-  const currentTab = () => document.querySelector('[data-ftab].active')?.dataset.ftab || 'animal';
+  const currentTab = () => document.querySelector('.form-step.active')?.dataset.step || 'animal';
 
   const updatePetButtons = (tab) => {
     const btnPrev = document.getElementById('btn-modal-prev');
@@ -731,7 +726,6 @@ export async function openPetModal(id, opts = {}) {
 
   // Muestra solo el paso activo y oculta los demás. NO borra ningún dato.
   const activatePetTab = (tab) => {
-    document.querySelectorAll('[data-ftab]').forEach(el => el.classList.toggle('active', el.dataset.ftab === tab));
     PET_STEPS.forEach(k => document.getElementById('ftab-' + k)?.classList.toggle('hidden', k !== tab));
     document.querySelectorAll('.form-step').forEach(s => {
       s.classList.remove('active', 'done');
@@ -741,7 +735,7 @@ export async function openPetModal(id, opts = {}) {
     updatePetButtons(tab);
   };
 
-  document.querySelectorAll('[data-ftab]').forEach(el => el.addEventListener('click', () => activatePetTab(el.dataset.ftab)));
+  document.querySelectorAll('.form-step').forEach(el => el.addEventListener('click', () => activatePetTab(el.dataset.step)));
   document.getElementById('btn-modal-next')?.addEventListener('click', () => {
     const idx = PET_STEPS.indexOf(currentTab());
     if (idx < PET_STEPS.length - 1) activatePetTab(PET_STEPS[idx + 1]);
@@ -914,9 +908,9 @@ export async function openPetModal(id, opts = {}) {
             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
               <div>
                 <b>${escapeHtml(owner.owner_name)}</b><br>
-                <span style="font-size:11px;">CI: ${escapeHtml(owner.owner_ci || '—')} · Tel: ${escapeHtml(owner.owner_phone || '—')} · ${escapeHtml(owner.owner_city || '')}</span>
+                <span style="font-size:14px; font-weight:600;">CI: ${escapeHtml(owner.owner_ci || '—')} · Tel: ${escapeHtml(owner.owner_phone || '—')} · ${escapeHtml(owner.owner_city || '')}</span>
               </div>
-              <button type="button" id="btn-apply-owner">Usar estos datos</button>
+              <button type="button" id="btn-apply-owner" class="btn btn-outline btn-sm">Usar estos datos</button>
             </div>`;
           document.getElementById('btn-apply-owner').addEventListener('click', () => {
             document.getElementById('owner-name-input').value = owner.owner_name || '';
